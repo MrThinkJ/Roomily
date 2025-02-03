@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: Roomily
+  datasource:
+    url: jdbc:postgresql://mrthinkj.site:5432/roomily
+    username: postgres
+    password: roomily
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    generate-ddl: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
