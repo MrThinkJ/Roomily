@@ -21,7 +21,7 @@ public class Review {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "review_id")
     private String id;
-    private String review;
+    private String content;
     private int rating;
     @CreationTimestamp
     @Column(name = "created_at")

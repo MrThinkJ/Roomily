@@ -51,7 +51,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomResponse createRoom(CreateRoomRequest createRoomRequest, String landlordId) {
+    public Boolean createRoom(CreateRoomRequest createRoomRequest, String landlordId) {
         User landlord = userRepository.findById(landlordId).orElseThrow(
                 () -> new ResourceNotFoundException("User", "id", landlordId)
         );
@@ -78,7 +78,7 @@ public class RoomServiceImpl implements RoomService {
                 .tags(tags)
                 .build();
         roomRepository.save(room);
-        return mapToRoomResponse(room);
+        return true;
     }
 
     @Override
@@ -107,12 +107,13 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public void deleteRoom(String roomId) {
+    public Boolean deleteRoom(String roomId) {
         Room room = roomRepository.findById(roomId).orElseThrow(
                 () -> new ResourceNotFoundException("Room", "id", roomId)
         );
         room.setStatus(RoomStatus.DELETED);
         roomRepository.save(room);
+        return true;
     }
 
     private String getNearbyAmenitiesString(Double latitude, Double longitude) {
