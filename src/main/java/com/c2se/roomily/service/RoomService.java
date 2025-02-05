@@ -18,7 +18,7 @@ public interface RoomService {
                                         Double maxPrice,
                                         Integer minPeople,
                                         Integer maxPeople);
-    RoomResponse createRoom(CreateRoomRequest createRoomRequest, String landlordId);
+    Boolean createRoom(CreateRoomRequest createRoomRequest, String landlordId);
     RoomResponse updateRoom(String roomId, UpdateRoomRequest updateRoomRequest);
-    void deleteRoom(String roomId);
+    Boolean deleteRoom(String roomId);
 }

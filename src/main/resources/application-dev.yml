@@ -11,3 +11,9 @@ spring:
     show-sql: true
     generate-ddl: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+minio:
+  access-key: minioadmin
+  secret-key: minioadmin
+  url: http://localhost:9000
+  bucket:
+    store: video
