@@ -19,7 +19,7 @@ public class RoomController extends BaseController{
     public ResponseEntity<RoomResponse> getRoomById(@PathVariable String roomId) {
         return ResponseEntity.ok(roomService.getRoomById(roomId));
     }
-    @GetMapping("/landlord/{landlordId}")
+    @GetMapping("/landlords/{landlordId}")
     public ResponseEntity<List<RoomResponse>> getRoomsByLandlordId(@PathVariable String landlordId) {
         return ResponseEntity.ok(roomService.getRoomsByLandlordId(landlordId));
     }

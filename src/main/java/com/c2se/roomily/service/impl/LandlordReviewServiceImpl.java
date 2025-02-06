@@ -105,8 +105,8 @@ public class LandlordReviewServiceImpl implements LandlordReviewService {
                 .id(review.getId())
                 .rating(review.getRating())
                 .content(review.getContent())
-                .createdAt(review.getCreatedAt())
-                .updatedAt(review.getUpdatedAt())
+                .createdAt(review.getCreatedAt().toString())
+                .updatedAt(review.getUpdatedAt().toString())
                 .landlordId(review.getLandlord().getId())
                 .reviewerId(review.getReviewer().getId())
                 .build();

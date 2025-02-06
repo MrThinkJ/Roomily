@@ -3,6 +3,8 @@ package com.c2se.roomily.service.impl;
 import com.c2se.roomily.entity.Review;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.User;
+import com.c2se.roomily.enums.ErrorCode;
+import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateReviewRequest;
 import com.c2se.roomily.payload.response.ReviewResponse;
@@ -11,6 +13,7 @@ import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -70,7 +73,7 @@ public class ReviewServiceImpl implements ReviewService {
                 () -> new ResourceNotFoundException("Review", "id", reviewId)
         );
         if (!review.getUser().getId().equals(userId)) {
-            throw new ResourceNotFoundException("Review", "id", reviewId);
+            throw new APIException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
         }
         review.setContent(createReviewRequest.getContent());
         review.setRating(createReviewRequest.getRating());
@@ -84,7 +87,7 @@ public class ReviewServiceImpl implements ReviewService {
                 () -> new ResourceNotFoundException("Review", "id", reviewId)
         );
         if (!review.getUser().getId().equals(userId)) {
-            throw new ResourceNotFoundException("Review", "id", reviewId);
+            throw new APIException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
         }
         reviewRepository.delete(review);
         return true;
@@ -96,8 +99,8 @@ public class ReviewServiceImpl implements ReviewService {
                 .id(review.getId())
                 .content(review.getContent())
                 .rating(review.getRating())
-                .createdAt(review.getCreatedAt())
-                .updatedAt(review.getUpdatedAt())
+                .createdAt(review.getCreatedAt().toString())
+                .updatedAt(review.getUpdatedAt().toString())
                 .userId(review.getUser().getId())
                 .roomId(review.getRoom().getId())
                 .userName(user.getUsername())

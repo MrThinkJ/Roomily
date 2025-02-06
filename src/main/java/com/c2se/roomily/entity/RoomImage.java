@@ -19,6 +19,7 @@ public class RoomImage {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "room_image_id")
     private String id;
+    private String name;
     private String url;
     @CreationTimestamp
     @Column(name = "created_at")

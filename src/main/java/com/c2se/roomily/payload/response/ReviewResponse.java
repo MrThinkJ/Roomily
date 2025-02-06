@@ -15,6 +15,6 @@ public class ReviewResponse {
     private String userId;
     private String userName;
     private String userAvatar;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String createdAt;
+    private String updatedAt;
 }
