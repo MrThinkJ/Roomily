@@ -1,6 +1,7 @@
 package com.c2se.roomily.entity;
 
 import com.c2se.roomily.enums.TransactionStatus;
+import com.c2se.roomily.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,7 +27,12 @@ public class Transaction {
     @Column(name = "payment_id")
     private String paymentId;
     private BigDecimal amount;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_status", nullable = false)
     private TransactionStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_type", nullable = false)
+    private TransactionType type;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

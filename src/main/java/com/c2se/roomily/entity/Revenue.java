@@ -23,7 +23,7 @@ public class Revenue {
     private LocalDateTime paymentDate;
     @ManyToOne
     @JoinColumn(name = "landlord_id")
-    private Landlord landlord;
+    private User landlord;
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;

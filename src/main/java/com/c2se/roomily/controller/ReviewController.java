@@ -18,15 +18,15 @@ public class ReviewController extends BaseController{
     public ResponseEntity<ReviewResponse> getReview(@PathVariable String id) {
         return ResponseEntity.ok(reviewService.getReview(id));
     }
-    @GetMapping("/user/{userId}")
+    @GetMapping("/users/{userId}")
     public ResponseEntity<List<ReviewResponse>> getReviewsByUserId(@PathVariable String userId) {
         return ResponseEntity.ok(reviewService.getReviewsByUserId(userId));
     }
-    @GetMapping("/room/{roomId}")
+    @GetMapping("/rooms/{roomId}")
     public ResponseEntity<List<ReviewResponse>> getReviewsByRoomId(@PathVariable String roomId) {
         return ResponseEntity.ok(reviewService.getReviewsByRoomId(roomId));
     }
-    @PostMapping("/room/{roomId}")
+    @PostMapping("/rooms/{roomId}")
     public ResponseEntity<Boolean> createReview(@PathVariable String roomId,
                                                 @RequestBody CreateReviewRequest createReviewRequest) {
         String userId = this.getUserInfo().getId();

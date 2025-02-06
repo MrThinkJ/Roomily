@@ -18,23 +18,23 @@ public class LandlordReviewController extends BaseController{
     public ResponseEntity<LandlordReviewResponse> getLandlordReview(@PathVariable String id) {
         return ResponseEntity.ok(landlordReviewService.getLandlordReview(id));
     }
-    @GetMapping("/landlord/{landlordId}")
+    @GetMapping("/landlords/{landlordId}")
     public ResponseEntity<List<LandlordReviewResponse>> getLandlordReviewsByLandlordId(
             @PathVariable String landlordId) {
         return ResponseEntity.ok(landlordReviewService.getLandlordReviewsByLandlordId(landlordId));
     }
-    @GetMapping("/reviewer/{reviewerId}")
+    @GetMapping("/reviewers/{reviewerId}")
     public ResponseEntity<List<LandlordReviewResponse>> getLandlordReviewsByReviewerId(
             @PathVariable String reviewerId) {
         return ResponseEntity.ok(landlordReviewService.getLandlordReviewsByReviewerId(reviewerId));
     }
-    @GetMapping("/landlord/{landlordId}/reviewer/{reviewerId}")
+    @GetMapping("/landlords/{landlordId}/reviewers/{reviewerId}")
     public ResponseEntity<List<LandlordReviewResponse>> getLandlordReviewsByLandlordIdAndReviewerId(
             @PathVariable String landlordId,
             @PathVariable String reviewerId) {
         return ResponseEntity.ok(landlordReviewService.getLandlordReviewsByLandlordIdAndReviewerId(landlordId, reviewerId));
     }
-    @PostMapping("/landlord/{landlordId}")
+    @PostMapping("/landlords/{landlordId}")
     public ResponseEntity<Boolean> createLandlordReview(
             @PathVariable String landlordId,
             @RequestBody CreateLandlordReviewRequest createLandlordReviewRequest) {

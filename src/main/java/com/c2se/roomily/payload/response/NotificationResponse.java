@@ -7,12 +7,12 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class LandlordReviewResponse {
+public class NotificationResponse {
     private String id;
-    private String reviewerId;
-    private String landlordId;
-    private String content;
-    private Integer rating;
+    private String header;
+    private String body;
+    private Boolean isRead;
+    private String type;
     private String createdAt;
-    private String updatedAt;
+    private String userId;
 }
