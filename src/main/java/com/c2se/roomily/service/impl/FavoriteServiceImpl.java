@@ -11,7 +11,7 @@ import com.c2se.roomily.repository.FavoriteRepository;
 import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.FavoriteService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 import static com.c2se.roomily.service.impl.RoomServiceImpl.getRoomResponse;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class FavoriteServiceImpl implements FavoriteService {
     FavoriteRepository favoriteRepository;
     UserRepository userRepository;

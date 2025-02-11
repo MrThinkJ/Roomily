@@ -11,7 +11,7 @@ import com.c2se.roomily.repository.RoomImageRepository;
 import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.service.RoomImageService;
 import com.c2se.roomily.service.StorageService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +22,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class RoomImageServiceImpl implements RoomImageService {
     RoomImageRepository roomImageRepository;
     RoomRepository roomRepository;

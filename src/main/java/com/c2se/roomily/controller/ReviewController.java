@@ -3,14 +3,14 @@ package com.c2se.roomily.controller;
 import com.c2se.roomily.payload.request.CreateReviewRequest;
 import com.c2se.roomily.payload.response.ReviewResponse;
 import com.c2se.roomily.service.ReviewService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/reviews")
 public class ReviewController extends BaseController{
     ReviewService reviewService;

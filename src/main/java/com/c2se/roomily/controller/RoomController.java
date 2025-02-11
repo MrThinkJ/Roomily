@@ -4,25 +4,28 @@ import com.c2se.roomily.payload.request.CreateRoomRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.service.RoomService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/rooms")
 public class RoomController extends BaseController{
     RoomService roomService;
+
     @GetMapping("/{roomId}")
     public ResponseEntity<RoomResponse> getRoomById(@PathVariable String roomId) {
         return ResponseEntity.ok(roomService.getRoomById(roomId));
     }
+
     @GetMapping("/landlords/{landlordId}")
     public ResponseEntity<List<RoomResponse>> getRoomsByLandlordId(@PathVariable String landlordId) {
         return ResponseEntity.ok(roomService.getRoomsByLandlordId(landlordId));
     }
+
     @GetMapping("/filter")
     public ResponseEntity<List<RoomResponse>> getRoomsByFilter(@RequestParam(defaultValue = "") String city,
                                                                @RequestParam(defaultValue = "") String district,

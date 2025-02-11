@@ -3,14 +3,14 @@ package com.c2se.roomily.controller;
 import com.c2se.roomily.payload.request.CreateLandlordReviewRequest;
 import com.c2se.roomily.payload.response.LandlordReviewResponse;
 import com.c2se.roomily.service.LandlordReviewService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/landlord-reviews")
 public class LandlordReviewController extends BaseController{
     LandlordReviewService landlordReviewService;

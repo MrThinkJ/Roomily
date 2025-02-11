@@ -2,14 +2,14 @@ package com.c2se.roomily.controller;
 
 import com.c2se.roomily.entity.Tag;
 import com.c2se.roomily.service.TagService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/tags")
 public class TagController {
     TagService tagService;

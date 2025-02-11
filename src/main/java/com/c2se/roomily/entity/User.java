@@ -1,5 +1,6 @@
 package com.c2se.roomily.entity;
 
+import com.c2se.roomily.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,6 +39,7 @@ public class User{
     private String profilePicture;
     private String address;
     private Double rating;
+    private UserStatus status;
     @Column(name = "is_verified")
     private Boolean isVerified;
     private BigDecimal balance;

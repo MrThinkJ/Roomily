@@ -2,14 +2,14 @@ package com.c2se.roomily.controller;
 
 import com.c2se.roomily.payload.response.RoomImageResponse;
 import com.c2se.roomily.service.RoomImageService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/room-images")
 public class RoomImageController extends BaseController{
     RoomImageService roomImageService;

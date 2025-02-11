@@ -4,13 +4,13 @@ import com.c2se.roomily.entity.Tag;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.repository.TagRepository;
 import com.c2se.roomily.service.TagService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class TagServiceImpl implements TagService {
     TagRepository tagRepository;
     @Override

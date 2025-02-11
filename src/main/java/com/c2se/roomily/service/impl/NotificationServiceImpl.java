@@ -9,14 +9,14 @@ import com.c2se.roomily.payload.response.NotificationResponse;
 import com.c2se.roomily.repository.NotificationRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.NotificationService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     NotificationRepository notificationRepository;
     UserRepository userRepository;

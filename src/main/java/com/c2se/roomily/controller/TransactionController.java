@@ -4,12 +4,12 @@ import com.c2se.roomily.payload.response.TransactionPageResponse;
 import com.c2se.roomily.payload.response.TransactionResponse;
 import com.c2se.roomily.service.TransactionService;
 import com.c2se.roomily.util.AppConstants;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/transactions")
 public class TransactionController {
     TransactionService transactionService;

@@ -2,7 +2,7 @@ package com.c2se.roomily.controller;
 
 import com.c2se.roomily.payload.response.NotificationResponse;
 import com.c2se.roomily.service.NotificationService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/notifications")
 public class NotificationController extends BaseController{
     NotificationService notificationService;

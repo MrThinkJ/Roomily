@@ -2,14 +2,14 @@ package com.c2se.roomily.controller;
 
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.service.FavoriteService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@AllArgsConstructor
 @RequestMapping("/api/v1/favorites")
 public class FavoriteController extends BaseController{
     FavoriteService favoriteService;
