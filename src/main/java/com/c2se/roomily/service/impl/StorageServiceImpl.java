@@ -5,7 +5,7 @@ import com.c2se.roomily.service.StorageService;
 import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.Item;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,7 +14,7 @@ import java.io.InputStream;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class StorageServiceImpl implements StorageService {
     MinioClient minioClient;
     StorageConfiguration storageConfiguration;

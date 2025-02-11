@@ -1,6 +1,6 @@
 package com.c2se.roomily.entity;
 
-import com.c2se.roomily.enums.UserReportStatus;
+import com.c2se.roomily.enums.ReportStatus;
 import com.c2se.roomily.enums.UserReportType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -29,8 +29,12 @@ public class UserReport {
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    private UserReportStatus status;
+    private ReportStatus status;
+    private Boolean isValid;
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "reporter_id")
+    private User reporter;
+    @ManyToOne
+    @JoinColumn(name = "reported_user_id")
+    private User reportedUser;
 }

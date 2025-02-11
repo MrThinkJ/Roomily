@@ -12,7 +12,7 @@ import com.c2se.roomily.repository.ReviewRepository;
 import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.ReviewService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
     UserRepository userRepository;
     ReviewRepository reviewRepository;

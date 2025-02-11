@@ -24,6 +24,9 @@ public enum ErrorCode {
     // Payment errors (1200-1299)
     INSUFFICIENT_BALANCE(1200, "Insufficient balance. Required: %s, Available: %s"),
     PAYMENT_PROCESSING_ERROR(1201, "Payment processing failed: %s"),
+    PAYMENT_LINK_GET_FAILED(1202, "Error when get payment link %s"),
+    PAYMENT_LINK_EXPIRED(1203, "Payment link %s has expired"),
+    PAYMENT_LINK_CREATE_FAILED(1204, "Failed to create payment link %s"),
 
     // Application errors (1300-1399)
     USER_ALREADY_HAS_PENDING_RESERVATION(1300, "User %s already has a pending reservation."),

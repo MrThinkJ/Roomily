@@ -1,9 +1,9 @@
 package com.c2se.roomily.service.impl;
 
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class PricingHistoryServiceImpl {
 }

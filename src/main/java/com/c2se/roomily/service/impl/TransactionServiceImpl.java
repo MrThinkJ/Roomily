@@ -11,7 +11,7 @@ import com.c2se.roomily.payload.response.TransactionResponse;
 import com.c2se.roomily.repository.TransactionRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.TransactionService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class TransactionServiceImpl implements TransactionService {
     TransactionRepository transactionRepository;
     UserRepository userRepository;

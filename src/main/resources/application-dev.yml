@@ -14,6 +14,18 @@ spring:
 minio:
   access-key: minioadmin
   secret-key: minioadmin
-  url: http://mrthinkj.site:9000
+  url: http://localhost:9000
   bucket:
     image: images
+payos:
+  client-id: bb08d5f8-72bf-425a-a13b-b39c52d91ca7
+  api-key: 73c759f5-eaf2-41f1-90cb-9bbd9385e7ec
+  checksum-key: c378e619aa1ef989c511e3ece8f69a207f6c89aa95b324f16244f693d9e1a410
+springdoc:
+  api-docs:
+    path: /api-docs
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"

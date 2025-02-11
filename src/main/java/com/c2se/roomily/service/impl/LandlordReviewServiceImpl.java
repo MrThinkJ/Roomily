@@ -9,14 +9,14 @@ import com.c2se.roomily.payload.response.ReviewResponse;
 import com.c2se.roomily.repository.LandlordReviewRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.LandlordReviewService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class LandlordReviewServiceImpl implements LandlordReviewService {
     UserRepository userRepository;
     LandlordReviewRepository landlordReviewRepository;

@@ -12,7 +12,7 @@ import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.RoomService;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class RoomServiceImpl implements RoomService {
     RoomRepository roomRepository;
     UserRepository userRepository;
@@ -45,7 +45,8 @@ public class RoomServiceImpl implements RoomService {
                                                String ward, String type,
                                                Double minPrice, Double maxPrice,
                                                Integer minPeople, Integer maxPeople) {
-        List<Room> rooms = roomRepository.findByFilter(city, district, ward, type,
+        RoomType roomType = type.isEmpty() ? null : RoomType.valueOf(type);
+        List<Room> rooms = roomRepository.findByFilter(city, district, ward, roomType,
                 minPrice, maxPrice, minPeople, maxPeople);
         return rooms.stream().map(this::mapToRoomResponse).toList();
     }

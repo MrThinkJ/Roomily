@@ -8,4 +8,4 @@ FROM eclipse-temurin:21-jre-alpine as production
 WORKDIR /app
 COPY --from=build target/*.jar target/app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "target/app.jar", "--spring.profiles.active=dev"]
+ENTRYPOINT ["java", "-jar", "target/app.jar", "--spring.profiles.active=prod"]

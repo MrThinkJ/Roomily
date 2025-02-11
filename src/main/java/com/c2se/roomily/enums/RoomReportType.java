@@ -1,4 +1,4 @@
 package com.c2se.roomily.enums;
 
-public enum UserReportStatus {
+public enum RoomReportType {
 }

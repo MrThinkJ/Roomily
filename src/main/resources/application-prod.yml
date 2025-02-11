@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: Roomily
+  datasource:
+    url: jdbc:postgresql://${POSTGRESQL_HOST:localhost}:${POSTGRESQL_PORT:5432}/${POSTGRESQL_DB:roomily}
+    username: ${POSTGRESQL_USER:postgres}
+    password: ${POSTGRESQL_PASSWORD:28122003}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    generate-ddl: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+minio:
+  access-key: minioroomily
+  secret-key: miniopassword
+  url: ${MINIO_URL:http://localhost:9000}
+  bucket:
+    image: images
+payos:
+  client-id: bb08d5f8-72bf-425a-a13b-b39c52d91ca7
+  api-key: 73c759f5-eaf2-41f1-90cb-9bbd9385e7ec
+  checksum-key: c378e619aa1ef989c511e3ece8f69a207f6c89aa95b324f16244f693d9e1a410
+springdoc:
+  api-docs:
+    path: /api-docs
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
