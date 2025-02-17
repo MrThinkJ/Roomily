@@ -20,6 +20,7 @@ public class RentedRoom {
     private String id;
     private LocalDateTime startDate;
     private Double duration;
+    @Enumerated(EnumType.STRING)
     private RentedRoomStatus status;
     @ManyToOne
     @JoinColumn(name = "room_id")

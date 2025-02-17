@@ -3,19 +3,24 @@ package com.c2se.roomily.service.impl;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.Tag;
 import com.c2se.roomily.entity.User;
+import com.c2se.roomily.enums.ErrorCode;
 import com.c2se.roomily.enums.RoomStatus;
 import com.c2se.roomily.enums.RoomType;
+import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateRoomRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.repository.RoomRepository;
+import com.c2se.roomily.repository.TagRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.RoomService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,6 +29,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class RoomServiceImpl implements RoomService {
     RoomRepository roomRepository;
+    TagRepository tagRepository;
     UserRepository userRepository;
     @Override
     public RoomResponse getRoomById(String roomId) {
@@ -56,13 +62,16 @@ public class RoomServiceImpl implements RoomService {
         User landlord = userRepository.findById(landlordId).orElseThrow(
                 () -> new ResourceNotFoundException("User", "id", landlordId)
         );
-        Set<Tag> tags = createRoomRequest.getTags().stream()
-                .map(tag -> Tag.builder().name(tag).build())
-                .collect(Collectors.toSet());
+
+        List<Tag> tags = tagRepository.findByIdIn(createRoomRequest.getTagIds());
+        if (tags.size() != createRoomRequest.getTagIds().size()) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Some tags are not found");
+        }
         Room room = Room.builder()
-                .name(createRoomRequest.getName())
+                .title(createRoomRequest.getTitle())
+                .description(createRoomRequest.getDescription())
                 .address(createRoomRequest.getAddress())
-                .status(RoomStatus.valueOf(createRoomRequest.getStatus()))
+                .status(RoomStatus.AVAILABLE)
                 .price(BigDecimal.valueOf(Double.parseDouble(createRoomRequest.getPrice())))
                 .latitude(createRoomRequest.getLatitude())
                 .longitude(createRoomRequest.getLongitude())
@@ -76,7 +85,8 @@ public class RoomServiceImpl implements RoomService {
                         createRoomRequest.getLongitude()))
                 .maxPeople(createRoomRequest.getMaxPeople())
                 .landlord(landlord)
-                .tags(tags)
+                .tags(new HashSet<>(tags))
+                .squareMeters(createRoomRequest.getSquareMeters())
                 .build();
         roomRepository.save(room);
         return true;
@@ -87,7 +97,8 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomRepository.findById(roomId).orElseThrow(
                 () -> new ResourceNotFoundException("Room", "id", roomId)
         );
-        room.setName(updateRoomRequest.getName());
+        room.setTitle(updateRoomRequest.getTitle());
+        room.setDescription(updateRoomRequest.getDescription());
         room.setAddress(updateRoomRequest.getAddress());
         room.setStatus(RoomStatus.valueOf(updateRoomRequest.getStatus()));
         room.setPrice(BigDecimal.valueOf(Double.parseDouble(updateRoomRequest.getPrice())));
@@ -103,6 +114,7 @@ public class RoomServiceImpl implements RoomService {
         room.setTags(updateRoomRequest.getTags().stream()
                 .map(tag -> Tag.builder().name(tag).build())
                 .collect(Collectors.toSet()));
+        room.setSquareMeters(updateRoomRequest.getSquareMeters());
         Room updatedRoom = roomRepository.save(room);
         return mapToRoomResponse(updatedRoom);
     }
@@ -129,7 +141,8 @@ public class RoomServiceImpl implements RoomService {
     static RoomResponse getRoomResponse(Room room) {
         return RoomResponse.builder()
                 .id(room.getId())
-                .name(room.getName())
+                .title(room.getTitle())
+                .description(room.getDescription())
                 .address(room.getAddress())
                 .status(room.getStatus().name())
                 .price(room.getPrice())
@@ -145,6 +158,7 @@ public class RoomServiceImpl implements RoomService {
                 .maxPeople(room.getMaxPeople())
                 .landlordId(room.getLandlord().getId())
                 .tags(room.getTags())
+                .squareMeters(room.getSquareMeters())
                 .build();
     }
 }

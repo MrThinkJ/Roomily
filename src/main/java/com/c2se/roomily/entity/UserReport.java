@@ -23,12 +23,14 @@ public class UserReport {
     @Column(name = "user_report_id")
     private String id;
     @Column(name = "report_type")
+    @Enumerated(EnumType.STRING)
     private UserReportType type;
     @Column(name = "report_content")
     private String content;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    @Enumerated(EnumType.STRING)
     private ReportStatus status;
     private Boolean isValid;
     @ManyToOne

@@ -104,7 +104,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .userId(review.getUser().getId())
                 .roomId(review.getRoom().getId())
                 .userName(user.getUsername())
-                .userAvatar(user.getAvatar())
+                .profilePicture(user.getProfilePicture())
                 .build();
     }
 }

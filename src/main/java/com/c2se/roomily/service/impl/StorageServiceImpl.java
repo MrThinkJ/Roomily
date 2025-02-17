@@ -1,23 +1,21 @@
 package com.c2se.roomily.service.impl;
 
-import com.c2se.roomily.config.StorageConfiguration;
+import com.c2se.roomily.config.StorageConfig;
 import com.c2se.roomily.service.StorageService;
 import io.minio.*;
 import io.minio.http.Method;
-import io.minio.messages.Item;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.util.List;
 
 @Service
 @AllArgsConstructor
 public class StorageServiceImpl implements StorageService {
     MinioClient minioClient;
-    StorageConfiguration storageConfiguration;
+    StorageConfig storageConfig;
     @Override
     public void putObject(MultipartFile file, String bucket, String fileName) throws Exception {
         String contentType = file.getContentType();
@@ -37,7 +35,7 @@ public class StorageServiceImpl implements StorageService {
         minioClient.putObject(
                 PutObjectArgs.builder()
                         .object(folderName)
-                        .bucket(storageConfiguration.getBucketStore())
+                        .bucket(storageConfig.getBucketStore())
                         .stream(new ByteArrayInputStream(new byte[] {}), 0, -1)
                         .build()
         );

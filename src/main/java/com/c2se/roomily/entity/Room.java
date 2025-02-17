@@ -26,9 +26,13 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "room_id")
     private String id;
-    @Column(name = "room_name")
-    private String name;
+    @Column(name = "title")
+    private String title;
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
     private String address;
+    @Column(name = "room_status")
+    @Enumerated(EnumType.STRING)
     private RoomStatus status;
     private BigDecimal price;
     @Column(name = "lat")
@@ -43,6 +47,7 @@ public class Room {
     @Column(name = "water_price")
     private BigDecimal waterPrice;
     @Column(name = "room_type")
+    @Enumerated(EnumType.STRING)
     private RoomType type;
     @Column(name = "nearby_amenities")
     private String nearbyAmenities;
@@ -57,4 +62,6 @@ public class Room {
             inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
     private Set<Tag> tags;
+    @Column(name = "square_meters")
+    private Double squareMeters;
 }

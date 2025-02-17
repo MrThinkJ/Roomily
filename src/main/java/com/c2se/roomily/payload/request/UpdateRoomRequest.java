@@ -8,7 +8,8 @@ import java.util.Set;
 @Data
 @Builder
 public class UpdateRoomRequest {
-    private String name;
+    private String title;
+    private String description;
     private String address;
     private String status;
     private String price;
@@ -22,4 +23,5 @@ public class UpdateRoomRequest {
     private String type;
     private int maxPeople;
     private Set<String> tags;
+    private Double squareMeters;
 }

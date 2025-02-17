@@ -1,6 +1,7 @@
 package com.c2se.roomily.controller;
 
 import com.c2se.roomily.payload.response.RoomResponse;
+import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.FavoriteService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import java.util.List;
 @RequestMapping("/api/v1/favorites")
 public class FavoriteController extends BaseController{
     FavoriteService favoriteService;
+
     @PatchMapping("/{roomId}")
     public ResponseEntity<Boolean> toggleFavorite(@PathVariable String roomId) {
         String userId = this.getUserInfo().getId();

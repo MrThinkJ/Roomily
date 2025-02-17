@@ -1,10 +1,13 @@
 spring:
+  threads:
+    virtual:
+      enabled: true
   application:
     name: Roomily
   datasource:
-    url: jdbc:postgresql://mrthinkj.site:5432/roomily
+    url: jdbc:postgresql://localhost:5432/roomily
     username: postgres
-    password: roomily
+    password: 28122003
   jpa:
     hibernate:
       ddl-auto: update
@@ -12,8 +15,8 @@ spring:
     generate-ddl: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 minio:
-  access-key: minioadmin
-  secret-key: minioadmin
+  access-key: roomily
+  secret-key: miniopassword
   url: http://localhost:9000
   bucket:
     image: images

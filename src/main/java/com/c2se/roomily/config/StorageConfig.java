@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @Data
-public class StorageConfiguration {
+public class StorageConfig {
     @Value("${minio.access-key}")
     private String accessKey;
     @Value("${minio.secret-key}")
