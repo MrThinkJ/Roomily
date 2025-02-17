@@ -3,14 +3,15 @@ package com.c2se.roomily.payload.request;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Set;
 
 @Data
 @Builder
 public class CreateRoomRequest {
-    private String name;
+    private String title;
+    private String description;
     private String address;
-    private String status;
     private String price;
     private Double latitude;
     private Double longitude;
@@ -21,5 +22,6 @@ public class CreateRoomRequest {
     private String waterPrice;
     private String type;
     private int maxPeople;
-    private Set<String> tags;
+    private List<String> tagIds;
+    private Double squareMeters;
 }

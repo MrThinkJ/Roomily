@@ -2,7 +2,7 @@ spring:
   application:
     name: Roomily
   datasource:
-    url: jdbc:postgresql://${POSTGRESQL_HOST:localhost}:${POSTGRESQL_PORT:5432}/${POSTGRESQL_DB:roomily}
+    url: jdbc:postgresql://${POSTGRESQL_HOST:postgresdb}:${POSTGRESQL_PORT:5432}/${POSTGRESQL_DB:roomily}
     username: ${POSTGRESQL_USER:postgres}
     password: ${POSTGRESQL_PASSWORD:28122003}
   jpa:
@@ -12,9 +12,9 @@ spring:
     generate-ddl: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 minio:
-  access-key: minioroomily
+  access-key: roomily
   secret-key: miniopassword
-  url: ${MINIO_URL:http://localhost:9000}
+  url: ${MINIO_URL:http://minio:9000}
   bucket:
     image: images
 payos:

@@ -11,7 +11,8 @@ import java.util.Set;
 @Builder
 public class RoomResponse {
     private String id;
-    private String name;
+    private String title;
+    private String description;
     private String address;
     private String status;
     private BigDecimal price;
@@ -27,4 +28,5 @@ public class RoomResponse {
     private Integer maxPeople;
     private String landlordId;
     private Set<Tag> tags;
+    private Double squareMeters;
 }

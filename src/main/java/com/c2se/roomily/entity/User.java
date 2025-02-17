@@ -32,17 +32,19 @@ public class User{
     private String id;
     private String username;
     private String password;
-    private String avatar;
     private String fullName;
     private String email;
     private String phone;
     private String profilePicture;
     private String address;
-    private Double rating;
+    @Column(name = "rating")
+    private Double rating = 0.00;
+    @Enumerated(EnumType.STRING)
     private UserStatus status;
     @Column(name = "is_verified")
     private Boolean isVerified;
-    private BigDecimal balance;
+    @Column(name = "balance", precision = 10, scale = 2)
+    private BigDecimal balance = BigDecimal.valueOf(0.00);
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),

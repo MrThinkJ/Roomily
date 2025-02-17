@@ -14,7 +14,7 @@ public class ReviewResponse {
     private String roomId;
     private String userId;
     private String userName;
-    private String userAvatar;
+    private String profilePicture;
     private String createdAt;
     private String updatedAt;
 }

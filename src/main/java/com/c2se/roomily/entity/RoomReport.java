@@ -22,9 +22,11 @@ public class RoomReport {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "room_report_id")
     private String id;
-    private String content;
+    private String reason;
+    @Enumerated(EnumType.STRING)
     private ReportStatus status;
     @Column(name = "report_type")
+    @Enumerated(EnumType.STRING)
     private RoomReportType type;
     @CreationTimestamp
     @Column(name = "created_at")

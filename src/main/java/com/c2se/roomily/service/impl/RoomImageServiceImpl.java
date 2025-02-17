@@ -1,6 +1,6 @@
 package com.c2se.roomily.service.impl;
 
-import com.c2se.roomily.config.StorageConfiguration;
+import com.c2se.roomily.config.StorageConfig;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.RoomImage;
 import com.c2se.roomily.enums.ErrorCode;
@@ -27,7 +27,7 @@ public class RoomImageServiceImpl implements RoomImageService {
     RoomImageRepository roomImageRepository;
     RoomRepository roomRepository;
     StorageService storageService;
-    StorageConfiguration storageConfiguration;
+    StorageConfig storageConfig;
     @Override
     public List<String> getRoomImageUrlsByRoomId(String roomId) {
         Room room = roomRepository.findById(roomId).orElseThrow(
@@ -55,8 +55,8 @@ public class RoomImageServiceImpl implements RoomImageService {
         for (MultipartFile image : images) {
             String imageName = generateImageName(roomId, image.getOriginalFilename());
             try{
-                storageService.putObject(image, storageConfiguration.getBucketStore(), imageName);
-                String imageUrl = storageService.generatePresignedUrl(storageConfiguration.getBucketStore(), imageName);
+                storageService.putObject(image, storageConfig.getBucketStore(), imageName);
+                String imageUrl = storageService.generatePresignedUrl(storageConfig.getBucketStore(), imageName);
                 RoomImage roomImage = RoomImage.builder()
                         .name(imageName)
                         .room(room)
@@ -81,7 +81,7 @@ public class RoomImageServiceImpl implements RoomImageService {
         List<RoomImage> roomImages = roomImageRepository.findByRoomIdAndIdIn(roomId, imageIds);
         for (RoomImage roomImage : roomImages) {
             try {
-                storageService.removeObject(storageConfiguration.getBucketStore(), roomImage.getName());
+                storageService.removeObject(storageConfig.getBucketStore(), roomImage.getName());
                 roomImageRepository.delete(roomImage);
             } catch (Exception e) {
                 e.printStackTrace();

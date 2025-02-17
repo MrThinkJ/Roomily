@@ -29,9 +29,6 @@ public enum ErrorCode {
     PAYMENT_LINK_CREATE_FAILED(1204, "Failed to create payment link %s"),
 
     // Application errors (1300-1399)
-    USER_ALREADY_HAS_PENDING_RESERVATION(1300, "User %s already has a pending reservation."),
-    NO_PENDING_RESERVATION(1301, "No pending reservation found for user %s."),
-    MACHINE_NOT_AVAILABLE(1301, "Machine %s is not available."),
     EXISTING_USERNAME_OR_EMAIL(1301, "Username or email already exists."),
     EXISTING_USERNAME(1302, "Username %s already exists."),
     EXISTING_EMAIL(1303, "Email %s already exists."),
@@ -45,21 +42,6 @@ public enum ErrorCode {
     WITHDRAW_INTERVAL(1311, "You can only withdraw once every %s days."),
     TRANSACTION_STATUS(1312, "Transaction status is %s."),
     ACCOUNT_INFO(1313, "Account information is incomplete."),
-    MACHINE_IN_USE(1314, "Machine %s is currently in use."),
-    // Validation errors (2000-2999)
-    FIELD_REQUIRED(2000, "Field is required"),
-    FIELD_INVALID_FORMAT(2001, "Invalid format"),
-    FIELD_MIN_LENGTH(2002, "Minimum length is %d characters"),
-    FIELD_MAX_LENGTH(2003, "Maximum length is %d characters"),
-    FIELD_MIN_VALUE(2004, "Minimum value is %d"),
-    FIELD_MAX_VALUE(2005, "Maximum value is %d"),
-
-    // Custom validation errors
-    FIELD_INVALID_EMAIL(2200, "Invalid email format"),
-    FIELD_INVALID_PHONE(2201, "Invalid phone number format"),
-    FIELD_INVALID_DATE(2202, "Invalid date format"),
-    FIELD_INVALID(2203, "Invalid %s format"),
-
     // API errors
     INVALID_JWT(2300, "Invalid JWT token"),
     EXPIRED_JWT(2301, "Expired JWT token"),
@@ -67,12 +49,11 @@ public enum ErrorCode {
     UNSUPPORTED_JWT(2303, "Unsupported JWT token"),
     INVALID_JWT_CLAIMS(2304, "JWT claim error"),
     INVALID_HASH(2305, "Invalid hash"),
-
     // System errors (5000-5999)
     INTERNAL_ERROR(5000, "Internal server error"),
     SERVICE_UNAVAILABLE(5001, "Service temporarily unavailable"),
-    DATABASE_ERROR(5002, "Database operation failed");
-
+    DATABASE_ERROR(5002, "Database operation failed"),
+    FLEXIBLE_ERROR(9999, "%s");
     @Getter
     private final int code;
     private final String messageTemplate;

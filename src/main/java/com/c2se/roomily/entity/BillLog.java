@@ -36,6 +36,7 @@ public class BillLog {
     private BigDecimal electricityBill;
     @Column(name = "water_bill")
     private BigDecimal waterBill;
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private BillStatus billStatus;
     @CreationTimestamp

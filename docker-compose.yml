@@ -8,13 +8,17 @@ services:
       - 9000:9000
       - 9001:9001
     environment:
-      MINIO_ROOT_USER: minioroomily
-      MINIO_ROOT_PASSWORD: miniopassword
+      - MINIO_ROOT_USER=roomily
+      - MINIO_ROOT_PASSWORD=miniopassword
+      - VIRTUAL_HOST=minio.mrthinkj.site
+      - VIRTUAL_PORT=9000
+      - LETSENCRYPT_HOST=minio.mrthinkj.site
+      - LETSENCRYPT_EMAIL=blog@minio.mrthinkj.site
     volumes:
-      - ./minio/data:/data
+      - /var/lib/minio/data:/data
     command: server --console-address ':9001' /data
     networks:
-      - shared_net:
+      - pi_shared_net
   postgresdb:
     image: postgres
     container_name: postgresdb
@@ -24,7 +28,7 @@ services:
       - 5432:5432
     environment:
       - TZ=Asia/Ho_Chi_Minh
-      - POSTGRES_PASSWORD=roomily
+      - POSTGRES_PASSWORD=28122003
       - POSTGRES_DB=roomily
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
@@ -33,4 +37,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     networks:
-      shared_net:
+      - pi_shared_net
+networks:
+  pi_shared_net:
+    external: true

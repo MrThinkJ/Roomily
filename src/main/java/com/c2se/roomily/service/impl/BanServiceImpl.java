@@ -2,10 +2,12 @@ package com.c2se.roomily.service.impl;
 
 import com.c2se.roomily.entity.BanHistory;
 import com.c2se.roomily.entity.User;
+import com.c2se.roomily.enums.RoomStatus;
 import com.c2se.roomily.enums.UserStatus;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.response.BanHistoryResponse;
 import com.c2se.roomily.repository.BanHistoryRepository;
+import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.BanService;
 import lombok.AllArgsConstructor;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class BanServiceImpl implements BanService {
     UserRepository userRepository;
     BanHistoryRepository banHistoryRepository;
+    RoomRepository roomRepository;
 
     @Override
     public Boolean banUser(String userId, String reason, LocalDateTime expiresAt) {
@@ -39,6 +42,7 @@ public class BanServiceImpl implements BanService {
         user.setStatus(UserStatus.BANNED);
         userRepository.save(user);
         banHistoryRepository.save(activeBan);
+        roomRepository.updateRoomStatusByLandlordId(userId, RoomStatus.BANNED);
         return true;
     }
 
@@ -53,6 +57,7 @@ public class BanServiceImpl implements BanService {
             activeBan.setExpiresAt(LocalDateTime.now());
             banHistoryRepository.save(activeBan);
         }
+        roomRepository.updateRoomStatusByLandlordId(userId, RoomStatus.AVAILABLE);
         return true;
     }
 

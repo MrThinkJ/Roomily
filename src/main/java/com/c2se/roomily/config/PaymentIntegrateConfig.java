@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import vn.payos.PayOS;
 
 @Configuration
-public class PaymentIntegrateConfiguration {
+public class PaymentIntegrateConfig {
     @Value("${payos.client-id}")
     private String clientId;
     @Value("${payos.api-key}")

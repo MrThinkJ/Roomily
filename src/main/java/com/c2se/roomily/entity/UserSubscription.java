@@ -26,10 +26,12 @@ public class UserSubscription {
     private LocalDateTime startDate;
     @Column(name = "end_date")
     private LocalDateTime endDate;
+    @Column(name = "auto_renew")
+    private boolean autoRenew;
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "subscription_id")
     private Subscription subscription;
 }

@@ -1,6 +1,5 @@
 package com.c2se.roomily.entity;
 
-import com.c2se.roomily.enums.SubscriptionType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,8 +19,10 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "subscription_id")
     private String id;
-    @Column(name = "subscription_type")
-    private SubscriptionType type;
-    @Column(name = "subscription_price")
     private BigDecimal price;
+    private String name;
+    private String description;
+    private int duration;
+    @Column(name = "details")
+    private String details;
 }
