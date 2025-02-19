@@ -64,7 +64,11 @@ public class RoomImageServiceImpl implements RoomImageService {
                         .build();
                 roomImageRepository.save(roomImage);
             } catch (Exception e) {
-                e.printStackTrace();
+                try {
+                    storageService.removeObject(storageConfig.getBucketStore(), imageName);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         }
     }
