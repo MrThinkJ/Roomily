@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "room_images")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,6 +21,7 @@ public class RoomImage {
     @Column(name = "room_image_id")
     private String id;
     private String name;
+    @Column(columnDefinition = "TEXT")
     private String url;
     @CreationTimestamp
     @Column(name = "created_at")

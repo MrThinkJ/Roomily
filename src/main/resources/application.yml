@@ -3,23 +3,3 @@ spring:
     name: Roomily
   profiles:
     active: dev
-  datasource:
-    url: jdbc:postgresql://xxx/roomily
-    username: xxx
-    password: xxx
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    generate-ddl: true
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-minio:
-  access-key: xxx
-  secret-key: xxx
-  url: http://xxx:9000
-  bucket:
-    image: images
-payos:
-  client-id: xxx
-  api-key: xxx
-  checksum-key: xxx

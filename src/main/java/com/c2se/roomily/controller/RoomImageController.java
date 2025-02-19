@@ -24,7 +24,7 @@ public class RoomImageController extends BaseController{
     }
 
     @PostMapping("rooms/{roomId}")
-    public void uploadRoomImages(@PathVariable String roomId, @RequestBody List<MultipartFile> images) {
+    public void uploadRoomImages(@PathVariable String roomId, @RequestParam("images") List<MultipartFile> images) {
         roomImageService.uploadRoomImages(roomId, images);
     }
 

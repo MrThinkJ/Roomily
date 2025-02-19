@@ -18,26 +18,31 @@ public class ReviewController extends BaseController{
     public ResponseEntity<ReviewResponse> getReview(@PathVariable String id) {
         return ResponseEntity.ok(reviewService.getReview(id));
     }
+
     @GetMapping("/users/{userId}")
     public ResponseEntity<List<ReviewResponse>> getReviewsByUserId(@PathVariable String userId) {
         return ResponseEntity.ok(reviewService.getReviewsByUserId(userId));
     }
+
     @GetMapping("/rooms/{roomId}")
     public ResponseEntity<List<ReviewResponse>> getReviewsByRoomId(@PathVariable String roomId) {
         return ResponseEntity.ok(reviewService.getReviewsByRoomId(roomId));
     }
+
     @PostMapping("/rooms/{roomId}")
     public ResponseEntity<Boolean> createReview(@PathVariable String roomId,
                                                 @RequestBody CreateReviewRequest createReviewRequest) {
         String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(reviewService.createReview(userId, roomId, createReviewRequest));
     }
+
     @PutMapping("/{id}")
     public ResponseEntity<Boolean> updateReview(@PathVariable String id,
                                                 @RequestBody CreateReviewRequest createReviewRequest) {
         String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(reviewService.updateReview(userId, id, createReviewRequest));
     }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Boolean> deleteReview(@PathVariable String id) {
         String userId = this.getUserInfo().getId();

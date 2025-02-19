@@ -3,6 +3,7 @@ package com.c2se.roomily.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "chat_messages")
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -26,9 +28,8 @@ public class ChatMessage {
     private boolean isRead;
     @Column(name = "image_url")
     private String imageUrl;
-    @ManyToOne
-    @JoinColumn(name = "chat_room_id")
-    private ChatRoom chatRoom;
+    @Column(name = "room_id")
+    private String roomId;
     @ManyToOne
     @JoinColumn(name = "sender_id")
     private User sender;
