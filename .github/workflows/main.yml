@@ -1,4 +1,4 @@
-name: BSN Backend API Pipeline
+name: Roomily
 
 on:
   push:
