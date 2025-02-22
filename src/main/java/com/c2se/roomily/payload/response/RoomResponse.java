@@ -27,6 +27,9 @@ public class RoomResponse {
     private String nearbyAmenities;
     private Integer maxPeople;
     private String landlordId;
+    private String deposit;
     private Set<Tag> tags;
     private Double squareMeters;
+    private String createdAt;
+    private String updatedAt;
 }

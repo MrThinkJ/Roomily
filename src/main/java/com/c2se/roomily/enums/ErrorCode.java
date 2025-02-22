@@ -13,7 +13,7 @@ public enum ErrorCode {
     USER_BANNED(1004, "User %s is banned"),
     USER_DELETED(1005, "User %s is deleted"),
     RESOURCE_EXISTS(1006, "%s already exists"),
-    FORBIDDEN(1007, "Forbidden access"),
+    FORBIDDEN(1007, "Forbidden access: %s"),
     CAN_NOT_DELETE(1008, "Can not delete %s"),
 
     // Authentication errors (1100-1199)

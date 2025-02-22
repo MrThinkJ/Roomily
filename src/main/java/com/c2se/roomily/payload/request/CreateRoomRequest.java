@@ -22,6 +22,7 @@ public class CreateRoomRequest {
     private String waterPrice;
     private String type;
     private int maxPeople;
+    private String deposit;
     private List<String> tagIds;
     private Double squareMeters;
 }

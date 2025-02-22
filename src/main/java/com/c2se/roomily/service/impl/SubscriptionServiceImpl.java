@@ -95,9 +95,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    public boolean isSubscribed(String userId, String subscriptionId) {
-        return userSubscriptionRepository.existsByUserIdAndSubscriptionIdAndEndDateAfter(
-                userId, subscriptionId, LocalDateTime.now());
+    public List<Boolean> isSubscribed(String userId, List<String> subscriptionId) {
+        return subscriptionId.stream()
+                .map(id -> userSubscriptionRepository.existsByUserIdAndSubscriptionIdAndEndDateAfter(
+                        userId, id, LocalDateTime.now()))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -136,10 +138,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    public Integer getMostPopularSubscriptionId() {
+    public String getMostPopularSubscriptionId() {
         LocalDateTime now = LocalDateTime.now();
         return userSubscriptionRepository.findMostPopularActiveSubscriptionId(now)
-            .map(Integer::parseInt)
             .orElse(null);
     }
 

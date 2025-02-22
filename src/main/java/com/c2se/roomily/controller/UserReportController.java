@@ -54,6 +54,7 @@ public class UserReportController extends BaseController {
             @PathVariable String reportedUserId,
             @RequestBody CreateUserReportRequest createUserReportRequest) {
         String reporterId = this.getUserInfo().getId();
+        createUserReportRequest.setReporterId(reporterId);
         return ResponseEntity.ok(userReportService.reportUser(reporterId, reportedUserId, createUserReportRequest));
     }
 
