@@ -38,11 +38,11 @@ public class SubscriptionController extends BaseController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/check/{subscriptionId}")
-    public ResponseEntity<Boolean> isSubscribed(@PathVariable String subscriptionId) {
-        String userId = getUserInfo().getId();
-        return ResponseEntity.ok(subscriptionService.isSubscribed(userId, subscriptionId));
-    }
+//    @GetMapping("/check")
+//    public ResponseEntity<List<Boolean>> isSubscribed(@RequestBody List<String> subscriptionIds) {
+//        String userId = getUserInfo().getId();
+//        return ResponseEntity.ok(subscriptionService.isSubscribed(userId, subscriptionIds));
+//    }
 
     @GetMapping
     public ResponseEntity<List<Subscription>> getSubscriptions() {
@@ -62,7 +62,7 @@ public class SubscriptionController extends BaseController {
     }
 
     @GetMapping("/popular")
-    public ResponseEntity<Integer> getMostPopularSubscriptionId() {
+    public ResponseEntity<String> getMostPopularSubscriptionId() {
         return ResponseEntity.ok(subscriptionService.getMostPopularSubscriptionId());
     }
 

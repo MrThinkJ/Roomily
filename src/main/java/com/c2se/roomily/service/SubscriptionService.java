@@ -11,11 +11,11 @@ public interface SubscriptionService {
     void subscribe(String userId, String subscriptionId);
     void unsubscribe(String userId);
     void renewSubscription(String userId);
-    boolean isSubscribed(String userId, String subscriptionId);
+    List<Boolean> isSubscribed(String userId, List<String> subscriptionId);
     List<Subscription> getSubscriptions();
     ActiveSubscriptionResponse getActiveSubscription(String userId);
     List<UserSubscriptionResponse> getUserSubscriptions(String userId);
-    Integer getMostPopularSubscriptionId();
+    String getMostPopularSubscriptionId();
     void updateSubscription(String subscriptionId, UpdateSubscriptionRequest updateSubscriptionRequest);
     void deleteSubscription(String subscriptionId);
 }
