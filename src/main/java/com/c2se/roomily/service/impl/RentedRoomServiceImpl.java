@@ -8,16 +8,16 @@ import com.c2se.roomily.enums.RentedRoomStatus;
 import com.c2se.roomily.enums.RoomStatus;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.request.CreateRentRequest;
 import com.c2se.roomily.payload.request.CreateRentedRoomRequest;
 import com.c2se.roomily.payload.request.UpdateRentedRoomRequest;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
-import com.c2se.roomily.repository.RentRoomCodeRepository;
+import com.c2se.roomily.repository.RentRequestRepository;
 import com.c2se.roomily.repository.RentedRoomRepository;
 import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.RentedRoomService;
 import lombok.AllArgsConstructor;
-import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +33,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     UserRepository userRepository;
     RoomRepository roomRepository;
     RentedRoomRepository rentedRoomRepository;
-    RentRoomCodeRepository rentRoomCodeRepository;
+    RentRequestRepository rentRequestRepository;
     @Override
     public List<RentedRoomResponse> getRentedRoomsByLandlordId(String landlordId) {
         return rentedRoomRepository.findByLandlordId(landlordId).stream()
@@ -67,34 +67,47 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 () -> new ResourceNotFoundException("Room", "roomId", createRentedRoomRequest.getRoomId()));
         if (room.getStatus() != RoomStatus.AVAILABLE)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not available");
-        RentedRoom rentedRoom = RentedRoom.builder()
-                .user(user)
-                .room(room)
-                .landlord(room.getLandlord())
-                .startDate(LocalDateTime.parse(createRentedRoomRequest.getStartDate()))
-                .endDate(LocalDateTime.parse(createRentedRoomRequest.getEndDate()))
-                .status(RentedRoomStatus.PENDING)
-                .build();
         String privateCode = UUID.randomUUID().toString();
-        rentRoomCodeRepository.save(userId, privateCode);
-        rentedRoomRepository.save(rentedRoom);
+        CreateRentRequest request = CreateRentRequest.builder()
+                .userId(userId)
+                .roomId(createRentedRoomRequest.getRoomId())
+                .landlordId(room.getLandlord().getId())
+                .startDate(createRentedRoomRequest.getStartDate())
+                .endDate(createRentedRoomRequest.getEndDate())
+                .privateCode(privateCode)
+                .createdAt(LocalDateTime.now())
+                .build();
+        rentRequestRepository.save(userId, request);
         return room.getId()+ "." +privateCode;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void acceptRent(String landlordId, String userId, String privateCode) {
         String roomId = privateCode.split("\\.")[0];
         String checkCode = privateCode.split("\\.")[1];
-        String code = rentRoomCodeRepository.findByUserId(userId);
-        if (!code.equals(checkCode))
+        CreateRentRequest rentRequest = rentRequestRepository.findByUserId(userId);
+        if (rentRequest == null || !rentRequest.getPrivateCode().equals(checkCode))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
-        RentedRoom rentedRoom = rentedRoomRepository.findActiveByRoomId(roomId);
-        if (rentedRoom == null)
-            throw new ResourceNotFoundException("RentedRoom", "roomId", roomId);
-        if (!rentedRoom.getLandlord().getId().equals(landlordId))
-            throw new APIException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "You are not the landlord of this room");
-        if (rentedRoom.getStatus() != RentedRoomStatus.PENDING)
+        Room room = roomRepository.findById(roomId).orElseThrow(
+                () -> new ResourceNotFoundException("Room", "roomId", roomId));
+        if (!room.getLandlord().getId().equals(landlordId))
+            throw new APIException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "Not Authorized");
+        if (room.getStatus() != RoomStatus.AVAILABLE)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not pending");
+        RentedRoom rentedRoom = RentedRoom.builder()
+                .user(userRepository.findById(userId).orElseThrow(
+                        () -> new ResourceNotFoundException("User", "userId", userId)))
+                .room(room)
+                .landlord(userRepository.findById(landlordId).orElseThrow(
+                        () -> new ResourceNotFoundException("User", "userId", landlordId)))
+                .startDate(LocalDateTime.parse(rentRequest.getStartDate()))
+                .endDate(LocalDateTime.parse(rentRequest.getEndDate()))
+                .status(RentedRoomStatus.RENTED)
+                .build();
+        rentedRoomRepository.save(rentedRoom);
+        room.setStatus(RoomStatus.RENTED);
+        roomRepository.save(room);
         rentedRoom.setStatus(RentedRoomStatus.RENTED);
         rentedRoomRepository.save(rentedRoom);
     }
