@@ -12,7 +12,7 @@ public class RentRoomCodeRepositoryImpl implements RentRoomCodeRepository {
     }
 
     @Override
-    public String findByCode(String rentRoomCode) {
+    public String findByUserId(String userId) {
         return null;
     }
 }
