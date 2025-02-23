@@ -61,7 +61,7 @@ jobs:
       - name: Build Docker image for ARM64
         run: |
           docker buildx create --use
-          docker buildx build --platform linux/arm64 -t ${{ env.APP_NAME }} . --push
+          docker buildx build --platform linux/arm64 -t ${{ env.APP_NAME }} .
 
       - name: Save Docker image
         run: docker save -o ${{ env.APP_NAME }}.tar ${{ env.APP_NAME }}
