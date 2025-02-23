@@ -21,7 +21,7 @@ env:
 
 jobs:
   compile:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Compile project
     steps:
       - name: Checkout code
@@ -40,7 +40,7 @@ jobs:
         run: mvn clean compile
         
   build-and-deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
