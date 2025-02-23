@@ -14,9 +14,9 @@ on:
 env:
   APP_NAME: roomily
   NETWORK: pi_shared_net
-  VIRTUAL_HOST: roomily.mrthinkj.site
-  LETSENCRYPT_EMAIL: blog@roomily.mrthinkj.site
-  DEPLOY_CONNECT: root@mrthinkj.site
+  VIRTUAL_HOST: app.mrthinkj.site
+  LETSENCRYPT_EMAIL: blog@app.mrthinkj.site
+  DEPLOY_CONNECT: pi@app.mrthinkj.site
 
 jobs:
   compile:
