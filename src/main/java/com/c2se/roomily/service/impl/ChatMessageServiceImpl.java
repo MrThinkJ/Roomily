@@ -2,12 +2,15 @@ package com.c2se.roomily.service.impl;
 
 import com.c2se.roomily.config.StorageConfig;
 import com.c2se.roomily.entity.ChatMessage;
+import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.ErrorCode;
 import com.c2se.roomily.exception.APIException;
+import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.ChatMessageToAdd;
 import com.c2se.roomily.payload.response.ChatMessageResponse;
 import com.c2se.roomily.repository.ChatMessageRepository;
+import com.c2se.roomily.repository.ChatRoomRepository;
 import com.c2se.roomily.service.ChatMessageService;
 import com.c2se.roomily.service.ChatRoomService;
 import com.c2se.roomily.service.StorageService;
@@ -26,6 +29,7 @@ import java.util.stream.Collectors;
 public class ChatMessageServiceImpl implements ChatMessageService {
     ChatMessageRepository chatMessageRepository;
     UserService userService;
+    ChatRoomRepository chatRoomRepository;
     ChatRoomService chatRoomService;
     StorageService storageService;
     StorageConfig storageConfig;
@@ -35,11 +39,18 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     public ChatMessageResponse saveChatMessage(ChatMessageToAdd chatMessageToAdd) {
         User sender = userService.getUserEntity(chatMessageToAdd.getSenderId());
         String roomId = chatMessageToAdd.getRoomId();
-        if (!chatRoomService.isUserInChatRoom(roomId, sender.getId()))
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid room id");
-
-        ChatMessage chatMessage = ChatMessage.builder().sender(sender).imageUrl(null).message(
-                chatMessageToAdd.getContent()).roomId(roomId).build();
+        if (!chatRoomRepository.existsById(roomId))
+            throw new ResourceNotFoundException("Chat room", "id", roomId);
+        ChatRoom chatRoom = chatRoomRepository.findByIdLocked(roomId).orElseThrow(
+                () -> new ResourceNotFoundException("Chat room", "id", roomId)
+        );
+        ChatMessage chatMessage = ChatMessage.builder()
+                .sender(sender)
+                .imageUrl(null)
+                .message(chatMessageToAdd.getContent())
+                .roomId(roomId)
+                .subId(chatRoom.getNextSubId()+1)
+                .build();
         if (chatMessageToAdd.getImage() != null) {
             String fileName = roomId + "_" + UUID.randomUUID();
             try {
@@ -50,7 +61,11 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                         "Error while saving image");
             }
         }
-
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(chatMessage.getCreatedAt());
+        chatRoom.setLastMessageSender(chatMessage.getSender().getId());
+        chatRoom.setNextSubId(chatRoom.getNextSubId()+1);
+        chatRoomRepository.save(chatRoom);
         chatMessageRepository.save(chatMessage);
         List<String> users = chatRoomService.getChatRoomUserIds(roomId);
         users.forEach(user -> messagingTemplate.convertAndSendToUser(user, "/queue/messages", chatMessage));

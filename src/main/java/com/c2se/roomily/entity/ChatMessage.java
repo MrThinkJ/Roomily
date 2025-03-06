@@ -20,7 +20,6 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "chat_message_id")
     private String id;
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "sub_id")
     private Integer subId;
     private String message;

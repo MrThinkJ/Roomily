@@ -24,6 +24,8 @@ public class ChatRoom {
     private String name;
     @Column(name = "manager_id")
     private String managerId;
+    @Column(name = "next_sub_id")
+    private Integer nextSubId = 1;
     @Enumerated(EnumType.STRING)
     private ChatRoomType type;
     @Column(name = "last_message")

@@ -14,7 +14,7 @@ public interface FavoriteRepository extends JpaRepository<Favorite, String> {
     boolean existsByUserIdAndRoomId(String userId, String roomId);
 
     @Modifying
-    @Query("update Favorite f set f.isFavorite = not(f.isFavorite) where f.room = :roomId and f.user = :userId")
+    @Query("UPDATE Favorite f SET f.isFavorite = CASE WHEN f.isFavorite = true THEN false ELSE true END WHERE f.user.id = :userId AND f.room.id = :roomId")
     void toggleByUserIdAndRoomId(@Param(":userId") String userId,
                                  @Param(":userId") String roomId);
 
