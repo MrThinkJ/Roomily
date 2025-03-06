@@ -1,0 +1,101 @@
+name: Roomily
+
+on:
+  push:
+    branches:
+      - master
+      - test
+    paths:
+      - 'src/**'
+      - 'pom.xml'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.github/workflows/main.yml'
+
+env:
+  APP_NAME: roomily
+  NETWORK: pi_shared_net
+  VIRTUAL_HOST: app.mrthinkj.site
+  LETSENCRYPT_EMAIL: blog@app.mrthinkj.site
+  DEPLOY_CONNECT: pi@app.mrthinkj.site
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    name: Compile project
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Compile project
+        run: mvn clean compile
+        
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Enable QEMU for ARM64 builds
+        run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+      - name: Build Docker image for ARM64
+        run: |
+          docker buildx create --use
+          docker buildx build --platform linux/arm64 -t ${{ env.APP_NAME }} . --load
+
+      - name: Save Docker image
+        run: docker save -o ${{ env.APP_NAME }}.tar ${{ env.APP_NAME }}
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H mrthinkj.site >> ~/.ssh/known_hosts
+
+      - name: Copy files to VPS
+        run: |
+          scp -o StrictHostKeyChecking=no ./${{ env.APP_NAME }}.tar ${{ env.DEPLOY_CONNECT }}:~
+          scp -o StrictHostKeyChecking=no ./docker-compose.yml ${{ env.DEPLOY_CONNECT }}:~
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_CONNECT }} "
+            docker compose -f docker-compose.yml up -d && \
+            docker load -i ${{ env.APP_NAME }}.tar && \
+            docker rm -f ${{ env.APP_NAME }} || true && \
+            docker run -d \
+              --name ${{ env.APP_NAME }} \
+              -p 8080:8080 \
+              --network ${{ env.NETWORK }} \
+              -e VIRTUAL_HOST=\"${{ env.VIRTUAL_HOST }}\" \
+              -e VIRTUAL_PORT=8080 \
+              -e LETSENCRYPT_HOST=\"${{ env.VIRTUAL_HOST }}\" \
+              -e LETSENCRYPT_EMAIL=\"${{ env.LETSENCRYPT_EMAIL }}\" \
+              ${{ env.APP_NAME }}
+          "
+
+      - name: Cleanup
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_CONNECT }} "rm -f ~/${{ env.APP_NAME }}.tar"
+          rm -f ~/.ssh/id_rsa
