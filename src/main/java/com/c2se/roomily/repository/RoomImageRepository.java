@@ -12,6 +12,8 @@ import java.util.List;
 public interface RoomImageRepository extends JpaRepository<RoomImage, String> {
     @Query("SELECT url FROM RoomImage WHERE room.id = :roomId")
     List<String> findUrlsByRoomId(@Param("roomId") String roomId);
+
     List<RoomImage> findByRoomId(String roomId);
+
     List<RoomImage> findByRoomIdAndIdIn(String roomId, List<String> imageIds);
 }

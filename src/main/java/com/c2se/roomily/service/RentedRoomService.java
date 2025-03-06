@@ -8,12 +8,23 @@ import java.util.List;
 
 public interface RentedRoomService {
     List<RentedRoomResponse> getRentedRoomsByLandlordId(String landlordId);
+
     List<RentedRoomResponse> getRentedRoomHistoryByRoomId(String roomId);
+
     RentedRoomResponse getRentedRoomByRoomId(String roomId);
+
     List<RentedRoomResponse> getRentedRoomsByUserId(String userId);
+
     String requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest);
-    void acceptRent(String landlordId, String userId, String privateCode);
-    void cancelRent(String landlordId, String roomId);
+
+    void cancelRentRequest(String userId, String privateCode);
+
+    void acceptRent(String landlordId, String privateCode);
+
+    void denyRent(String landlordId, String privateCode);
+
+    void cancelRent(String userId, String roomId);
+
     void updateRentedRoom(String landlordId, String roomId, UpdateRentedRoomRequest updateRentedRoomRequest);
 //    void deleteRentedRoom(String landlordId, String roomId);
 }

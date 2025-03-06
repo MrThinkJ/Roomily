@@ -11,8 +11,9 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/room-images")
-public class RoomImageController extends BaseController{
+public class RoomImageController extends BaseController {
     RoomImageService roomImageService;
+
     @GetMapping("/urls/rooms/{roomId}")
     public List<String> getRoomImageUrlsByRoomId(@PathVariable String roomId) {
         return roomImageService.getRoomImageUrlsByRoomId(roomId);

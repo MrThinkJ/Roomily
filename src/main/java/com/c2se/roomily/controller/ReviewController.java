@@ -12,8 +12,9 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/reviews")
-public class ReviewController extends BaseController{
+public class ReviewController extends BaseController {
     ReviewService reviewService;
+
     @GetMapping("/{id}")
     public ResponseEntity<ReviewResponse> getReview(@PathVariable String id) {
         return ResponseEntity.ok(reviewService.getReview(id));

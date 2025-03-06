@@ -22,6 +22,7 @@ public class RoomReportServiceImpl implements RoomReportService {
     RoomRepository roomRepository;
     UserRepository userRepository;
     RoomReportRepository roomReportRepository;
+
     @Override
     public void reportRoom(String reporterId, CreateRoomReportRequest createRoomReportRequest) {
         User reporter = userRepository.findById(reporterId).orElseThrow(
@@ -37,11 +38,6 @@ public class RoomReportServiceImpl implements RoomReportService {
                 .reason(createRoomReportRequest.getReason())
                 .build();
         roomReportRepository.save(roomReport);
-    }
-
-    @Override
-    public Boolean hasAlreadyReported(String reporterId, String roomId) {
-        return roomReportRepository.existsByReporterIdAndRoomId(reporterId, roomId);
     }
 
     @Override

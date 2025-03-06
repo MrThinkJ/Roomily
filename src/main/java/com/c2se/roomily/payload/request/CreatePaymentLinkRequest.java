@@ -6,11 +6,11 @@ import lombok.Data;
 @Data
 @Builder
 public class CreatePaymentLinkRequest {
-//    @NotBlank(message = "Product name is required")
+    //    @NotBlank(message = "Product name is required")
     private String productName;
-//    @NotBlank(message = "Description is required")
+    //    @NotBlank(message = "Description is required")
     private String description;
-//    @NotNull(message = "Price is required")
+    //    @NotNull(message = "Price is required")
 //    @Min(value = 0, message = "Price must be a positive number")
     private int price;
 }

@@ -5,7 +5,7 @@ import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public abstract class BusinessException extends RuntimeException{
+public abstract class BusinessException extends RuntimeException {
     private final HttpStatus httpStatus;
     private final ErrorCode errorCode;
     private final Object[] args;

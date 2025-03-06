@@ -28,6 +28,7 @@ public class RoomImageServiceImpl implements RoomImageService {
     RoomRepository roomRepository;
     StorageService storageService;
     StorageConfig storageConfig;
+
     @Override
     public List<String> getRoomImageUrlsByRoomId(String roomId) {
         Room room = roomRepository.findById(roomId).orElseThrow(
@@ -54,7 +55,7 @@ public class RoomImageServiceImpl implements RoomImageService {
 
         for (MultipartFile image : images) {
             String imageName = generateImageName(roomId, image.getOriginalFilename());
-            try{
+            try {
                 storageService.putObject(image, storageConfig.getBucketStore(), imageName);
                 String imageUrl = storageService.generatePresignedUrl(storageConfig.getBucketStore(), imageName);
                 RoomImage roomImage = RoomImage.builder()
@@ -95,7 +96,7 @@ public class RoomImageServiceImpl implements RoomImageService {
 
     private String generateImageName(String roomId, String originalFilename) {
         String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        return roomId+"-"+UUID.randomUUID()+extension;
+        return roomId + "-" + UUID.randomUUID() + extension;
     }
 
     private RoomImageResponse mapToResponse(RoomImage roomImage) {
@@ -104,7 +105,7 @@ public class RoomImageServiceImpl implements RoomImageService {
                 .name(roomImage.getName())
                 .url(roomImage.getUrl())
                 .roomId(roomImage.getRoom().getId())
-                .createdAt(roomImage.getCreatedDate().toString())
+                .createdAt(roomImage.getCreatedDate())
                 .build();
     }
 }

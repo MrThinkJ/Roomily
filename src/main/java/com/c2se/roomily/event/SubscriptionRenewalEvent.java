@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class SubscriptionRenewalEvent implements AppEvent{
+public class SubscriptionRenewalEvent implements AppEvent {
     private String subscriptionId;
     private LocalDateTime renewalTime;
 }

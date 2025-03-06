@@ -4,17 +4,17 @@ import com.c2se.roomily.entity.BanHistory;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.RoomStatus;
 import com.c2se.roomily.enums.UserStatus;
-import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.response.BanHistoryResponse;
 import com.c2se.roomily.repository.BanHistoryRepository;
-import com.c2se.roomily.repository.RoomRepository;
-import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.BanService;
+import com.c2se.roomily.service.RoomService;
+import com.c2se.roomily.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,48 +23,48 @@ import java.util.stream.Collectors;
 @Service
 @AllArgsConstructor
 public class BanServiceImpl implements BanService {
-    UserRepository userRepository;
+    UserService userService;
     BanHistoryRepository banHistoryRepository;
-    RoomRepository roomRepository;
+    RoomService roomService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean banUser(String userId, String reason, LocalDateTime expiresAt) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-        BanHistory activeBan = banHistoryRepository.findActiveBanByUserId(userId).orElse(
-                BanHistory.builder()
-                        .user(user)
-                        .reason(reason)
-                        .bannedAt(LocalDateTime.now())
-                        .expiresAt(expiresAt)
-                        .build()
-        );
-        user.setStatus(UserStatus.BANNED);
-        userRepository.save(user);
+        User user = userService.getUserEntity(userId);
+        if (banHistoryRepository.existsActiveBanByUserId(userId)) {
+            return false;
+        }
+        if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Ban expiration must be in the future");
+        }
+        BanHistory activeBan = BanHistory.builder()
+                .user(user)
+                .reason(reason)
+                .bannedAt(LocalDateTime.now())
+                .expiresAt(expiresAt)
+                .build();
         banHistoryRepository.save(activeBan);
-        roomRepository.updateRoomStatusByLandlordId(userId, RoomStatus.BANNED);
+        userService.updateUserStatus(user, UserStatus.BANNED);
+        roomService.updateRoomStatusByLandlordId(userId, RoomStatus.BANNED);
         return true;
     }
 
     @Override
     public Boolean unbanUser(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-        user.setStatus(UserStatus.ACTIVE);
-        userRepository.save(user);
+        User user = userService.getUserEntity(userId);
         BanHistory activeBan = banHistoryRepository.findActiveBanByUserId(userId).orElse(null);
-        if (activeBan != null) {
-            activeBan.setExpiresAt(LocalDateTime.now());
-            banHistoryRepository.save(activeBan);
-        }
-        roomRepository.updateRoomStatusByLandlordId(userId, RoomStatus.AVAILABLE);
+        if (activeBan == null)
+            return false;
+        activeBan.setExpiresAt(LocalDateTime.now());
+        banHistoryRepository.save(activeBan);
+        userService.updateUserStatus(user, UserStatus.ACTIVE);
+        roomService.updateRoomStatusByLandlordId(userId, RoomStatus.AVAILABLE);
         return true;
     }
 
     @Override
     public Boolean isUserBanned(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        User user = userService.getUserEntity(userId);
         return UserStatus.BANNED.equals(user.getStatus());
     }
 
@@ -90,9 +90,9 @@ public class BanServiceImpl implements BanService {
                 .id(banHistory.getId())
                 .userId(banHistory.getUser().getId())
                 .reason(banHistory.getReason())
-                .bannedAt(banHistory.getBannedAt().toString())
-                .expiresAt(banHistory.getExpiresAt() != null ? 
-                        banHistory.getExpiresAt().toString() : null)
+                .bannedAt(banHistory.getBannedAt())
+                .expiresAt(banHistory.getExpiresAt() != null ?
+                        banHistory.getExpiresAt() : null)
                 .build();
     }
 } 

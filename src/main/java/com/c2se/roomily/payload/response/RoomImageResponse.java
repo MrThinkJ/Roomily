@@ -1,5 +1,6 @@
 package com.c2se.roomily.payload.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
@@ -12,5 +13,6 @@ public class RoomImageResponse {
     private String name;
     private String url;
     private String roomId;
-    private String createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;
 }

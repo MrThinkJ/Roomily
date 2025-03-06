@@ -7,7 +7,6 @@ import com.c2se.roomily.enums.ErrorCode;
 import com.c2se.roomily.event.SubscriptionRenewalEvent;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
-import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.request.UpdateSubscriptionRequest;
 import com.c2se.roomily.payload.response.ActiveSubscriptionResponse;
 import com.c2se.roomily.payload.response.UserSubscriptionResponse;
@@ -17,10 +16,10 @@ import com.c2se.roomily.repository.UserSubscriptionRepository;
 import com.c2se.roomily.service.EventService;
 import com.c2se.roomily.service.NotificationService;
 import com.c2se.roomily.service.SubscriptionService;
+import com.c2se.roomily.service.UserService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +33,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @Slf4j
 public class SubscriptionServiceImpl implements SubscriptionService {
-    UserRepository userRepository;
+    UserService userService;
     SubscriptionRepository subscriptionRepository;
     NotificationService notificationService;
     UserSubscriptionRepository userSubscriptionRepository;
@@ -47,8 +46,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new IllegalArgumentException("User already subscribed to this subscription");
         }
 
-        User user = userRepository.findById(userId).orElseThrow(
-                () -> new ResourceNotFoundException("User", "id", userId));
+        User user = userService.getUserEntity(userId);
         Subscription subscription = subscriptionRepository.findById(subscriptionId).orElseThrow(
                 () -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
 
@@ -60,7 +58,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         UserSubscription userSubscription = userSubscriptionRepository.findByUserIdAndEndDateAfter(
-                userId, LocalDateTime.now())
+                        userId, LocalDateTime.now())
                 .orElse(UserSubscription.builder()
                         .user(user)
                         .subscription(subscription)
@@ -126,8 +124,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .details(subscription.getDetails())
                 .autoRenew(userSubscription.isAutoRenew())
                 .subscriptionId(userSubscription.getSubscription().getId())
-                .startDate(userSubscription.getStartDate().toString())
-                .endDate(userSubscription.getEndDate().toString())
+                .startDate(userSubscription.getStartDate())
+                .endDate(userSubscription.getEndDate())
                 .build();
     }
 
@@ -138,10 +136,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    public List<String> getLandlordsWithActiveSubscriptions() {
+        // TODO: Cache this
+        return userSubscriptionRepository.findLandlordsWithActiveSubscriptions();
+    }
+
+    @Override
+    public boolean hasActiveSubscription(String landlordId) {
+        return userSubscriptionRepository.hasActiveSubscription(landlordId);
+    }
+    @Override
     public String getMostPopularSubscriptionId() {
         LocalDateTime now = LocalDateTime.now();
         return userSubscriptionRepository.findMostPopularActiveSubscriptionId(now)
-            .orElse(null);
+                .orElse(null);
     }
 
     @Override
@@ -184,8 +192,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .subscriptionId(userSubscription.getSubscription().getId())
                 .subscriptionName(userSubscription.getSubscription().getName())
                 .subscriptionId(userSubscription.getSubscription().getId())
-                .startDate(userSubscription.getStartDate().toString())
-                .endDate(userSubscription.getEndDate().toString())
+                .startDate(userSubscription.getStartDate())
+                .endDate(userSubscription.getEndDate())
                 .build();
     }
 }

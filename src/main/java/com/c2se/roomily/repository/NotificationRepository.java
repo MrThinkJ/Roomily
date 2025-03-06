@@ -12,7 +12,9 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, String> {
     List<Notification> findByUserId(String userId);
+
     List<Notification> findByUserIdAndIsRead(String userId, Boolean isRead);
+
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.id = :userId")
     void markAllNotificationsAsRead(@Param("userId") String userId);

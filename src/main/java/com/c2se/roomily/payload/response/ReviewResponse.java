@@ -1,5 +1,6 @@
 package com.c2se.roomily.payload.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,6 +16,8 @@ public class ReviewResponse {
     private String userId;
     private String userName;
     private String profilePicture;
-    private String createdAt;
-    private String updatedAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime updatedAt;
 }

@@ -8,7 +8,6 @@ import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.repository.UserSubscriptionRepository;
-import com.c2se.roomily.service.EventService;
 import com.c2se.roomily.service.NotificationService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

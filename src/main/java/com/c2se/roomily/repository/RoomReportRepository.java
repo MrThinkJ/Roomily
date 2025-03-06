@@ -7,11 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
 public interface RoomReportRepository extends JpaRepository<RoomReport, String> {
     boolean existsByReporterIdAndRoomId(String reporterId, String roomId);
+
     @Query("update RoomReport r set r.status = :status where r.room.id = :roomId and r.status = 'pending'")
-    void updateRoomReportStatusByRoomId(String roomId, @Param("status")ReportStatus status);
+    void updateRoomReportStatusByRoomId(String roomId, @Param("status") ReportStatus status);
 }

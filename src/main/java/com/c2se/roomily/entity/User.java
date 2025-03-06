@@ -10,7 +10,6 @@ import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -25,11 +24,13 @@ import java.util.Set;
 @Builder
 @DynamicInsert
 @DynamicUpdate
-public class User{
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "user_id")
     private String id;
+    @Column(name = "private_id")
+    private String privateId;
     private String username;
     private String password;
     private String fullName;

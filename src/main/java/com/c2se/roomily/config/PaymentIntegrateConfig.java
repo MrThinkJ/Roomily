@@ -13,6 +13,7 @@ public class PaymentIntegrateConfig {
     private String apiKey;
     @Value("${payos.checksum-key}")
     private String checksumKey;
+
     @Bean
     public PayOS payOS() {
         return new PayOS(clientId, apiKey, checksumKey);

@@ -13,9 +13,9 @@ import com.c2se.roomily.payload.request.CreatePaymentLinkRequest;
 import com.c2se.roomily.payload.response.CheckoutResponse;
 import com.c2se.roomily.payload.response.PaymentLinkResponse;
 import com.c2se.roomily.repository.TransactionRepository;
-import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.NotificationService;
 import com.c2se.roomily.service.PaymentProcessingService;
+import com.c2se.roomily.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
@@ -36,8 +36,9 @@ import java.util.stream.Collectors;
 public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     PayOS payOS;
     TransactionRepository transactionRepository;
-    UserRepository userRepository;
+    UserService userService;
     NotificationService notificationService;
+
     @Override
     public CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest) {
         log.info("Creating payment link for amount: {}", paymentLinkRequest.getPrice());
@@ -84,24 +85,24 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } catch (Exception e) {
             log.error("Payment link creation failed: {}", e.getMessage(), e);
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    " .Error: "+e.getMessage());
+                    " .Error: " + e.getMessage());
         }
     }
 
     @Override
     public PaymentLinkResponse getPaymentLinkData(long paymentLinkId) {
-        try{
+        try {
             PaymentLinkData data = payOS.getPaymentLinkInformation(paymentLinkId);
             return mapToPaymentLinkDto(data);
         } catch (Exception e) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_LINK_GET_FAILED,
-                    paymentLinkId+". Error: "+e.getMessage());
+                    paymentLinkId + ". Error: " + e.getMessage());
         }
     }
 
     @Override
     public PaymentLinkResponse cancelPaymentLink(long paymentLinkId) {
-        try{
+        try {
             PaymentLinkData data = payOS.cancelPaymentLink(paymentLinkId, null);
             Transaction transaction = transactionRepository.findByPaymentId(data.getId());
             transaction.setStatus(TransactionStatus.CANCELLED);
@@ -118,7 +119,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } catch (Exception e) {
             log.error("Failed to cancel payment link: {}", e.getMessage(), e);
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    "Failed when cancel payment. Error: "+e.getMessage());
+                    "Failed when cancel payment. Error: " + e.getMessage());
         }
     }
 
@@ -133,14 +134,14 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             return response;
         } catch (Exception e) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    "Failed to confirm webhook. Error: "+e.getMessage());
+                    "Failed to confirm webhook. Error: " + e.getMessage());
         }
     }
 
     @Override
     public void payosTransferHandler(ObjectNode body) {
         ObjectMapper objectMapper = new ObjectMapper();
-        try{
+        try {
             Webhook webhookBody = Webhook.builder()
                     .code(body.findValue("code").asText())
                     .desc(body.findValue("desc").asText())
@@ -149,21 +150,21 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                     .signature(body.findValue("signature").asText())
                     .build();
             WebhookData data = payOS.verifyPaymentWebhookData(webhookBody);
-            if (webhookBody.getSuccess()){
-                if (data.getOrderCode() == 123){
+            if (webhookBody.getSuccess()) {
+                if (data.getOrderCode() == 123) {
                     return;
                 }
                 PaymentLinkData paymentLinkData = payOS.getPaymentLinkInformation(data.getOrderCode());
-                if (paymentLinkData == null){
+                if (paymentLinkData == null) {
                     log.error("Payment link not found for order code: {}", data.getOrderCode());
                     throw new ResourceNotFoundException("PaymentLink", "orderCode", data.getOrderCode().toString());
                 }
                 Transaction transaction = transactionRepository.findByPaymentId(data.getPaymentLinkId());
-                if (transaction == null){
+                if (transaction == null) {
                     log.error("Transaction not found for payment link: {}", data.getPaymentLinkId());
                     throw new ResourceNotFoundException("Transaction", "paymentId", data.getPaymentLinkId());
                 }
-                if (data.getAmount() < transaction.getAmount().doubleValue()){
+                if (data.getAmount() < transaction.getAmount().doubleValue()) {
                     CreateNotificationRequest notification = CreateNotificationRequest.builder()
                             .header("Thanh toán chưa đủ tiền")
                             .body("Bạn chưa thanh toán đủ số tiền, vui lòng thanh toán thêm.")
@@ -176,9 +177,11 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 transaction.setStatus(TransactionStatus.COMPLETED);
                 transaction.setUpdatedAt(LocalDateTime.now());
                 transactionRepository.save(transaction);
+
                 User user = transaction.getUser();
                 user.setBalance(user.getBalance().add(BigDecimal.valueOf(data.getAmount())));
-                userRepository.save(user);
+                userService.saveUser(user);
+
                 CreateNotificationRequest notification = CreateNotificationRequest.builder()
                         .header("Thanh toán thành công")
                         .body("Thanh toán của bạn đã thực hiện thành công.")
@@ -186,7 +189,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                         .build();
                 notificationService.sendNotification(notification);
                 log.info("Successfully handled payos transfer for user: {}", user.getUsername());
-            } else{
+            } else {
                 Transaction transaction = transactionRepository.findByPaymentId(data.getPaymentLinkId());
                 transaction.setStatus(TransactionStatus.FAILED);
                 transactionRepository.save(transaction);
@@ -198,10 +201,10 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 notificationService.sendNotification(notification);
                 log.error("Failed to handle payos transfer for payment link: {}", data.getPaymentLinkId());
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             log.error("Failed to handle payos transfer: {}", e.getMessage(), e);
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    "Failed to handle payos transfer. Error: "+e.getMessage());
+                    "Failed to handle payos transfer. Error: " + e.getMessage());
         }
     }
 

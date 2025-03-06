@@ -1,6 +1,7 @@
 package com.c2se.roomily.controller;
 
 import com.c2se.roomily.payload.request.CreateRoomRequest;
+import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.service.RoomService;
@@ -13,7 +14,7 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/rooms")
-public class RoomController extends BaseController{
+public class RoomController extends BaseController {
     RoomService roomService;
 
     @GetMapping("/{roomId}")
@@ -26,16 +27,30 @@ public class RoomController extends BaseController{
         return ResponseEntity.ok(roomService.getRoomsByLandlordId(landlordId));
     }
 
-    @GetMapping("/filter")
-    public ResponseEntity<List<RoomResponse>> getRoomsByFilter(@RequestParam(defaultValue = "") String city,
-                                                               @RequestParam(defaultValue = "") String district,
-                                                               @RequestParam(defaultValue = "") String ward,
-                                                               @RequestParam(defaultValue = "") String type,
-                                                               @RequestParam(defaultValue = "0") Double minPrice,
-                                                               @RequestParam(defaultValue = "99999999999") Double maxPrice,
-                                                               @RequestParam(defaultValue = "0") Integer minPeople,
-                                                               @RequestParam(defaultValue = "10") Integer maxPeople) {
-        return ResponseEntity.ok(roomService.getRoomsByFilter(city, district, ward, type, minPrice, maxPrice, minPeople, maxPeople));
+    @PostMapping("/filter")
+    public ResponseEntity<List<RoomResponse>> getRoomsByFilter(@RequestBody RoomFilterRequest filterRequest) {
+        return ResponseEntity.ok(
+                roomService.getRoomsByFilter(filterRequest)
+        );
+    }
+
+    @GetMapping("/average-price")
+    public ResponseEntity<Double> getAveragePriceAroundRoom(@RequestParam String roomId, @RequestParam Double radius) {
+        return ResponseEntity.ok(roomService.getAveragePriceAroundRoom(roomId, radius).doubleValue());
+    }
+
+    @GetMapping("/subscribed/nearby")
+    public ResponseEntity<List<RoomResponse>> getSubscribedRoomsNearby(@RequestParam double latitude,
+                                                                       @RequestParam double longitude,
+                                                                       @RequestParam double radiusKm) {
+        return ResponseEntity.ok(roomService.getSubscribedRoomsNearby(latitude, longitude, radiusKm));
+    }
+
+    @GetMapping("/subscribed/location")
+    public ResponseEntity<List<RoomResponse>> getSubscribedRoomsByLocation(@RequestParam String city,
+                                                                          @RequestParam String district,
+                                                                          @RequestParam String ward) {
+        return ResponseEntity.ok(roomService.getSubscribedRoomsByLocation(city, district, ward));
     }
 
     @PostMapping

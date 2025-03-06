@@ -12,8 +12,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/rented-rooms")
 @AllArgsConstructor
-public class RentedRoomController extends BaseController{
+public class RentedRoomController extends BaseController {
     RentedRoomService rentedRoomService;
+
     @GetMapping("/landlord/{landlordId}")
     public List<RentedRoomResponse> getRentedRoomsByLandlordId(@PathVariable String landlordId) {
         return rentedRoomService.getRentedRoomsByLandlordId(landlordId);
@@ -40,10 +41,32 @@ public class RentedRoomController extends BaseController{
         return ResponseEntity.ok(rentedRoomService.requestRent(userId, createRentedRoomRequest));
     }
 
-    @PostMapping("/accept/user/{userId}/private-code/{privateCode}")
-    public void acceptRentedRoom(@PathVariable String userId, @PathVariable String privateCode) {
+    @DeleteMapping("request/cancel")
+    public ResponseEntity<Void> cancelRentRequest(@RequestParam String roomId) {
+        String userId = this.getUserInfo().getId();
+        rentedRoomService.cancelRentRequest(userId, roomId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/cancel/{roomId}")
+    public ResponseEntity<Void> cancelRent(@PathVariable String roomId) {
+        String userId = this.getUserInfo().getId();
+        rentedRoomService.cancelRent(userId, roomId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/accept")
+    public ResponseEntity<Void> acceptRentedRoom(@RequestBody String privateCode){
         String landlordId = this.getUserInfo().getId();
-        rentedRoomService.acceptRent(landlordId, userId, privateCode);
+        rentedRoomService.acceptRent(landlordId, privateCode);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/deny")
+    public ResponseEntity<Void> denyRentedRoom(@RequestBody String privateCode){
+        String landlordId = this.getUserInfo().getId();
+        rentedRoomService.denyRent(landlordId, privateCode);
+        return ResponseEntity.ok().build();
     }
 
 }

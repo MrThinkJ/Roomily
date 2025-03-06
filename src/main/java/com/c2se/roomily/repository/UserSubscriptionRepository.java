@@ -13,16 +13,44 @@ import java.util.Optional;
 @Repository
 public interface UserSubscriptionRepository extends JpaRepository<UserSubscription, String> {
     boolean existsByUserIdAndSubscriptionIdAndEndDateAfter(String userId, String subscriptionId, LocalDateTime endDate);
+
     List<UserSubscription> findByUserId(String userId);
+
     List<UserSubscription> findByEndDateBetweenAndAutoRenewIsTrue(LocalDateTime startDate, LocalDateTime endDate);
+
     Optional<UserSubscription> findByUserIdAndSubscriptionId(String userId, String subscriptionId);
+
     Optional<UserSubscription> findByUserIdAndEndDateAfter(String userId, LocalDateTime endDate);
+
     Optional<UserSubscription> findByEndDateAfter(LocalDateTime endDate);
 
     @Query("SELECT us.subscription.id FROM UserSubscription us " +
-           "WHERE us.endDate > :now " +
-           "GROUP BY us.subscription.id " +
-           "ORDER BY COUNT(us) DESC " +
-           "LIMIT 1")
+            "WHERE us.endDate > :now " +
+            "GROUP BY us.subscription.id " +
+            "ORDER BY COUNT(us) DESC " +
+            "LIMIT 1")
     Optional<String> findMostPopularActiveSubscriptionId(@Param("now") LocalDateTime now);
+
+    @Query("""
+            SELECT COUNT(us) > 0
+            FROM UserSubscription us
+            WHERE us.user.id = :landlordId
+            AND us.endDate > CURRENT_TIMESTAMP
+            """)
+    boolean hasActiveSubscription(@Param("landlordId") String landlordId);
+    
+    @Query("""
+            SELECT us.user.id
+            FROM UserSubscription us
+            WHERE us.endDate > CURRENT_TIMESTAMP
+            """)
+    List<String> findLandlordsWithActiveSubscriptions();
+    
+    @Query("""
+            SELECT us.subscription.name
+            FROM UserSubscription us
+            WHERE us.user.id = :landlordId
+            AND us.endDate > CURRENT_TIMESTAMP
+            """)
+    String findActiveSubscriptionLevel(@Param("landlordId") String landlordId);
 }

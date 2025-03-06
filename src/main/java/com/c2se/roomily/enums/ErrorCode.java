@@ -57,6 +57,7 @@ public enum ErrorCode {
     @Getter
     private final int code;
     private final String messageTemplate;
+
     public String getMessage(Object... args) {
         return String.format(messageTemplate, args);
     }

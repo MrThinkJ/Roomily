@@ -36,6 +36,7 @@ public class BillLog {
     private BigDecimal electricityBill;
     @Column(name = "water_bill")
     private BigDecimal waterBill;
+    private BigDecimal rent;
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private BillStatus billStatus;

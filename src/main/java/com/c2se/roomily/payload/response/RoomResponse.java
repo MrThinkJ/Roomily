@@ -1,10 +1,12 @@
 package com.c2se.roomily.payload.response;
 
 import com.c2se.roomily.entity.Tag;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Data
@@ -30,6 +32,9 @@ public class RoomResponse {
     private String deposit;
     private Set<Tag> tags;
     private Double squareMeters;
-    private String createdAt;
-    private String updatedAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime updatedAt;
+    private boolean isSubscribed;
 }

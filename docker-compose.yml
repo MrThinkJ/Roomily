@@ -1,4 +1,15 @@
 services:
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - /var/lib/redis/data:/data
+    environment:
+      - REDIS_USERNAME=root
+      - REDIS_PASSWORD=roomily
+      - REDIS_PORT=6379
   minio:
     image: minio/minio
     container_name: minio

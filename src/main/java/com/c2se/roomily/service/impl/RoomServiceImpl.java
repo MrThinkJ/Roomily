@@ -8,18 +8,25 @@ import com.c2se.roomily.enums.RoomStatus;
 import com.c2se.roomily.enums.RoomType;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.dao.RoomDao;
 import com.c2se.roomily.payload.request.CreateRoomRequest;
+import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.repository.RoomRepository;
-import com.c2se.roomily.repository.TagRepository;
-import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.RoomService;
+import com.c2se.roomily.service.SubscriptionService;
+import com.c2se.roomily.service.TagService;
+import com.c2se.roomily.service.UserService;
+import com.c2se.roomily.util.AppConstants;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -29,41 +36,158 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class RoomServiceImpl implements RoomService {
     RoomRepository roomRepository;
-    TagRepository tagRepository;
-    UserRepository userRepository;
+    TagService tagService;
+    UserService userService;
+    SubscriptionService subscriptionService;
+
+
+    static RoomResponse getRoomResponse(Room room) {
+        return RoomResponse.builder()
+                .id(room.getId())
+                .title(room.getTitle())
+                .description(room.getDescription())
+                .address(room.getAddress())
+                .status(room.getStatus().name())
+                .price(room.getPrice())
+                .latitude(room.getLatitude())
+                .longitude(room.getLongitude())
+                .city(room.getCity())
+                .district(room.getDistrict())
+                .ward(room.getWard())
+                .electricPrice(room.getElectricPrice())
+                .waterPrice(room.getWaterPrice())
+                .type(room.getType().name())
+                .nearbyAmenities(room.getNearbyAmenities())
+                .maxPeople(room.getMaxPeople())
+                .landlordId(room.getLandlord().getId())
+                .tags(room.getTags())
+                .deposit(room.getDeposit())
+                .createdAt(room.getCreatedAt())
+                .updatedAt(room.getUpdatedAt())
+                .squareMeters(room.getSquareMeters())
+                .build();
+    }
+
+    @Override
+    public Room getRoomEntityById(String roomId) {
+        return roomRepository.findById(roomId).orElseThrow(
+                () -> new ResourceNotFoundException("Room", "Id", roomId)
+        );
+    }
+
     @Override
     public RoomResponse getRoomById(String roomId) {
-        Room room = roomRepository.findById(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("Room", "id", roomId)
-        );
+        Room room = getRoomEntityById(roomId);
         return this.mapToRoomResponse(room);
+    }
+
+    @Override
+    public void updateRoomStatus(String roomId, String status) {
+        Room room = getRoomEntityById(roomId);
+        room.setStatus(RoomStatus.valueOf(status));
+        roomRepository.save(room);
+    }
+
+    @Override
+    public boolean isRoomExist(String roomId) {
+        return roomRepository.existsById(roomId);
     }
 
     @Override
     public List<RoomResponse> getRoomsByLandlordId(String landlordId) {
         List<Room> rooms = roomRepository.findByLandlordId(landlordId);
-        return rooms.stream().map(this::mapToRoomResponse).toList();
+        return rooms.stream().map(this::mapToRoomResponse).collect(Collectors.toList());
     }
 
     @Override
-    public List<RoomResponse> getRoomsByFilter(String city,
-                                               String district,
-                                               String ward, String type,
-                                               Double minPrice, Double maxPrice,
-                                               Integer minPeople, Integer maxPeople) {
-        RoomType roomType = type.isEmpty() ? null : RoomType.valueOf(type);
-        List<Room> rooms = roomRepository.findByFilter(city, district, ward, roomType,
-                minPrice, maxPrice, minPeople, maxPeople);
-        return rooms.stream().map(this::mapToRoomResponse).toList();
+    public List<RoomResponse> getRoomsByFilter(RoomFilterRequest request) {
+        List<String> subscribedLandlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
+
+        String city = request.getCity() != null ? request.getCity() : "";
+        String district = request.getDistrict() != null ? request.getDistrict() : "";
+        String ward = request.getWard() != null ? request.getWard() : "";
+
+        RoomType roomType = null;
+        if (request.getType() != null && !request.getType().isEmpty()) {
+            try {
+                roomType = RoomType.valueOf(request.getType());
+            } catch (IllegalArgumentException e) {
+                throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid room type");
+            }
+        }
+
+        BigDecimal minPrice = BigDecimal.valueOf(
+                request.getMinPrice() != null ? request.getMinPrice() : 0.0);
+        BigDecimal maxPrice = BigDecimal.valueOf(
+                request.getMaxPrice() != null ? request.getMaxPrice() : Double.MAX_VALUE);
+
+        Integer minPeople = request.getMinPeople() != null ? request.getMinPeople() : 0;
+        Integer maxPeople = request.getMaxPeople() != null ? request.getMaxPeople() : Integer.MAX_VALUE;
+
+        Integer limit = request.getLimit() != null ? request.getLimit() : 20;
+
+        boolean pivotSubscribed = false;
+        LocalDateTime timestamp = LocalDateTime.now().plusYears(100);
+        String pivotId = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz";
+
+        if (request.getPivotId() != null && request.getTimestamp() != null) {
+            pivotId = request.getPivotId();
+            try {
+                timestamp = LocalDateTime.parse(request.getTimestamp());
+            } catch (Exception e) {
+                throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid timestamp format");
+            }
+        }
+
+        List<String> tagIds = request.getTagIds() != null ? request.getTagIds() : Collections.emptyList();
+
+        List<RoomDao> rooms = roomRepository.findRoomsWithCursor(
+                city,
+                district,
+                ward,
+                roomType,
+                minPrice,
+                maxPrice,
+                minPeople,
+                maxPeople,
+                subscribedLandlordIds,
+                pivotSubscribed,
+                timestamp,
+                pivotId,
+                limit,
+                tagIds
+        );
+
+        return rooms.stream()
+                .map(roomDao -> {
+                    Room room = roomDao.getRoom();
+                    RoomResponse response = mapToRoomResponse(room);
+                    response.setSubscribed(roomDao.isSubscribed());
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<RoomResponse> getSubscribedRoomsNearby(double latitude, double longitude,
+                                                       double radiusKm) {
+        List<String> landlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
+        List<Room> rooms = roomRepository.findRoomsByLandlordIdsWithinRadius(landlordIds, latitude, longitude,
+                radiusKm);
+        return rooms.stream().map(this::mapToRoomResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<RoomResponse> getSubscribedRoomsByLocation(String city, String district, String ward) {
+        List<String> landlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
+        List<Room> rooms = roomRepository.findRoomsByLandlordIdsAndLocation(landlordIds, city, district, ward);
+        return rooms.stream().map(this::mapToRoomResponse).collect(Collectors.toList());
     }
 
     @Override
     public Boolean createRoom(CreateRoomRequest createRoomRequest, String landlordId) {
-        User landlord = userRepository.findById(landlordId).orElseThrow(
-                () -> new ResourceNotFoundException("User", "id", landlordId)
-        );
-
-        List<Tag> tags = tagRepository.findByIdIn(createRoomRequest.getTagIds());
+        User landlord = userService.getUserEntity(landlordId);
+        List<Tag> tags = tagService.getTagsByIdIn(createRoomRequest.getTagIds());
         if (tags.size() != createRoomRequest.getTagIds().size()) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Some tags are not found");
         }
@@ -95,9 +219,7 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public RoomResponse updateRoom(String roomId, UpdateRoomRequest updateRoomRequest) {
-        Room room = roomRepository.findById(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("Room", "id", roomId)
-        );
+        Room room = getRoomEntityById(roomId);
         room.setTitle(updateRoomRequest.getTitle());
         room.setDescription(updateRoomRequest.getDescription());
         room.setAddress(updateRoomRequest.getAddress());
@@ -122,13 +244,40 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public Boolean deleteRoom(String roomId) {
+    public void deleteRoom(String roomId) {
         Room room = roomRepository.findById(roomId).orElseThrow(
                 () -> new ResourceNotFoundException("Room", "id", roomId)
         );
         room.setStatus(RoomStatus.DELETED);
         roomRepository.save(room);
-        return true;
+    }
+
+    @Override
+    public BigDecimal getAveragePriceAroundRoom(String roomId, Double radius) {
+        Room room = getRoomEntityById(roomId);
+        List<Room> aroundRoom = roomRepository.findRoomAround(
+                room.getLongitude(),
+                room.getLatitude(),
+                radius);
+        Set<Tag> roomTag = room.getTags();
+        BigDecimal totalWeightedPrice = BigDecimal.ZERO;
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        for (Room loopRoom : aroundRoom) {
+            double similarity = calculateTagSimilarity(roomTag, loopRoom.getTags());
+            // Minimum weight in case no similarity, so this weighted is strong location base
+            // The last part of weight is base on tags similarity
+            double weight = AppConstants.MIN_WEIGHT + ((1 - AppConstants.MIN_WEIGHT) * similarity);
+            BigDecimal roomWeight = BigDecimal.valueOf(weight);
+            BigDecimal weightedPrice = loopRoom.getPrice().multiply(roomWeight);
+            totalWeightedPrice = totalWeightedPrice.add(weightedPrice);
+            totalWeight = totalWeight.add(roomWeight);
+        }
+        return totalWeightedPrice.divide(totalWeight, 2, RoundingMode.HALF_UP);
+    }
+
+    @Override
+    public void updateRoomStatusByLandlordId(String landlordId, RoomStatus status) {
+
     }
 
     private String getNearbyAmenitiesString(Double latitude, Double longitude) {
@@ -140,30 +289,13 @@ public class RoomServiceImpl implements RoomService {
         return getRoomResponse(room);
     }
 
-    static RoomResponse getRoomResponse(Room room) {
-        return RoomResponse.builder()
-                .id(room.getId())
-                .title(room.getTitle())
-                .description(room.getDescription())
-                .address(room.getAddress())
-                .status(room.getStatus().name())
-                .price(room.getPrice())
-                .latitude(room.getLatitude())
-                .longitude(room.getLongitude())
-                .city(room.getCity())
-                .district(room.getDistrict())
-                .ward(room.getWard())
-                .electricPrice(room.getElectricPrice())
-                .waterPrice(room.getWaterPrice())
-                .type(room.getType().name())
-                .nearbyAmenities(room.getNearbyAmenities())
-                .maxPeople(room.getMaxPeople())
-                .landlordId(room.getLandlord().getId())
-                .tags(room.getTags())
-                .deposit(room.getDeposit())
-                .createdAt(room.getCreatedAt().toString())
-                .updatedAt(room.getUpdatedAt().toString())
-                .squareMeters(room.getSquareMeters())
-                .build();
+    private double calculateTagSimilarity(Set<Tag> tags1, Set<Tag> tags2) {
+        if (tags1.isEmpty() && tags2.isEmpty())
+            return 1;
+        Set<Tag> intersect = new HashSet<>(tags1);
+        intersect.retainAll(tags2);
+        Set<Tag> union = new HashSet<>(tags1);
+        union.addAll(tags2);
+        return (double) intersect.size() / union.size();
     }
 }

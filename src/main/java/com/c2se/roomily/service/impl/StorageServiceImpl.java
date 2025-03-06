@@ -16,6 +16,7 @@ import java.io.InputStream;
 public class StorageServiceImpl implements StorageService {
     MinioClient minioClient;
     StorageConfig storageConfig;
+
     @Override
     public void putObject(MultipartFile file, String bucket, String fileName) throws Exception {
         String contentType = file.getContentType();
@@ -36,7 +37,7 @@ public class StorageServiceImpl implements StorageService {
                 PutObjectArgs.builder()
                         .object(folderName)
                         .bucket(storageConfig.getBucketStore())
-                        .stream(new ByteArrayInputStream(new byte[] {}), 0, -1)
+                        .stream(new ByteArrayInputStream(new byte[]{}), 0, -1)
                         .build()
         );
     }

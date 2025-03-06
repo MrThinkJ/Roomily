@@ -1,5 +1,6 @@
 package com.c2se.roomily.payload.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class NotificationResponse {
     private String body;
     private Boolean isRead;
     private String type;
-    private String createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;
     private String userId;
 }

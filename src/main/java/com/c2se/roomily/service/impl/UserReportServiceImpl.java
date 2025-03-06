@@ -31,6 +31,7 @@ public class UserReportServiceImpl implements UserReportService {
     UserRepository userRepository;
     UserReportRepository userReportRepository;
     BanService banService;
+
     @Override
     public List<UserReportResponse> getUserReportsByReportedUserId(String reportedUserId, Integer page, Integer size) {
         User user = userRepository.findById(reportedUserId).orElseThrow(
@@ -149,7 +150,7 @@ public class UserReportServiceImpl implements UserReportService {
                 .reportedUserId(userReport.getReportedUser().getId())
                 .reporterId(userReport.getReporter().getId())
                 .content(userReport.getContent())
-                .createdAt(userReport.getCreatedAt().toString())
+                .createdAt(userReport.getCreatedAt())
                 .status(userReport.getStatus().name())
                 .type(userReport.getType().name())
                 .build();

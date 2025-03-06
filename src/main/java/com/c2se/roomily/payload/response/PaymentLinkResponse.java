@@ -1,9 +1,11 @@
 package com.c2se.roomily.payload.response;
 
 import com.c2se.roomily.payload.internal.PayOsTransactionDto;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
