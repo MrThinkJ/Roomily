@@ -13,9 +13,15 @@ import java.util.List;
 @AllArgsConstructor
 public class TagServiceImpl implements TagService {
     TagRepository tagRepository;
+
     @Override
     public List<Tag> getAllTags() {
         return tagRepository.findAll();
+    }
+
+    @Override
+    public List<Tag> getTagsByIdIn(List<String> tagIds) {
+        return tagRepository.findByIdIn(tagIds);
     }
 
     @Override

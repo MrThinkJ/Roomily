@@ -16,6 +16,13 @@ public interface BanHistoryRepository extends JpaRepository<BanHistory, String> 
     @Query("SELECT b FROM BanHistory b WHERE b.user.id = :userId AND " +
             "b.expiresAt > CURRENT_TIMESTAMP")
     Optional<BanHistory> findActiveBanByUserId(String userId);
+
+    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END " +
+            "FROM BanHistory b WHERE b.user.id = :userId AND " +
+            "b.expiresAt > CURRENT_TIMESTAMP")
+    Boolean existsActiveBanByUserId(String userId);
+
     Page<BanHistory> findByUserId(String userId, Pageable pageable);
+
     List<BanHistory> findByExpiresAtBefore(LocalDateTime expiresAt);
 }

@@ -23,6 +23,7 @@ public class Notification {
     private String id;
     private String header;
     private String body;
+    private String extra;
     @Column(name = "is_read")
     private Boolean isRead;
     @Enumerated(EnumType.STRING)

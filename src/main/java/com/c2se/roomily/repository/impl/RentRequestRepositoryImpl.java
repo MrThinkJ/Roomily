@@ -2,29 +2,50 @@ package com.c2se.roomily.repository.impl;
 
 import com.c2se.roomily.payload.request.CreateRentRequest;
 import com.c2se.roomily.repository.RentRequestRepository;
+import com.c2se.roomily.util.UtilFunction;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Repository
+@RequiredArgsConstructor
 public class RentRequestRepositoryImpl implements RentRequestRepository {
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
-    public String save(String userId, CreateRentRequest createRentRequest) {
-        String key = generateKey(userId, createRentRequest.getPrivateCode());
-        // TODO: save to redis
-//        redisTemplate.opsForValue().set(key, request);
-//        redisTemplate.expire(key, REQUEST_TTL, TimeUnit.HOURS);
-        return key;
+    public String generateKey(String userId, CreateRentRequest createRentRequest, int ttl) {
+        String value = serializeRequest(createRentRequest);
+        String privateCode = UtilFunction.generatePrivateCode(value);
+        save(privateCode, value, ttl);
+        return privateCode;
     }
 
     @Override
-    public CreateRentRequest findByUserId(String userId) {
-//        return redisTemplate.opsForValue().get("rent_request:" + userId);
-        return null;
+    public void save(String key, String value, int ttl) {
+        redisTemplate.opsForValue().set(key, value);
+        redisTemplate.expire(key, ttl, TimeUnit.MINUTES);
     }
 
-    private String generateKey(String userId, String code) {
-        return String.format("rent_request:%s:%s", userId, code);
+    @Override
+    public String findByKey(String key) {
+        return redisTemplate.opsForValue().get("rent_request:" + key);
+    }
+
+    @Override
+    public void deleteByKey(String key) {
+        redisTemplate.delete("rent_request:" + key);
+    }
+
+    private String serializeRequest(CreateRentRequest createRentRequest) {
+        return createRentRequest.getUserId() +
+                "#" + createRentRequest.getRoomId() +
+                "#" + createRentRequest.getStartDate() +
+                "#" + createRentRequest.getFindPartnerPostId();
     }
 }

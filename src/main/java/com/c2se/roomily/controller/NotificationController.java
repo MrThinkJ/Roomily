@@ -14,8 +14,9 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/notifications")
-public class NotificationController extends BaseController{
+public class NotificationController extends BaseController {
     NotificationService notificationService;
+
     @GetMapping("/{id}")
     public ResponseEntity<NotificationResponse> getNotificationById(@PathVariable String id) {
         return ResponseEntity.ok(notificationService.getNotificationById(id));

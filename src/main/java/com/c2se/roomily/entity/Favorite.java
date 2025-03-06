@@ -5,8 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @Table(name = "favorites", uniqueConstraints = {
@@ -21,6 +19,7 @@ public class Favorite {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "favorite_id")
     private String id;
+    private boolean isFavorite;
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;

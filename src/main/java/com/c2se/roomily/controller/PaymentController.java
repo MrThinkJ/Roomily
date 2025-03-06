@@ -16,9 +16,10 @@ import java.util.Map;
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
     PaymentProcessingService paymentProcessingService;
+
     @PostMapping("/create")
     public ResponseEntity<CheckoutResponse> createPaymentLink(@RequestBody CreatePaymentLinkRequest
-                                                                         createPaymentLinkRequest) {
+                                                                      createPaymentLinkRequest) {
         return ResponseEntity.ok(paymentProcessingService.createPaymentLink(createPaymentLinkRequest));
     }
 

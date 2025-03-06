@@ -21,7 +21,7 @@ public class AppConfig {
     @Bean
     public ApplicationRunner applicationRunner(RoleRepository roleRepository,
                                                UserRepository userRepository,
-                                               TagRepository tagRepository){
+                                               TagRepository tagRepository) {
         List<String> roles = List.of("ROLE_ADMIN", "ROLE_LANDLORD", "ROLE_USER");
         List<String> tags = List.of("Air Conditioning",
                 "Balcony",
@@ -36,7 +36,7 @@ public class AppConfig {
                 "Water Heater");
         return args -> {
             tags.forEach(tag -> {
-                if(tagRepository.findByName(tag) == null){
+                if (tagRepository.findByName(tag) == null) {
                     tagRepository.save(Tag.builder()
                             .name(tag)
                             .build());
@@ -44,7 +44,7 @@ public class AppConfig {
                 }
             });
             roles.forEach(role -> {
-                if(roleRepository.findByName(role) == null){
+                if (roleRepository.findByName(role) == null) {
                     Role newRole = Role.builder()
                             .name(role)
                             .build();
@@ -53,7 +53,7 @@ public class AppConfig {
                 }
             });
             User admin = userRepository.findByUsername("admin");
-            if(admin == null){
+            if (admin == null) {
                 User newAdmin = User.builder()
                         .username("admin")
                         .password("admin")

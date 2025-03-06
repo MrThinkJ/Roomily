@@ -7,8 +7,8 @@ import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.response.NotificationResponse;
 import com.c2se.roomily.repository.NotificationRepository;
-import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.NotificationService;
+import com.c2se.roomily.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +19,8 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     NotificationRepository notificationRepository;
-    UserRepository userRepository;
+    UserService userService;
+
     @Override
     public NotificationResponse getNotificationById(String id) {
         return mapToResponse(notificationRepository.findById(id).orElseThrow(
@@ -62,9 +63,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendNotification(CreateNotificationRequest request) {
         // TODO: Implement sending notification to device
-        User user = userRepository.findById(request.getUserId()).orElseThrow(
-                () -> new ResourceNotFoundException("User", "id", request.getUserId())
-        );
+        User user = userService.getUserEntity(request.getUserId());
         Notification notification = Notification.builder()
                 .header(request.getHeader())
                 .body(request.getBody())
@@ -87,7 +86,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .body(notification.getBody())
                 .isRead(notification.getIsRead())
                 .type(notification.getType().name())
-                .createdAt(notification.getCreatedAt().toString())
+                .createdAt(notification.getCreatedAt())
                 .userId(notification.getUser().getId())
                 .build();
     }

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/storage")
 public class StorageController {
     StorageService storageService;
+
     @GetMapping("/objects/{bucket}/{objectName}")
     public ResponseEntity<GetObjectResponse> getObject(@PathVariable String bucket,
                                                        @PathVariable String objectName) throws Exception {

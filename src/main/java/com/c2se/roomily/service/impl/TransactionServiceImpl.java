@@ -18,7 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,9 +25,10 @@ import java.util.stream.Collectors;
 public class TransactionServiceImpl implements TransactionService {
     TransactionRepository transactionRepository;
     UserRepository userRepository;
+
     @Override
     public TransactionPageResponse getAllTransactions(int page, int size,
-                                                          String sortBy, String sortDir) {
+                                                      String sortBy, String sortDir) {
         Sort sort = Sort.by(
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.Direction.ASC : Sort.Direction.DESC,
                 sortBy);
@@ -51,7 +51,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionPageResponse getTransactionsByUserId(String userId, int page, int size,
-                                                             String sortBy, String sortDir) {
+                                                           String sortBy, String sortDir) {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new ResourceNotFoundException("User", "id", userId)
         );
@@ -65,7 +65,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionPageResponse getTransactionsByStatus(String status, int page, int size,
-                                                             String sortBy, String sortDir) {
+                                                           String sortBy, String sortDir) {
         Sort sort = Sort.by(
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.Direction.ASC : Sort.Direction.DESC,
                 sortBy);
@@ -78,7 +78,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionPageResponse getTransactionsByTypeAndStatus(String type, String status,
-                                                                    int page, int size, String sortBy, String sortDir) {
+                                                                  int page, int size, String sortBy, String sortDir) {
         Sort sort = Sort.by(
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.Direction.ASC : Sort.Direction.DESC,
                 sortBy);
@@ -96,8 +96,8 @@ public class TransactionServiceImpl implements TransactionService {
                 .amount(transaction.getAmount().toString())
                 .status(transaction.getStatus().name())
                 .type(transaction.getType().name())
-                .createdAt(transaction.getCreatedAt().toString())
-                .updatedAt(transaction.getUpdatedAt().toString())
+                .createdAt(transaction.getCreatedAt())
+                .updatedAt(transaction.getUpdatedAt())
                 .userId(transaction.getUser().getId())
                 .userName(transaction.getUser().getUsername())
                 .build();

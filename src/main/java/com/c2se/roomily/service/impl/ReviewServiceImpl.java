@@ -25,6 +25,7 @@ public class ReviewServiceImpl implements ReviewService {
     UserRepository userRepository;
     ReviewRepository reviewRepository;
     RoomRepository roomRepository;
+
     @Override
     public Boolean createReview(String userId, String roomId, CreateReviewRequest createReviewRequest) {
         User user = userRepository.findById(userId).orElseThrow(
@@ -99,8 +100,8 @@ public class ReviewServiceImpl implements ReviewService {
                 .id(review.getId())
                 .content(review.getContent())
                 .rating(review.getRating())
-                .createdAt(review.getCreatedAt().toString())
-                .updatedAt(review.getUpdatedAt().toString())
+                .createdAt(review.getCreatedAt())
+                .updatedAt(review.getUpdatedAt())
                 .userId(review.getUser().getId())
                 .roomId(review.getRoom().getId())
                 .userName(user.getUsername())

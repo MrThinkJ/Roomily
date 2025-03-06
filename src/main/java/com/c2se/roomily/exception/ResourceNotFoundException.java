@@ -5,8 +5,8 @@ import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public class ResourceNotFoundException extends BusinessException{
-    public ResourceNotFoundException(String resourceName, String fieldName, String fieldValue){
+public class ResourceNotFoundException extends BusinessException {
+    public ResourceNotFoundException(String resourceName, String fieldName, String fieldValue) {
         super(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, resourceName, fieldName, fieldValue);
     }
 

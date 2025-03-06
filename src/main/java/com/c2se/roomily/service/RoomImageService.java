@@ -7,7 +7,10 @@ import java.util.List;
 
 public interface RoomImageService {
     List<String> getRoomImageUrlsByRoomId(String roomId);
+
     List<RoomImageResponse> getRoomImagesByRoomId(String roomId);
+
     void uploadRoomImages(String roomId, List<MultipartFile> images);
+
     void deleteImages(String userId, String roomId, List<String> imageIds);
 }

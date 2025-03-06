@@ -2,6 +2,7 @@ package com.c2se.roomily.enums;
 
 public enum RentedRoomStatus {
     PENDING,
-    RENTED,
+    IN_USE,
+    DEBT,
     CANCELLED
 }

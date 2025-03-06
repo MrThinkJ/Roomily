@@ -22,7 +22,7 @@ public class StorageConfig {
 
     @Bean
     public MinioClient minioClient() throws Exception {
-        MinioClient minioClient =  MinioClient.builder()
+        MinioClient minioClient = MinioClient.builder()
                 .credentials(accessKey, secretKey)
                 .endpoint(url)
                 .build();
@@ -30,10 +30,9 @@ public class StorageConfig {
         return minioClient;
     }
 
-    private void initBucket(MinioClient minioClient, String bucketStore) throws Exception{
+    private void initBucket(MinioClient minioClient, String bucketStore) throws Exception {
         boolean exist = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketStore).build());
-        if (!exist){
+        if (!exist)
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketStore).build());
-        }
     }
 }

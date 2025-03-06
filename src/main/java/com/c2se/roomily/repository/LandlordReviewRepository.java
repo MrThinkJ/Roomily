@@ -9,6 +9,8 @@ import java.util.List;
 @Repository
 public interface LandlordReviewRepository extends JpaRepository<LandlordReview, String> {
     List<LandlordReview> findByLandlordId(String landlordId);
+
     List<LandlordReview> findByReviewerId(String reviewerId);
+
     List<LandlordReview> findByLandlordIdAndReviewerId(String landlordId, String reviewerId);
 } 

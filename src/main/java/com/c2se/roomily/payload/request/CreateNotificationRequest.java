@@ -10,4 +10,5 @@ public class CreateNotificationRequest {
     private String body;
     private String userId;
     private String type;
+    private String extra;
 }

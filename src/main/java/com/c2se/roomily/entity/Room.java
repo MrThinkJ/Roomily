@@ -38,9 +38,7 @@ public class Room {
     @Enumerated(EnumType.STRING)
     private RoomStatus status;
     private BigDecimal price;
-    @Column(name = "lat")
     private Double latitude;
-    @Column(name = "lng")
     private Double longitude;
     private String city;
     private String district;
@@ -63,7 +61,7 @@ public class Room {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "landlord_id")
     private User landlord;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

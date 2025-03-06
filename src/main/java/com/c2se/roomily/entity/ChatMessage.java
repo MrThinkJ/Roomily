@@ -20,6 +20,8 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "chat_message_id")
     private String id;
+    @Column(name = "sub_id")
+    private Integer subId;
     private String message;
     @CreationTimestamp
     @Column(name = "created_at")
@@ -33,7 +35,4 @@ public class ChatMessage {
     @ManyToOne
     @JoinColumn(name = "sender_id")
     private User sender;
-    @ManyToOne
-    @JoinColumn(name = "recipient_id")
-    private User recipient;
 }
