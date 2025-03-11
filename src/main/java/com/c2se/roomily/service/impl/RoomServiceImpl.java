@@ -245,21 +245,22 @@ public class RoomServiceImpl implements RoomService {
 
     private FilterParameters normalizeRoomFilterRequest(RoomFilterRequest request) {
         List<String> tagIds = request.getTagIds() != null ? request.getTagIds() : Collections.emptyList();
-        return new FilterParameters(
-                normalizeString(request.getCity()),
-                normalizeString(request.getDistrict()),
-                normalizeString(request.getWard()),
-                parseRoomType(request.getType()),
-                request.getMinPrice() != null ? BigDecimal.valueOf(request.getMinPrice()) : DEFAULT_MIN_PRICE,
-                request.getMaxPrice() != null ? BigDecimal.valueOf(request.getMaxPrice()) : DEFAULT_MAX_PRICE,
-                request.getMinPeople() != null ? request.getMinPeople() : DEFAULT_MIN_PEOPLE,
-                request.getMaxPeople() != null ? request.getMaxPeople() : DEFAULT_MAX_PEOPLE,
-                request.getPivotId() != null ? request.getPivotId() : "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz",
-                request.getLimit() != null ? request.getLimit() : DEFAULT_LIMIT,
-                request.getTimestamp() != null ? LocalDateTime.parse(
-                        request.getTimestamp()) : LocalDateTime.now().plusDays(1),
-                request.isSubscribed(),
-                tagIds);
+        return FilterParameters.builder()
+                .city(normalizeString(request.getCity()))
+                .district(normalizeString(request.getDistrict()))
+                .ward(normalizeString(request.getWard()))
+                .roomType(parseRoomType(request.getType()))
+                .minPrice(request.getMinPrice() != null ? BigDecimal.valueOf(request.getMinPrice()) : DEFAULT_MIN_PRICE)
+                .maxPrice(request.getMaxPrice() != null ? BigDecimal.valueOf(request.getMaxPrice()) : DEFAULT_MAX_PRICE)
+                .minPeople(request.getMinPeople() != null ? request.getMinPeople() : DEFAULT_MIN_PEOPLE)
+                .maxPeople(request.getMaxPeople() != null ? request.getMaxPeople() : DEFAULT_MAX_PEOPLE)
+                .pivotId(request.getPivotId() != null ? request.getPivotId() : "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz")
+                .limit(request.getLimit() != null ? request.getLimit() : DEFAULT_LIMIT)
+                .timestamp(request.getTimestamp() != null ? LocalDateTime.parse(
+                        request.getTimestamp()) : LocalDateTime.now().plusDays(1))
+                .pivotSubscribed(request.isSubscribed())
+                .tagIds(tagIds)
+                .build();
     }
 
     private String normalizeString(String value) {
@@ -320,6 +321,7 @@ public class RoomServiceImpl implements RoomService {
                 .createdAt(roomDao.getCreatedAt().toLocalDateTime())
                 .updatedAt(roomDao.getUpdatedAt().toLocalDateTime())
                 .squareMeters(roomDao.getSquareMeters())
+                .isSubscribed(roomDao.isSubscribed())
                 .build();
     }
 }
