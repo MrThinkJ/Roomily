@@ -3,6 +3,7 @@ package com.c2se.roomily.service.impl;
 import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.entity.ChatRoomUser;
 import com.c2se.roomily.entity.User;
+import com.c2se.roomily.enums.ChatRoomStatus;
 import com.c2se.roomily.enums.ChatRoomType;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.internal.ChatRoomUserData;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +43,16 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
+    public void updateChatRoomStatus(String roomId, String status) {
+        chatRoomRepository.updateStatusById(roomId, status);
+    }
+
+    @Override
+    public void archiveAllChatRoomsByFindPartnerPostId(String findPartnerPostId) {
+        chatRoomRepository.archiveAllByFindPartnerPostId(findPartnerPostId);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public String createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId) {
         userIds.add(managerId);
@@ -56,6 +68,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .managerId(managerId)
                 .type(ChatRoomType.GROUP)
                 .roomId(roomId)
+                .status(ChatRoomStatus.ACTIVE)
                 .build();
         ChatRoom savedChatRoom = chatRoomRepository.save(chatRoom);
         List<ChatRoomUser> chatRoomUsers = users.stream().map(user -> ChatRoomUser.builder()
@@ -69,24 +82,33 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public ChatRoom getOrCreateDirectChatRoom(String userId1, String userId2, String roomId) {
-        String chatRoomId = generateChatRoomId(userId1, userId2);
-        Optional<ChatRoom> existChatRoom = chatRoomRepository.findById(roomId);
-        if (existChatRoom.isPresent())
-            return existChatRoom.get();
+    public ChatRoom getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId) {
+        String chatKey = generateDirectChatKey(userId1, userId2);
+        Optional<ChatRoom> existingChatRoom = chatRoomRepository.findByChatKey(chatKey);
+        if (existingChatRoom.isPresent()) {
+            ChatRoom chatRoom = existingChatRoom.get();
+            if (findPartnerPostId != null && chatRoom.getFindPartnerPostId() == null) {
+                chatRoom.setFindPartnerPostId(findPartnerPostId);
+                chatRoomRepository.save(chatRoom);
+            }
+            return chatRoom;
+        }
+        
+        ChatRoom chatRoom = ChatRoom.builder()
+                .chatKey(chatKey)
+                .name("DM_" + userId1 + "_" + userId2)
+                .type(ChatRoomType.DIRECT)
+                .status(ChatRoomStatus.ACTIVE)
+                .findPartnerPostId(findPartnerPostId)
+                .build();
+        
+        chatRoomRepository.save(chatRoom);
         Set<User> users = userService.getUserEntities(List.of(userId1, userId2));
         if (users.size() != 2)
             throw new IllegalArgumentException("Invalid user ids");
-        if (!chatRoomRepository.existsById(chatRoomId)) {
+        if (!chatRoomRepository.existsById(chatRoom.getId())) {
             throw new IllegalArgumentException("Invalid room id");
         }
-        ChatRoom chatRoom = ChatRoom.builder()
-                .id(chatRoomId)
-                .name("DM_" + userId1 + "_" + userId2)
-                .type(ChatRoomType.DIRECT)
-                .roomId(roomId)
-                .build();
-        chatRoomRepository.save(chatRoom);
         List<ChatRoomUser> chatRoomUsers = users.stream().map(user -> ChatRoomUser.builder()
                 .chatRoom(chatRoom)
                 .user(user)
@@ -125,6 +147,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         ChatRoomUser chatRoomUser = chatRoomUserRepository.findByChatRoomAndUser(chatRoom, user).orElseThrow(
                 () -> new ResourceNotFoundException("ChatRoom", "ChatRoom Or User", roomId + " " + userId)
         );
+
         chatRoomUserRepository.delete(chatRoomUser);
     }
 
@@ -210,17 +233,39 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         return false;
     }
 
-    private String generateChatRoomId(String userId1, String userId2) {
-        String[] ids = {userId1, userId2};
-        Arrays.sort(ids);
-        return "private_" + ids[0] + "_" + ids[1];
+    @Override
+    public void testNotifyChatRoom() {
+        ChatRoom chatRoom = ChatRoom.builder()
+                .id("test")
+                .name("Test")
+                .type(ChatRoomType.GROUP)
+                .status(ChatRoomStatus.ACTIVE)
+                .build();
+        ConversationResponse conversationResponse = ConversationResponse.builder()
+                .chatRoomId(chatRoom.getId())
+                .roomName(chatRoom.getName())
+                .lastMessage(chatRoom.getLastMessage())
+                .lastMessageTime(chatRoom.getLastMessageTimeStamp())
+                .lastMessageSender(chatRoom.getLastMessageSender())
+                .unreadCount(0)
+                .isGroup(chatRoom.getType() == ChatRoomType.GROUP)
+                .build();
+        messagingTemplate.convertAndSendToUser("70f70be9-fd3a-4314-85c7-8e3881d8579a",
+                "/queue/chat-room",
+                conversationResponse);
     }
 
-    private String[] getUsersFromRoomId(String roomId) {
-        if (!roomId.startsWith("private_")) {
+    private String generateDirectChatKey(String userId1, String userId2) {
+        String[] ids = new String[]{userId1, userId2};
+        Arrays.sort(ids);
+        return "DIRECT_" + ids[0] + "_" + ids[1];
+    }
+
+    private String[] getUsersFromRoomId(String chatKey) {
+        if (!chatKey.startsWith("DIRECT_")) {
             throw new IllegalArgumentException("Not a direct room ID");
         }
-        String[] parts = roomId.split("_");
+        String[] parts = chatKey.split("_");
         if (parts.length != 3) {
             throw new IllegalArgumentException("Invalid direct room ID format");
         }

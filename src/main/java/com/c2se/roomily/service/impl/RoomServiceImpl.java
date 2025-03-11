@@ -9,6 +9,7 @@ import com.c2se.roomily.enums.RoomType;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.dao.RoomDao;
+import com.c2se.roomily.payload.internal.FilterParameters;
 import com.c2se.roomily.payload.request.CreateRoomRequest;
 import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
@@ -20,6 +21,8 @@ import com.c2se.roomily.service.TagService;
 import com.c2se.roomily.service.UserService;
 import com.c2se.roomily.util.AppConstants;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -33,13 +36,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
+@Slf4j
 public class RoomServiceImpl implements RoomService {
-    RoomRepository roomRepository;
-    TagService tagService;
-    UserService userService;
-    SubscriptionService subscriptionService;
-
+    private final RoomRepository roomRepository;
+    private final TagService tagService;
+    private final UserService userService;
+    private final SubscriptionService subscriptionService;
+    private final BigDecimal DEFAULT_MIN_PRICE = BigDecimal.ZERO;
+    private final BigDecimal DEFAULT_MAX_PRICE = BigDecimal.valueOf(1_000_000_000);
+    private final int DEFAULT_MIN_PEOPLE = 0;
+    private final int DEFAULT_MAX_PEOPLE = 100;
+    private final int DEFAULT_LIMIT = 20;
 
     static RoomResponse getRoomResponse(Room room) {
         return RoomResponse.builder()
@@ -61,7 +69,7 @@ public class RoomServiceImpl implements RoomService {
                 .maxPeople(room.getMaxPeople())
                 .landlordId(room.getLandlord().getId())
                 .tags(room.getTags())
-                .deposit(room.getDeposit())
+                .deposit(room.getRentalDeposit())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
                 .squareMeters(room.getSquareMeters())
@@ -102,70 +110,25 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public List<RoomResponse> getRoomsByFilter(RoomFilterRequest request) {
         List<String> subscribedLandlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
-
-        String city = request.getCity() != null ? request.getCity() : "";
-        String district = request.getDistrict() != null ? request.getDistrict() : "";
-        String ward = request.getWard() != null ? request.getWard() : "";
-
-        RoomType roomType = null;
-        if (request.getType() != null && !request.getType().isEmpty()) {
-            try {
-                roomType = RoomType.valueOf(request.getType());
-            } catch (IllegalArgumentException e) {
-                throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid room type");
-            }
-        }
-
-        BigDecimal minPrice = BigDecimal.valueOf(
-                request.getMinPrice() != null ? request.getMinPrice() : 0.0);
-        BigDecimal maxPrice = BigDecimal.valueOf(
-                request.getMaxPrice() != null ? request.getMaxPrice() : Double.MAX_VALUE);
-
-        Integer minPeople = request.getMinPeople() != null ? request.getMinPeople() : 0;
-        Integer maxPeople = request.getMaxPeople() != null ? request.getMaxPeople() : Integer.MAX_VALUE;
-
-        Integer limit = request.getLimit() != null ? request.getLimit() : 20;
-
-        boolean pivotSubscribed = false;
-        LocalDateTime timestamp = LocalDateTime.now().plusYears(100);
-        String pivotId = "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz";
-
-        if (request.getPivotId() != null && request.getTimestamp() != null) {
-            pivotId = request.getPivotId();
-            try {
-                timestamp = LocalDateTime.parse(request.getTimestamp());
-            } catch (Exception e) {
-                throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid timestamp format");
-            }
-        }
-
-        List<String> tagIds = request.getTagIds() != null ? request.getTagIds() : Collections.emptyList();
+        FilterParameters filterParameters = normalizeRoomFilterRequest(request);
 
         List<RoomDao> rooms = roomRepository.findRoomsWithCursor(
-                city,
-                district,
-                ward,
-                roomType,
-                minPrice,
-                maxPrice,
-                minPeople,
-                maxPeople,
-                subscribedLandlordIds,
-                pivotSubscribed,
-                timestamp,
-                pivotId,
-                limit,
-                tagIds
+                filterParameters.getCity(),
+                filterParameters.getDistrict(),
+                filterParameters.getWard(),
+                filterParameters.getRoomType(),
+                filterParameters.getMinPrice(),
+                filterParameters.getMaxPrice(),
+                filterParameters.getMinPeople(),
+                filterParameters.getMaxPeople(),
+                subscribedLandlordIds.toArray(new String[0]),
+                filterParameters.isPivotSubscribed(),
+                filterParameters.getTimestamp(),
+                filterParameters.getPivotId(),
+                filterParameters.getLimit(),
+                filterParameters.getTagIds().toArray(new String[0])
         );
-
-        return rooms.stream()
-                .map(roomDao -> {
-                    Room room = roomDao.getRoom();
-                    RoomResponse response = mapToRoomResponse(room);
-                    response.setSubscribed(roomDao.isSubscribed());
-                    return response;
-                })
-                .collect(Collectors.toList());
+        return rooms.stream().map(this::mapFromDaoToResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -209,7 +172,7 @@ public class RoomServiceImpl implements RoomService {
                         createRoomRequest.getLongitude()))
                 .maxPeople(createRoomRequest.getMaxPeople())
                 .landlord(landlord)
-                .deposit(createRoomRequest.getDeposit())
+                .rentalDeposit(createRoomRequest.getDeposit())
                 .tags(new HashSet<>(tags))
                 .squareMeters(createRoomRequest.getSquareMeters())
                 .build();
@@ -238,7 +201,7 @@ public class RoomServiceImpl implements RoomService {
                 .map(tag -> Tag.builder().name(tag).build())
                 .collect(Collectors.toSet()));
         room.setSquareMeters(updateRoomRequest.getSquareMeters());
-        room.setDeposit(updateRoomRequest.getDeposit());
+        room.setRentalDeposit(updateRoomRequest.getDeposit());
         Room updatedRoom = roomRepository.save(room);
         return mapToRoomResponse(updatedRoom);
     }
@@ -280,6 +243,40 @@ public class RoomServiceImpl implements RoomService {
 
     }
 
+    private FilterParameters normalizeRoomFilterRequest(RoomFilterRequest request) {
+        List<String> tagIds = request.getTagIds() != null ? request.getTagIds() : Collections.emptyList();
+        return new FilterParameters(
+                normalizeString(request.getCity()),
+                normalizeString(request.getDistrict()),
+                normalizeString(request.getWard()),
+                parseRoomType(request.getType()),
+                request.getMinPrice() != null ? BigDecimal.valueOf(request.getMinPrice()) : DEFAULT_MIN_PRICE,
+                request.getMaxPrice() != null ? BigDecimal.valueOf(request.getMaxPrice()) : DEFAULT_MAX_PRICE,
+                request.getMinPeople() != null ? request.getMinPeople() : DEFAULT_MIN_PEOPLE,
+                request.getMaxPeople() != null ? request.getMaxPeople() : DEFAULT_MAX_PEOPLE,
+                request.getPivotId() != null ? request.getPivotId() : "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz",
+                request.getLimit() != null ? request.getLimit() : DEFAULT_LIMIT,
+                request.getTimestamp() != null ? LocalDateTime.parse(
+                        request.getTimestamp()) : LocalDateTime.now().plusDays(1),
+                request.isSubscribed(),
+                tagIds);
+    }
+
+    private String normalizeString(String value) {
+        return value != null ? value : "";
+    }
+
+    private String parseRoomType(String type) {
+        if (type == null || type.isEmpty()) {
+            return null;
+        }
+        try {
+            return RoomType.valueOf(type).name();
+        } catch (IllegalArgumentException e) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid room type");
+        }
+    }
+
     private String getNearbyAmenitiesString(Double latitude, Double longitude) {
         // TODO: Implement this method to get nearby amenities from latitude and longitude by calling Google Maps API
         return "";
@@ -297,5 +294,32 @@ public class RoomServiceImpl implements RoomService {
         Set<Tag> union = new HashSet<>(tags1);
         union.addAll(tags2);
         return (double) intersect.size() / union.size();
+    }
+
+    private RoomResponse mapFromDaoToResponse(RoomDao roomDao) {
+        return RoomResponse.builder()
+                .id(roomDao.getId())
+                .title(roomDao.getTitle())
+                .description(roomDao.getDescription())
+                .address(roomDao.getAddress())
+                .status(roomDao.getStatus())
+                .price(roomDao.getPrice())
+                .latitude(roomDao.getLatitude())
+                .longitude(roomDao.getLongitude())
+                .city(roomDao.getCity())
+                .district(roomDao.getDistrict())
+                .ward(roomDao.getWard())
+                .electricPrice(roomDao.getElectricPrice())
+                .waterPrice(roomDao.getWaterPrice())
+                .type(roomDao.getType())
+                .nearbyAmenities(roomDao.getNearbyAmenities())
+                .maxPeople(roomDao.getMaxPeople())
+                .landlordId(roomDao.getLandlordId())
+                .tags(roomRepository.findTagsById(roomDao.getId()))
+                .deposit(roomDao.getDeposit())
+                .createdAt(roomDao.getCreatedAt().toLocalDateTime())
+                .updatedAt(roomDao.getUpdatedAt().toLocalDateTime())
+                .squareMeters(roomDao.getSquareMeters())
+                .build();
     }
 }

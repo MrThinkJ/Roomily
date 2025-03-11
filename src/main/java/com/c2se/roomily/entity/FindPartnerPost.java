@@ -24,10 +24,9 @@ public class FindPartnerPost {
     private String title;
     private Integer currentPeople;
     private Integer maxPeople;
-    @Column(name = "chat_room_id")
-    private String chatRoomId;
     @Enumerated(EnumType.STRING)
     private FindPartnerPostStatus status;
+    private String chatRoomId;
     @ManyToOne
     @JoinColumn(name = "poster_id")
     private User poster;

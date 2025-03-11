@@ -26,6 +26,12 @@ public class FavoriteController extends BaseController {
         return ResponseEntity.ok(favoriteService.getFavoriteRooms(userId));
     }
 
+    @GetMapping("/{roomId}")
+    public ResponseEntity<Boolean> isFavorite(@PathVariable String roomId) {
+        String userId = this.getUserInfo().getId();
+        return ResponseEntity.ok(favoriteService.isFavorite(userId, roomId));
+    }
+
     @GetMapping("/count")
     public ResponseEntity<Integer> countFavoriteRooms() {
         String userId = this.getUserInfo().getId();

@@ -32,11 +32,12 @@ public class BillLog {
     private LocalDateTime toDate;
     private Double electricity;
     private Double water;
+    private String roomId;
     @Column(name = "electricity_bill")
     private BigDecimal electricityBill;
     @Column(name = "water_bill")
     private BigDecimal waterBill;
-    private BigDecimal rent;
+    private BigDecimal rentalCost;
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private BillStatus billStatus;
@@ -44,6 +45,6 @@ public class BillLog {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     @ManyToOne
-    @JoinColumn(name = "room_id")
-    private Room room;
+    @JoinColumn(name = "rented_room_id")
+    private RentedRoom rentedRoom;
 }

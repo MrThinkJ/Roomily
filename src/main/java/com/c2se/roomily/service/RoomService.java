@@ -2,6 +2,7 @@ package com.c2se.roomily.service;
 
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.enums.RoomStatus;
+import com.c2se.roomily.payload.dao.RoomDao;
 import com.c2se.roomily.payload.request.CreateRoomRequest;
 import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
@@ -14,7 +15,9 @@ public interface RoomService {
     Room getRoomEntityById(String roomId);
 
     RoomResponse getRoomById(String roomId);
+
     void updateRoomStatus(String roomId, String status);
+
     boolean isRoomExist(String roomId);
 
     List<RoomResponse> getRoomsByLandlordId(String landlordId);

@@ -2,18 +2,29 @@ package com.c2se.roomily.service.impl;
 
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.UserStatus;
+import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.UserService;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+    private final UserRepository userRepository;
     @Override
     public User getUserEntity(String id) {
+        return userRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("User", "id", id)
+        );
+    }
+
+    @Override
+    public User getCurrentUser() {
         return null;
     }
 

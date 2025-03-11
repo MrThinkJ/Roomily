@@ -27,25 +27,30 @@ public class FavoriteServiceImpl implements FavoriteService {
     public boolean toggleFavorite(String userId, String roomId) {
         User user = userService.getUserEntity(userId);
         Room room = roomService.getRoomEntityById(roomId);
-        if (favoriteRepository.existsByUserIdAndRoomId(userId, roomId))
-            favoriteRepository.toggleByUserIdAndRoomId(userId, roomId);
-        else {
-            Favorite favorite = new Favorite();
-            favorite.setUser(user);
-            favorite.setRoom(room);
+        Favorite favorite = favoriteRepository.findByUserIdAndRoomId(userId, roomId).orElse(null);
+        if (favorite != null){
+            favorite.setFavorite(!favorite.isFavorite());
             favoriteRepository.save(favorite);
         }
-        return true;
+        else {
+            favorite = new Favorite();
+            favorite.setUser(user);
+            favorite.setRoom(room);
+            favorite.setFavorite(true);
+            favoriteRepository.save(favorite);
+        }
+        return favorite.isFavorite();
     }
 
     @Override
     public boolean isFavorite(String userId, String roomId) {
-        return favoriteRepository.existsByUserIdAndRoomId(userId, roomId);
+        Favorite favorite = favoriteRepository.findByUserIdAndRoomId(userId, roomId).orElse(null);
+        return favorite != null && favorite.isFavorite();
     }
 
     @Override
     public List<RoomResponse> getFavoriteRooms(String userId) {
-        List<Favorite> favorites = favoriteRepository.findAllByUserId(userId);
+        List<Favorite> favorites = favoriteRepository.findByUserIdAndFavoriteIsTrue(userId);
         List<Room> rooms = favorites.stream().map(Favorite::getRoom).toList();
         return rooms.stream().map(this::mapToRoomResponse).collect(Collectors.toList());
     }

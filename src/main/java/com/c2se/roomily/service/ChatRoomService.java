@@ -10,8 +10,10 @@ import java.util.Set;
 
 public interface ChatRoomService {
     ChatRoom getChatRoomEntity(String roomId);
+    void updateChatRoomStatus(String roomId, String status);
+    void archiveAllChatRoomsByFindPartnerPostId(String findPartnerPostId);
     String createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId);
-    ChatRoom getOrCreateDirectChatRoom(String userId1, String userId2, String roomId);
+    ChatRoom getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId);
     void addUserToGroupChatRoom(String roomId, String userId);
     void removeUserFromGroupChatRoom(String managerId, String roomId, String userId);
     void exitGroupChatRoom(String roomId, String userId);
@@ -23,4 +25,5 @@ public interface ChatRoomService {
     ChatRoomResponse getChatRoomInfo(String roomId);
     boolean isUserInChatRoom(String userId, String roomId);
     boolean isUsersInChatRoom(Set<String> userIds, String roomId);
+    void testNotifyChatRoom();
 }

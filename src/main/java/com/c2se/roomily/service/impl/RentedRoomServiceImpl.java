@@ -18,8 +18,6 @@ import com.c2se.roomily.payload.request.UpdateRentedRoomRequest;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
 import com.c2se.roomily.repository.RentRequestRepository;
 import com.c2se.roomily.repository.RentedRoomRepository;
-import com.c2se.roomily.repository.RoomRepository;
-import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +40,30 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     private final RentRequestRepository rentRequestRepository;
     private final ChatRoomService chatRoomService;
     private final EventService eventService;
+    private final List<RentedRoomStatus> activeStatus = List.of(RentedRoomStatus.IN_USE, RentedRoomStatus.DEBT);
+
+    @Override
+    public RentedRoom getRentedRoomEntityById(String roomId) {
+        return rentedRoomRepository.findById(roomId).orElseThrow(
+                () -> new ResourceNotFoundException("RentedRoom", "id", roomId));
+    }
+
+    @Override
+    public void saveRentedRoom(RentedRoom rentedRoom) {
+        rentedRoomRepository.save(rentedRoom);
+    }
+
+    @Override
+    public RentedRoomResponse getRentedRoomActiveByUserIdOrCoTenantIdAndRoomId(String userId, String roomId) {
+        return null;
+    }
+
+    @Override
+    public List<RentedRoomResponse> getRentedRoomActiveByUserIdOrCoTenantId(String userId) {
+        List<RentedRoom> rentedRooms = rentedRoomRepository.findActiveByUserId(userId, activeStatus);
+        rentedRooms.addAll(rentedRoomRepository.findActiveByCoTenantId(userId,activeStatus));
+        return rentedRooms.stream().map(this::mapToRentedRoomResponse).collect(Collectors.toList());
+    }
 
     @Override
     public List<RentedRoomResponse> getRentedRoomsByLandlordId(String landlordId) {
@@ -59,7 +80,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
 
     @Override
     public RentedRoomResponse getRentedRoomByRoomId(String roomId) {
-        return mapToRentedRoomResponse(rentedRoomRepository.findActiveByRoomId(roomId));
+        return mapToRentedRoomResponse(rentedRoomRepository.findActiveByRoomId(roomId, activeStatus));
     }
 
     @Override
@@ -127,7 +148,8 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .build();
         if (findPartnerPostId != null) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
-            findPartnerService.updateFindPartnerPostStatus(findPartnerPostId, FindPartnerPostStatus.COMPLETED.toString());
+            findPartnerService.updateFindPartnerPostStatus(findPartnerPostId,
+                    FindPartnerPostStatus.COMPLETED.toString());
             findPartnerPost.getParticipants().remove(user);
             rentedRoom.setCoTenants(findPartnerPost.getParticipants());
         }
@@ -136,6 +158,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         rentedRoom.setStatus(RentedRoomStatus.IN_USE);
         rentedRoomRepository.save(rentedRoom);
         findPartnerService.deleteFindPartnerPost(userId, findPartnerPostId);
+        findPartnerService.deleteFindPartnerPostByRoomId(roomId);
         rentRequestRepository.deleteByKey(privateCode);
     }
 
@@ -164,7 +187,8 @@ public class RentedRoomServiceImpl implements RentedRoomService {
 
     @Override
     public void updateRentedRoom(String landlordId, String roomId, UpdateRentedRoomRequest updateRentedRoomRequest) {
-        RentedRoom rentedRoom = rentedRoomRepository.findActiveByRoomId(roomId);
+        RentedRoom rentedRoom = rentedRoomRepository.findActiveByRoomId(roomId,
+                List.of(RentedRoomStatus.IN_USE, RentedRoomStatus.DEBT, RentedRoomStatus.PENDING));
         if (rentedRoom == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not rented");
         if (updateRentedRoomRequest.getStartDate() != null)

@@ -7,8 +7,6 @@ services:
     volumes:
       - /var/lib/redis/data:/data
     environment:
-      - REDIS_USERNAME=root
-      - REDIS_PASSWORD=roomily
       - REDIS_PORT=6379
   minio:
     image: minio/minio

@@ -1,0 +1,16 @@
+package com.c2se.roomily.enums;
+
+public enum RentedRoomActivityType {
+    PAYMENT_MADE,
+    RENT_PAID_IN_FULL,
+    DEBT_RECORDED,
+    TENANT_JOINED,
+    TENANT_LEFT,
+    RENT_TERMS_UPDATED,
+    BILL_ADDED,
+    BILL_PAID,
+    LANDLORD_ANNOUNCEMENT,
+    TENANT_MESSAGE,
+    CONTRACT_UPDATED,
+    OTHER
+}

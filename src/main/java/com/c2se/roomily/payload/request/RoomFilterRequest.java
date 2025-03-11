@@ -23,5 +23,6 @@ public class RoomFilterRequest {
     private String pivotId;
     private Integer limit;
     private String timestamp;
+    private boolean isSubscribed;
     private List<String> tagIds;
 }

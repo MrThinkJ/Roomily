@@ -17,7 +17,7 @@ public interface ChatRoomUserRepository extends JpaRepository<ChatRoomUser, Stri
     Optional<ChatRoomUser> findByChatRoomAndUser(ChatRoom chatRoom, User user);
 
     @Query("SELECT cru.user.id, cru.chatRoom.id, cru.chatRoom.name, cru.chatRoom.type, cru.chatRoom.lastMessage, cru.chatRoom.lastMessageTimeStamp, cru.chatRoom.lastMessageSender, cru.unreadMessageCount, cru.lastReadTimeStamp FROM ChatRoomUser cru " +
-            "where cru.user.id = :userId GROUP BY cru.chatRoom.id ORDER BY cru.chatRoom.lastMessageTimeStamp DESC")
+            "where cru.user.id = :userId ORDER BY cru.chatRoom.lastMessageTimeStamp DESC")
     List<ChatRoomUserData> findDataByUserId(String userId);
     @Query("SELECT cru.user.id FROM ChatRoomUser cru WHERE cru.chatRoom.id = :chatRoomId")
     List<String> findUserIdInChatRoomByChatRoomId(String chatRoomId);
