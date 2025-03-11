@@ -1,13 +1,12 @@
 package com.c2se.roomily.payload.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.*;
 
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,6 +22,7 @@ public class RoomFilterRequest {
     private String pivotId;
     private Integer limit;
     private String timestamp;
+    @JsonProperty("isSubscribed")
     private boolean isSubscribed;
     private List<String> tagIds;
 }

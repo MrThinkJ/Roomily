@@ -171,15 +171,12 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             WHERE
             (
                 fr.is_subscribed = :pivotSubscribed
-                AND (fr.createdAt, fr.id) < (:timestamp, :pivotId)
+                AND (fr.updatedAt, fr.id) < (:timestamp, :pivotId)
             )
-            OR (
-                fr.is_subscribed > :pivotSubscribed
-                AND (fr.createdAt, fr.id) < (:timestamp, :pivotId)
-            )
-            ORDER BY 
+            OR fr.is_subscribed < :pivotSubscribed
+            ORDER BY
                 fr.is_subscribed DESC,
-                fr.createdAt DESC, 
+                fr.updatedAt DESC,
                 fr.id DESC
             LIMIT :limit
                 """,
