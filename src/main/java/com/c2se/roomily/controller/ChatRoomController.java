@@ -15,6 +15,7 @@ import java.util.Set;
 @RequestMapping("/api/v1/chat-rooms")
 public class ChatRoomController extends BaseController {
     ChatRoomService chatRoomService;
+
     @PostMapping("/test")
     public void testNotifyChatRoom() {
         chatRoomService.testNotifyChatRoom();
@@ -53,14 +54,14 @@ public class ChatRoomController extends BaseController {
 
     @PostMapping("/{roomId}/users/{userId}")
     public ResponseEntity<Boolean> addUserToGroupChatRoom(@PathVariable String roomId,
-                                                         @PathVariable String userId) {
+                                                          @PathVariable String userId) {
         chatRoomService.addUserToGroupChatRoom(roomId, userId);
         return ResponseEntity.ok(true);
     }
 
     @DeleteMapping("/{roomId}/users/{userId}")
     public ResponseEntity<Boolean> removeUserFromGroupChatRoom(@PathVariable String roomId,
-                                                              @PathVariable String userId) {
+                                                               @PathVariable String userId) {
         String managerId = this.getUserInfo().getId();
         chatRoomService.removeUserFromGroupChatRoom(managerId, roomId, userId);
         return ResponseEntity.ok(true);
@@ -82,13 +83,13 @@ public class ChatRoomController extends BaseController {
 
     @GetMapping("/{roomId}/check-user")
     public ResponseEntity<Boolean> isUserInChatRoom(@PathVariable String roomId,
-                                                   @RequestParam String userId) {
+                                                    @RequestParam String userId) {
         return ResponseEntity.ok(chatRoomService.isUserInChatRoom(userId, roomId));
     }
 
     @PostMapping("/{roomId}/check-users")
     public ResponseEntity<Boolean> areUsersInChatRoom(@PathVariable String roomId,
-                                                     @RequestBody Set<String> userIds) {
+                                                      @RequestBody Set<String> userIds) {
         return ResponseEntity.ok(chatRoomService.isUsersInChatRoom(userIds, roomId));
     }
 }

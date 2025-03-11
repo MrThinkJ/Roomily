@@ -1,22 +1,12 @@
 package com.c2se.roomily.payload.dao;
 
-import com.c2se.roomily.entity.Room;
-import com.c2se.roomily.entity.Tag;
-import com.c2se.roomily.entity.User;
-import com.c2se.roomily.enums.RoomStatus;
-import com.c2se.roomily.enums.RoomType;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.Set;
 
 @Data
 @Builder

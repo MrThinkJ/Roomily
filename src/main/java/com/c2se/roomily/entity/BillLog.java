@@ -11,6 +11,7 @@ import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -26,21 +27,20 @@ public class BillLog {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "bill_log_id")
     private String id;
-    @Column(name = "from_date")
-    private LocalDateTime fromDate;
-    @Column(name = "to_date")
-    private LocalDateTime toDate;
+    private LocalDate fromDate;
+    private LocalDate toDate;
     private Double electricity;
     private Double water;
-    private String roomId;
-    @Column(name = "electricity_bill")
     private BigDecimal electricityBill;
-    @Column(name = "water_bill")
     private BigDecimal waterBill;
     private BigDecimal rentalCost;
+    private String roomId;
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private BillStatus billStatus;
+    private String waterImage;
+    private String electricityImage;
+    private String landlordComment;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

@@ -55,13 +55,14 @@ public class RentedRoomServiceImpl implements RentedRoomService {
 
     @Override
     public RentedRoomResponse getRentedRoomActiveByUserIdOrCoTenantIdAndRoomId(String userId, String roomId) {
-        return null;
+        return mapToRentedRoomResponse(rentedRoomRepository.findActiveByRoomIdAndUserIdOrCoTenantId(roomId, userId,
+                                                                                                    activeStatus));
     }
 
     @Override
     public List<RentedRoomResponse> getRentedRoomActiveByUserIdOrCoTenantId(String userId) {
         List<RentedRoom> rentedRooms = rentedRoomRepository.findActiveByUserId(userId, activeStatus);
-        rentedRooms.addAll(rentedRoomRepository.findActiveByCoTenantId(userId,activeStatus));
+        rentedRooms.addAll(rentedRoomRepository.findActiveByCoTenantId(userId, activeStatus));
         return rentedRooms.stream().map(this::mapToRentedRoomResponse).collect(Collectors.toList());
     }
 
@@ -84,12 +85,6 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     }
 
     @Override
-    public List<RentedRoomResponse> getRentedRoomsByUserId(String userId) {
-        return rentedRoomRepository.findByUserId(userId).stream().map(this::mapToRentedRoomResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public String requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest) {
         User user = userService.getUserEntity(userId);
@@ -109,7 +104,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 createRentedRoomRequest.getFindPartnerPostId());
         if (!userId.equals(findPartnerPost.getPoster().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You are not the poster of find partner post");
+                                   "You are not the poster of find partner post");
         request.setFindPartnerPostId(createRentedRoomRequest.getFindPartnerPostId());
         return rentRequestRepository.generateKey(userId, request, RENT_REQUEST_TTL);
     }
@@ -149,7 +144,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         if (findPartnerPostId != null) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
             findPartnerService.updateFindPartnerPostStatus(findPartnerPostId,
-                    FindPartnerPostStatus.COMPLETED.toString());
+                                                           FindPartnerPostStatus.COMPLETED.toString());
             findPartnerPost.getParticipants().remove(user);
             rentedRoom.setCoTenants(findPartnerPost.getParticipants());
         }
@@ -188,7 +183,9 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Override
     public void updateRentedRoom(String landlordId, String roomId, UpdateRentedRoomRequest updateRentedRoomRequest) {
         RentedRoom rentedRoom = rentedRoomRepository.findActiveByRoomId(roomId,
-                List.of(RentedRoomStatus.IN_USE, RentedRoomStatus.DEBT, RentedRoomStatus.PENDING));
+                                                                        List.of(RentedRoomStatus.IN_USE,
+                                                                                RentedRoomStatus.DEBT,
+                                                                                RentedRoomStatus.PENDING));
         if (rentedRoom == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not rented");
         if (updateRentedRoomRequest.getStartDate() != null)
@@ -200,16 +197,21 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         rentedRoomRepository.save(rentedRoom);
     }
 
+    @Override
+    public boolean isUserRentedRoomBefore(String userId, String roomId) {
+        return rentedRoomRepository.existsByRoomIdAndUserIdOrCoTenantId(roomId, userId);
+    }
+
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional(rollbackFor = Exception.class)
     public void scheduleEndDate() {
         List<RentedRoom> rooms = rentedRoomRepository.findByEndDate(LocalDate.now());
         rooms.forEach(rentedRoom -> eventService.publishEvent(RoomExpireEvent.builder()
-                .rentedRoomId(rentedRoom.getId())
-                .roomId(rentedRoom.getRoom().getId())
-                .landlordId(rentedRoom.getLandlord().getId())
-                .userId(rentedRoom.getUser().getId())
-                .build()));
+                                                                      .rentedRoomId(rentedRoom.getId())
+                                                                      .roomId(rentedRoom.getRoom().getId())
+                                                                      .landlordId(rentedRoom.getLandlord().getId())
+                                                                      .userId(rentedRoom.getUser().getId())
+                                                                      .build()));
     }
 
     @Scheduled(cron = "0 0 0 * * *")
@@ -217,11 +219,11 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     public void scheduleDebtDate() {
         List<RentedRoom> rooms = rentedRoomRepository.findByDebtDate(LocalDate.now());
         rooms.forEach(rentedRoom -> eventService.publishEvent(DebtDateExpireEvent.builder()
-                .rentedRoomId(rentedRoom.getId())
-                .roomId(rentedRoom.getRoom().getId())
-                .landlordId(rentedRoom.getLandlord().getId())
-                .userId(rentedRoom.getUser().getId())
-                .build()));
+                                                                      .rentedRoomId(rentedRoom.getId())
+                                                                      .roomId(rentedRoom.getRoom().getId())
+                                                                      .landlordId(rentedRoom.getLandlord().getId())
+                                                                      .userId(rentedRoom.getUser().getId())
+                                                                      .build()));
     }
 
 //    @Override

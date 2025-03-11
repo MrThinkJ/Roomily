@@ -92,7 +92,7 @@ public class BanServiceImpl implements BanService {
                 .reason(banHistory.getReason())
                 .bannedAt(banHistory.getBannedAt())
                 .expiresAt(banHistory.getExpiresAt() != null ?
-                        banHistory.getExpiresAt() : null)
+                                   banHistory.getExpiresAt() : null)
                 .build();
     }
 } 

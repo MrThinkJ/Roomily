@@ -19,9 +19,12 @@ public interface ChatRoomUserRepository extends JpaRepository<ChatRoomUser, Stri
     @Query("SELECT cru.user.id, cru.chatRoom.id, cru.chatRoom.name, cru.chatRoom.type, cru.chatRoom.lastMessage, cru.chatRoom.lastMessageTimeStamp, cru.chatRoom.lastMessageSender, cru.unreadMessageCount, cru.lastReadTimeStamp FROM ChatRoomUser cru " +
             "where cru.user.id = :userId ORDER BY cru.chatRoom.lastMessageTimeStamp DESC")
     List<ChatRoomUserData> findDataByUserId(String userId);
+
     @Query("SELECT cru.user.id FROM ChatRoomUser cru WHERE cru.chatRoom.id = :chatRoomId")
     List<String> findUserIdInChatRoomByChatRoomId(String chatRoomId);
+
     boolean existsByChatRoomIdAndUserId(String chatRoomId, String userId);
+
     @Modifying
     @Query("DELETE FROM ChatRoomUser cru WHERE cru.chatRoom.id = :chatRoomId")
     void deleteByChatRoomId(String chatRoomId);

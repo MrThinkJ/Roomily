@@ -70,7 +70,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } catch (Exception e) {
             log.error("Payment link creation failed: {}", e.getMessage(), e);
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    " .Error: " + e.getMessage());
+                                   " .Error: " + e.getMessage());
         }
     }
 
@@ -81,7 +81,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             return mapToPaymentLinkDto(data);
         } catch (Exception e) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_LINK_GET_FAILED,
-                    paymentLinkId + ". Error: " + e.getMessage());
+                                   paymentLinkId + ". Error: " + e.getMessage());
         }
     }
 
@@ -104,7 +104,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } catch (Exception e) {
             log.error("Failed to cancel payment link: {}", e.getMessage(), e);
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    "Failed when cancel payment. Error: " + e.getMessage());
+                                   "Failed when cancel payment. Error: " + e.getMessage());
         }
     }
 
@@ -119,7 +119,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             return response;
         } catch (Exception e) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    "Failed to confirm webhook. Error: " + e.getMessage());
+                                   "Failed to confirm webhook. Error: " + e.getMessage());
         }
     }
 
@@ -157,7 +157,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                             .build();
                     notificationService.sendNotification(notification);
                     log.error("Payment link amount remaining is greater than 0 for order code: {}",
-                            data.getOrderCode());
+                              data.getOrderCode());
                     return;
                 }
                 if (transaction.getType().equals(TransactionType.DEPOSIT)) {
@@ -180,7 +180,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } catch (Exception e) {
             log.error("Failed to handle payos transfer: {}", e.getMessage(), e);
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
-                    "Failed to handle payos transfer. Error: " + e.getMessage());
+                                   "Failed to handle payos transfer. Error: " + e.getMessage());
         }
     }
 
@@ -266,7 +266,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
                 .rentedRoomId(rentedRoomId)
                 .message(String.format("%s thanh toán %s cho phòng thuê", transaction.getUser().getFullName(),
-                        data.getAmount()))
+                                       data.getAmount()))
                 .activityType(RentedRoomActivityType.PAYMENT_MADE.name())
                 .build();
         rentedRoomActivityService.createRentedRoomActivity(activityRequest);
@@ -289,13 +289,13 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
                 .header("Nhận thanh toán tiền thuê")
                 .body(transaction.getUser().getFullName() + " đã thanh toán " +
-                        data.getAmount() + " cho phòng " + rentedRoom.getRoom().getId())
+                              data.getAmount() + " cho phòng " + rentedRoom.getRoom().getId())
                 .userId(rentedRoom.getLandlord().getId())
                 .build();
         notificationService.sendNotification(landlordNotification);
 
         log.info("Successfully topped up rentedRoomWallet for room: {}, tenant: {}, amount: {}",
-                rentedRoom.getRoom().getId(), transaction.getUser().getUsername(), data.getAmount());
+                 rentedRoom.getRoom().getId(), transaction.getUser().getUsername(), data.getAmount());
     }
 
 
@@ -311,7 +311,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 .cancellationReason(data.getCancellationReason())
                 .canceledAt(data.getCanceledAt())
                 .transactions(data.getTransactions().stream()
-                        .map(this::mapTransactionData).collect(Collectors.toList()))
+                                      .map(this::mapTransactionData).collect(Collectors.toList()))
                 .build();
     }
 

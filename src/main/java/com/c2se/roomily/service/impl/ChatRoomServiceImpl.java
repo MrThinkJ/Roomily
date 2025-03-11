@@ -19,12 +19,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,7 +91,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             }
             return chatRoom;
         }
-        
+
         ChatRoom chatRoom = ChatRoom.builder()
                 .chatKey(chatKey)
                 .name("DM_" + userId1 + "_" + userId2)
@@ -101,7 +99,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .status(ChatRoomStatus.ACTIVE)
                 .findPartnerPostId(findPartnerPostId)
                 .build();
-        
+
         chatRoomRepository.save(chatRoom);
         Set<User> users = userService.getUserEntities(List.of(userId1, userId2));
         if (users.size() != 2)
@@ -251,8 +249,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .isGroup(chatRoom.getType() == ChatRoomType.GROUP)
                 .build();
         messagingTemplate.convertAndSendToUser("70f70be9-fd3a-4314-85c7-8e3881d8579a",
-                "/queue/chat-room",
-                conversationResponse);
+                                               "/queue/chat-room",
+                                               conversationResponse);
     }
 
     private String generateDirectChatKey(String userId1, String userId2) {
@@ -272,7 +270,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         return new String[]{parts[1], parts[2]};
     }
 
-    private void notifyNewChatRoom(ChatRoom chatRoom, String userId){
+    private void notifyNewChatRoom(ChatRoom chatRoom, String userId) {
         ConversationResponse conversationResponse = ConversationResponse.builder()
                 .chatRoomId(chatRoom.getId())
                 .roomName(chatRoom.getName())

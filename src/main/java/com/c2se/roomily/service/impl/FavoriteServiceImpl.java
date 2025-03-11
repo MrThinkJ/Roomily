@@ -28,11 +28,10 @@ public class FavoriteServiceImpl implements FavoriteService {
         User user = userService.getUserEntity(userId);
         Room room = roomService.getRoomEntityById(roomId);
         Favorite favorite = favoriteRepository.findByUserIdAndRoomId(userId, roomId).orElse(null);
-        if (favorite != null){
+        if (favorite != null) {
             favorite.setFavorite(!favorite.isFavorite());
             favoriteRepository.save(favorite);
-        }
-        else {
+        } else {
             favorite = new Favorite();
             favorite.setUser(user);
             favorite.setRoom(room);

@@ -21,8 +21,11 @@ public interface SubscriptionService {
     ActiveSubscriptionResponse getActiveSubscription(String userId);
 
     List<UserSubscriptionResponse> getUserSubscriptions(String userId);
+
     List<String> getLandlordsWithActiveSubscriptions();
+
     boolean hasActiveSubscription(String landlordId);
+
     String getMostPopularSubscriptionId();
 
     void updateSubscription(String subscriptionId, UpdateSubscriptionRequest updateSubscriptionRequest);

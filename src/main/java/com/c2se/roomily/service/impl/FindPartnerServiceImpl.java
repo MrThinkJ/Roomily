@@ -52,7 +52,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         Room room = roomService.getRoomEntityById(request.getRoomId());
         if (findPartnerPostRepository.existsByPosterId(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You have already created a find partner post");
+                                   "You have already created a find partner post");
         }
         Set<User> users = userService.getUserEntitiesByPrivateIds(request.getCurrentParticipantPrivateIds());
         if (users.size() != request.getCurrentParticipantPrivateIds().size()) {
@@ -103,7 +103,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(posterId)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You are not the poster of this post");
+                                   "You are not the poster of this post");
         }
         User user = userService.getUserEntity(userId);
         findPartnerPost.getParticipants().add(user);
@@ -131,7 +131,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(posterId)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You are not the poster of this post");
+                                   "You are not the poster of this post");
         }
         findPartnerRequestRepository.deleteByKey(privateCode);
         chatRoomService.updateChatRoomStatus(roomId, ChatRoomStatus.CANCELED.name());
@@ -144,7 +144,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(poster.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You are not the poster of this post");
+                                   "You are not the poster of this post");
         }
         findPartnerPost.getParticipants().add(user);
         findPartnerPost.setCurrentPeople(findPartnerPost.getCurrentPeople() + 1);
@@ -164,7 +164,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You are not the poster of this post");
+                                   "You are not the poster of this post");
         }
         findPartnerPost.getParticipants().remove(participant);
         findPartnerPost.setCurrentPeople(findPartnerPost.getCurrentPeople() - 1);
@@ -189,7 +189,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You are not the poster of this post");
+                                   "You are not the poster of this post");
         }
         findPartnerPost.getParticipants().forEach(participant -> {
             CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder().header(
@@ -225,7 +225,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You are not the poster of this post");
+                                   "You are not the poster of this post");
         }
         findPartnerPost.setTitle(request.getTitle());
         findPartnerPost.setContent(request.getContent());
@@ -239,8 +239,10 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         Set<User> participants = findPartnerPost.getParticipants();
         participants.add(findPartnerPost.getRoom().getLandlord());
         String chatRoomId = chatRoomService.createGroupChatRoom(findPartnerPost.getPoster().getId(),
-                participants.stream().map(User::getId).collect(Collectors.toSet()),
-                "Find partner, room: " + findPartnerPost.getRoom().getId(), findPartnerPost.getRoom().getId());
+                                                                participants.stream().map(User::getId).collect(
+                                                                        Collectors.toSet()),
+                                                                "Find partner, room: " + findPartnerPost.getRoom().getId(),
+                                                                findPartnerPost.getRoom().getId());
         participants.forEach(participant -> {
             CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder().header(
                     "You have been added to a group chat room").body("You have been added to a group chat room").userId(

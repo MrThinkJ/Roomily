@@ -11,6 +11,7 @@ import com.c2se.roomily.payload.response.ReviewResponse;
 import com.c2se.roomily.repository.ReviewRepository;
 import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.repository.UserRepository;
+import com.c2se.roomily.service.RentedRoomService;
 import com.c2se.roomily.service.ReviewService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ public class ReviewServiceImpl implements ReviewService {
     UserRepository userRepository;
     ReviewRepository reviewRepository;
     RoomRepository roomRepository;
+    RentedRoomService rentedRoomService;
 
     @Override
     public Boolean createReview(String userId, String roomId, CreateReviewRequest createReviewRequest) {
@@ -34,6 +36,11 @@ public class ReviewServiceImpl implements ReviewService {
         Room room = roomRepository.findById(roomId).orElseThrow(
                 () -> new ResourceNotFoundException("Room", "id", roomId)
         );
+        if (!rentedRoomService.isUserRentedRoomBefore(userId, roomId)) {
+            throw new APIException(HttpStatus.FORBIDDEN,
+                                   ErrorCode.FORBIDDEN,
+                                   "You must rent this room before you can review it");
+        }
         Review review = Review.builder()
                 .user(user)
                 .room(room)

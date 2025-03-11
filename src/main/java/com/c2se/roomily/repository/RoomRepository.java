@@ -199,6 +199,7 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     );
 
     boolean existsById(@NotNull String roomId);
+
     @Query("SELECT r.tags FROM Room r WHERE r.id = :roomId")
     Set<Tag> findTagsById(String roomId);
 }

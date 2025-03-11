@@ -49,7 +49,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .imageUrl(null)
                 .message(chatMessageToAdd.getContent())
                 .roomId(roomId)
-                .subId(chatRoom.getNextSubId()+1)
+                .subId(chatRoom.getNextSubId() + 1)
                 .build();
         if (chatMessageToAdd.getImage() != null) {
             String fileName = roomId + "_" + UUID.randomUUID();
@@ -58,13 +58,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 chatMessage.setImageUrl(storageService.generatePresignedUrl(storageConfig.getBucketStore(), fileName));
             } catch (Exception e) {
                 throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
-                        "Error while saving image");
+                                       "Error while saving image");
             }
         }
         chatRoom.setLastMessage(chatMessage.getMessage());
         chatRoom.setLastMessageTimeStamp(chatMessage.getCreatedAt());
         chatRoom.setLastMessageSender(chatMessage.getSender().getId());
-        chatRoom.setNextSubId(chatRoom.getNextSubId()+1);
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
         chatRoomRepository.save(chatRoom);
         chatMessageRepository.save(chatMessage);
         List<String> users = chatRoomService.getChatRoomUserIds(roomId);
@@ -90,12 +90,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 chatMessage.setImageUrl(storageService.generatePresignedUrl(storageConfig.getBucketStore(), fileName));
             } catch (Exception e) {
                 throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
-                        "Error while saving image");
+                                       "Error while saving image");
             }
         }
         messagingTemplate.convertAndSendToUser("70f70be9-fd3a-4314-85c7-8e3881d8579a",
-                "/queue/messages",
-                chatMessage);
+                                               "/queue/messages",
+                                               chatMessage);
         return mapToResponse(chatMessage);
     }
 

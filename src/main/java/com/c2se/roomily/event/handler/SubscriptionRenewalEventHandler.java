@@ -33,7 +33,7 @@ public class SubscriptionRenewalEventHandler {
     public void handleSubscriptionRenewal(SubscriptionRenewalEvent event) {
         Runnable renewalTask = () -> processRenewal(event.getSubscriptionId());
         taskScheduler.schedule(renewalTask,
-                event.getRenewalTime().atZone(ZoneId.systemDefault()).toInstant());
+                               event.getRenewalTime().atZone(ZoneId.systemDefault()).toInstant());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -56,20 +56,20 @@ public class SubscriptionRenewalEventHandler {
                 userSubscriptionRepository.save(subscription);
 
                 notificationService.sendNotification(CreateNotificationRequest.builder()
-                        .header("Subscription Renewed")
-                        .body("Your subscription has been automatically renewed.")
-                        .userId(user.getId())
-                        .type("SUBSCRIPTION")
-                        .build());
+                                                             .header("Subscription Renewed")
+                                                             .body("Your subscription has been automatically renewed.")
+                                                             .userId(user.getId())
+                                                             .type("SUBSCRIPTION")
+                                                             .build());
             } else {
                 subscription.setAutoRenew(false);
                 userSubscriptionRepository.save(subscription);
                 notificationService.sendNotification(CreateNotificationRequest.builder()
-                        .header("Subscription Renewal Failed")
-                        .body("Auto-renewal failed due to insufficient balance.")
-                        .userId(user.getId())
-                        .type("SUBSCRIPTION")
-                        .build());
+                                                             .header("Subscription Renewal Failed")
+                                                             .body("Auto-renewal failed due to insufficient balance.")
+                                                             .userId(user.getId())
+                                                             .type("SUBSCRIPTION")
+                                                             .build());
             }
         } catch (Exception e) {
             log.error("Failed to process renewal for subscription: " + subscriptionId, e);

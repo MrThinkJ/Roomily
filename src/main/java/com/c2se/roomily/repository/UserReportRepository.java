@@ -32,7 +32,8 @@ public interface UserReportRepository extends JpaRepository<UserReport, String> 
 
     @Modifying
     @Query("UPDATE UserReport r SET r.status = :status WHERE r.reportedUser.id = :reportedUserId")
-    void markUserReportAsProcessed(@Param("reportStatus") ReportStatus status, @Param("reportedUserId") String reportedUserId);
+    void markUserReportAsProcessed(@Param("reportStatus") ReportStatus status,
+                                   @Param("reportedUserId") String reportedUserId);
 
     Boolean existsByReporterIdAndReportedUserIdAndStatus(String reporterId, String reportedUserId, ReportStatus status);
 

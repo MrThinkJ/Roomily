@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @AllArgsConstructor
 public class RoomReportController {
     RoomReportService roomReportService;
+
     @PostMapping
     public void reportRoom(String reporterId, CreateRoomReportRequest createRoomReportRequest) {
         roomReportService.reportRoom(reporterId, createRoomReportRequest);

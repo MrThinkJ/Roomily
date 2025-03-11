@@ -24,22 +24,22 @@ public class AppConfig {
                                                TagRepository tagRepository) {
         List<String> roles = List.of("ROLE_ADMIN", "ROLE_LANDLORD", "ROLE_USER");
         List<String> tags = List.of("Air Conditioning",
-                "Balcony",
-                "Bed",
-                "Fridge",
-                "Internet",
-                "Kitchen",
-                "Laundry",
-                "Microwave",
-                "Parking",
-                "TV",
-                "Water Heater");
+                                    "Balcony",
+                                    "Bed",
+                                    "Fridge",
+                                    "Internet",
+                                    "Kitchen",
+                                    "Laundry",
+                                    "Microwave",
+                                    "Parking",
+                                    "TV",
+                                    "Water Heater");
         return args -> {
             tags.forEach(tag -> {
                 if (tagRepository.findByName(tag) == null) {
                     tagRepository.save(Tag.builder()
-                            .name(tag)
-                            .build());
+                                               .name(tag)
+                                               .build());
                     log.info("Tag {} has been created as default", tag);
                 }
             });
