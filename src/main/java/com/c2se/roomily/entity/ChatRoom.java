@@ -1,5 +1,6 @@
 package com.c2se.roomily.entity;
 
+import com.c2se.roomily.enums.ChatRoomStatus;
 import com.c2se.roomily.enums.ChatRoomType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,8 @@ public class ChatRoom {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "chat_room_id")
     private String id;
+    @Column(name = "chat_key", unique = true)
+    private String chatKey;
     private String name;
     @Column(name = "manager_id")
     private String managerId;
@@ -28,6 +31,8 @@ public class ChatRoom {
     private Integer nextSubId = 1;
     @Enumerated(EnumType.STRING)
     private ChatRoomType type;
+    @Enumerated(EnumType.STRING)
+    private ChatRoomStatus status;
     @Column(name = "last_message")
     private String lastMessage;
     @Column(name = "last_message_timestamp")

@@ -15,6 +15,10 @@ import java.util.Set;
 @RequestMapping("/api/v1/chat-rooms")
 public class ChatRoomController extends BaseController {
     ChatRoomService chatRoomService;
+    @PostMapping("/test")
+    public void testNotifyChatRoom() {
+        chatRoomService.testNotifyChatRoom();
+    }
 
     @GetMapping("/{roomId}")
     public ResponseEntity<ChatRoomResponse> getChatRoomInfo(@PathVariable String roomId) {
@@ -37,12 +41,12 @@ public class ChatRoomController extends BaseController {
         return ResponseEntity.ok(chatRoomService.getChatRoomUserIds(roomId));
     }
 
-    @PostMapping("/direct/{userId}/room/{roomId}")
+    @PostMapping("/direct/{userId}")
     public ResponseEntity<ChatRoomResponse> getOrCreateDirectChatRoom(@PathVariable String userId,
-                                                                      @PathVariable String roomId) {
+                                                                      @RequestParam(required = false) String findPartnerPostId) {
         String currentUserId = this.getUserInfo().getId();
         ChatRoomResponse chatRoomResponse = ChatRoomResponse.builder()
-                .chatRoomId(chatRoomService.getOrCreateDirectChatRoom(currentUserId, userId, roomId).getId())
+                .chatRoomId(chatRoomService.getOrCreateDirectChatRoom(currentUserId, userId, findPartnerPostId).getId())
                 .build();
         return ResponseEntity.ok(chatRoomResponse);
     }

@@ -33,8 +33,8 @@ public class FindPartnerRequestRepositoryImpl implements FindPartnerRequestRepos
     }
 
     @Override
-    public String generateKey(String userId, String findPartnerPostId, int ttl) {
-        String value = String.format("%s#%s", userId, findPartnerPostId);
+    public String generateKey(String userId, String findPartnerPostId, String chatRoomId, int ttl) {
+        String value = String.format("%s#%s#%s", userId, findPartnerPostId, chatRoomId);
         String privateCode = UtilFunction.generatePrivateCode(value);
         save(privateCode, value, ttl);
         return privateCode;

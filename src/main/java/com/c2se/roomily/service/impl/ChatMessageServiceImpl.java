@@ -38,7 +38,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Override
     public ChatMessageResponse saveChatMessage(ChatMessageToAdd chatMessageToAdd) {
         User sender = userService.getUserEntity(chatMessageToAdd.getSenderId());
-        String roomId = chatMessageToAdd.getRoomId();
+        String roomId = chatMessageToAdd.getChatRoomId();
         if (!chatRoomRepository.existsById(roomId))
             throw new ResourceNotFoundException("Chat room", "id", roomId);
         ChatRoom chatRoom = chatRoomRepository.findByIdLocked(roomId).orElseThrow(
@@ -69,6 +69,33 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         chatMessageRepository.save(chatMessage);
         List<String> users = chatRoomService.getChatRoomUserIds(roomId);
         users.forEach(user -> messagingTemplate.convertAndSendToUser(user, "/queue/messages", chatMessage));
+        return mapToResponse(chatMessage);
+    }
+
+    @Override
+    public ChatMessageResponse saveTestChatMessage(ChatMessageToAdd chatMessageToAdd) {
+        User sender = userService.getUserEntity(chatMessageToAdd.getSenderId());
+        String roomId = chatMessageToAdd.getChatRoomId();
+        ChatMessage chatMessage = ChatMessage.builder()
+                .sender(sender)
+                .imageUrl(null)
+                .message(chatMessageToAdd.getContent())
+                .roomId(roomId)
+                .subId(0)
+                .build();
+        if (chatMessageToAdd.getImage() != null) {
+            String fileName = roomId + "_" + UUID.randomUUID();
+            try {
+                storageService.putObject(chatMessageToAdd.getImage(), storageConfig.getBucketStore(), fileName);
+                chatMessage.setImageUrl(storageService.generatePresignedUrl(storageConfig.getBucketStore(), fileName));
+            } catch (Exception e) {
+                throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
+                        "Error while saving image");
+            }
+        }
+        messagingTemplate.convertAndSendToUser("70f70be9-fd3a-4314-85c7-8e3881d8579a",
+                "/queue/messages",
+                chatMessage);
         return mapToResponse(chatMessage);
     }
 

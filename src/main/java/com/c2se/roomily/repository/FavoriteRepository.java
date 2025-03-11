@@ -8,19 +8,24 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FavoriteRepository extends JpaRepository<Favorite, String> {
     boolean existsByUserIdAndRoomId(String userId, String roomId);
+    Optional<Favorite> findByUserIdAndRoomId(String userId, String roomId);
 
     @Modifying
-    @Query("UPDATE Favorite f SET f.isFavorite = CASE WHEN f.isFavorite = true THEN false ELSE true END WHERE f.user.id = :userId AND f.room.id = :roomId")
+    @Query("UPDATE Favorite f SET f.isFavorite = :isFavorite WHERE f.user.id = :userId AND f.room.id = :roomId")
     void toggleByUserIdAndRoomId(@Param(":userId") String userId,
-                                 @Param(":userId") String roomId);
+                                 @Param(":userId") String roomId,
+                                 @Param("isFavorite") boolean isFavorite);
 
     void deleteByUserIdAndRoomId(String userId, String roomId);
 
     List<Favorite> findAllByUserId(String userId);
+    @Query("SELECT f FROM Favorite f WHERE f.user.id = :userId AND f.isFavorite = true")
+    List<Favorite> findByUserIdAndFavoriteIsTrue(String userId);
 
     int countByUserId(String userId);
 

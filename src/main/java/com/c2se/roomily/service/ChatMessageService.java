@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface ChatMessageService {
     ChatMessageResponse saveChatMessage(ChatMessageToAdd chatMessageToAdd);
+    ChatMessageResponse saveTestChatMessage(ChatMessageToAdd chatMessageToAdd);
 
     List<ChatMessageResponse> getChatMessages(String roomId, String userId, String pivot, String timestamp, int prev);
 }

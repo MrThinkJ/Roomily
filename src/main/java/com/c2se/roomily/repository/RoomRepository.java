@@ -1,6 +1,7 @@
 package com.c2se.roomily.repository;
 
 import com.c2se.roomily.entity.Room;
+import com.c2se.roomily.entity.Tag;
 import com.c2se.roomily.enums.RoomStatus;
 import com.c2se.roomily.enums.RoomType;
 import com.c2se.roomily.payload.dao.RoomDao;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface RoomRepository extends JpaRepository<Room, String> {
@@ -79,8 +81,8 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             ":radius)"
             , nativeQuery = true)
     List<Room> findRoomAround(@Param("lat") Double lat,
-                                         @Param("lon") Double lon,
-                                         @Param("radius") Double radius);
+                              @Param("lon") Double lon,
+                              @Param("radius") Double radius);
 
     @Query(value = """
             SELECT r.* FROM rooms r
@@ -104,12 +106,12 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             @Param("longitude") double longitude,
             @Param("radiusKm") double radiusKm
     );
-    
+
     @Query("SELECT r FROM Room r WHERE r.landlord.id IN :landlordIds " +
-           "AND (COALESCE(:city, '') = '' OR r.city LIKE '%' || :city || '%') " +
-           "AND (COALESCE(:district, '') = '' OR r.district LIKE '%' || :district || '%') " +
-           "AND (COALESCE(:ward, '') = '' OR r.ward LIKE '%' || :ward || '%') " +
-           "AND r.status = 'AVAILABLE'")
+            "AND (COALESCE(:city, '') = '' OR r.city LIKE '%' || :city || '%') " +
+            "AND (COALESCE(:district, '') = '' OR r.district LIKE '%' || :district || '%') " +
+            "AND (COALESCE(:ward, '') = '' OR r.ward LIKE '%' || :ward || '%') " +
+            "AND r.status = 'AVAILABLE'")
     List<Room> findRoomsByLandlordIdsAndLocation(
             @Param("landlordIds") List<String> landlordIds,
             @Param("city") String city,
@@ -118,50 +120,88 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     );
 
     @Query(value = """
-            SELECT DISTINCT r.*, 
-                   (r.user_id IN :subscribedLandlordIds) as is_subscribed
-            FROM room r
-            WHERE (COALESCE(:city, '') = '' OR r.city LIKE '%' || :city || '%')
-            AND (COALESCE(:district, '') = '' OR r.district LIKE '%' || :district || '%')
-            AND (COALESCE(:ward, '') = '' OR r.ward LIKE '%' || :ward || '%')
-            AND (:type IS NULL OR r.type = :type)
-            AND r.price BETWEEN :minPrice AND :maxPrice
-            AND r.max_people BETWEEN :minPeople AND :maxPeople
-            AND r.room_status = 'AVAILABLE'
-            AND (
-                :tagIds IS NULL 
-                OR :tagIds = '{}' 
-                OR EXISTS (
-                    SELECT 1 FROM room_tags rt 
-                    WHERE rt.room_id = r.id 
-                    AND rt.tag_id IN :tagIds
+                WITH filtered_rooms AS (
+                SELECT 
+                    r.room_id as id,
+                    r.address,
+                    r.city,
+                    r.description,
+                    r.district,
+                    r.electric_price as electricPrice,
+                    r.max_people as maxPeople,
+                    r.nearby_amenities as nearbyAmenities,
+                    r.price,
+                    r.square_meters as squareMeters,
+                    r.title,
+                    r.room_type as type,
+                    r.ward,
+                    r.water_price as waterPrice,
+                    CAST(r.created_at AS timestamp) as createdAt,
+                    r.deposit,
+                    r.room_status as status,
+                    CAST(r.updated_at AS timestamp) as updatedAt,
+                    r.latitude,
+                    r.longitude,
+                    r.landlord_id as landlordId,
+                    CASE 
+                        WHEN :subscribedLandlordIds IS NULL THEN false
+                        ELSE (r.landlord_id = ANY(:subscribedLandlordIds)) 
+                    END as is_subscribed
+                FROM rooms r
+                WHERE r.room_status = 'AVAILABLE'
+                AND (:type IS NULL OR r.room_type = :type)
+                AND r.price BETWEEN :minPrice AND :maxPrice
+                AND r.max_people BETWEEN :minPeople AND :maxPeople
+                AND (COALESCE(:city, '') = '' OR r.city LIKE '%' || :city || '%')
+                AND (COALESCE(:district, '') = '' OR r.district LIKE '%' || :district || '%')
+                AND (COALESCE(:ward, '') = '' OR r.ward LIKE '%' || :ward || '%')
+                AND (
+                    :tagIds IS NULL 
+                    OR :tagIds = '{}' 
+                    OR EXISTS (
+                        SELECT 1 
+                        FROM room_tags rt 
+                        WHERE rt.room_id = r.room_id 
+                        AND rt.tag_id = ANY(:tagIds)
+                    )
                 )
             )
-            AND (
-                ((r.user_id IN :subscribedLandlordIds) = :pivotSubscribed AND 
-                 (r.created_at < :timestamp OR (r.created_at = :timestamp AND r.id < :pivotId)))
-                OR ((r.user_id IN :subscribedLandlordIds) < :pivotSubscribed)
+            SELECT *
+            FROM filtered_rooms fr
+            WHERE
+            (
+                fr.is_subscribed = :pivotSubscribed
+                AND (fr.createdAt, fr.id) < (:timestamp, :pivotId)
             )
-            ORDER BY (r.user_id IN :subscribedLandlordIds) DESC, r.created_at DESC, r.id DESC
+            OR (
+                fr.is_subscribed > :pivotSubscribed
+                AND (fr.createdAt, fr.id) < (:timestamp, :pivotId)
+            )
+            ORDER BY 
+                fr.is_subscribed DESC,
+                fr.createdAt DESC, 
+                fr.id DESC
             LIMIT :limit
-            """, 
+                """,
             nativeQuery = true)
     List<RoomDao> findRoomsWithCursor(
             @Param("city") String city,
             @Param("district") String district,
             @Param("ward") String ward,
-            @Param("type") RoomType type,
+            @Param("type") String type,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
             @Param("minPeople") Integer minPeople,
             @Param("maxPeople") Integer maxPeople,
-            @Param("subscribedLandlordIds") List<String> subscribedLandlordIds,
+            @Param("subscribedLandlordIds") String[] subscribedLandlordIds,
             @Param("pivotSubscribed") boolean pivotSubscribed,
             @Param("timestamp") LocalDateTime timestamp,
             @Param("pivotId") String pivotId,
             @Param("limit") int limit,
-            @Param("tagIds") List<String> tagIds
+            @Param("tagIds") String[] tagIds
     );
 
     boolean existsById(@NotNull String roomId);
+    @Query("SELECT r.tags FROM Room r WHERE r.id = :roomId")
+    Set<Tag> findTagsById(String roomId);
 }

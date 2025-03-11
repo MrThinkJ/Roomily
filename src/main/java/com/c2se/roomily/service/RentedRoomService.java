@@ -1,5 +1,6 @@
 package com.c2se.roomily.service;
 
+import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.payload.request.CreateRentedRoomRequest;
 import com.c2se.roomily.payload.request.UpdateRentedRoomRequest;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
@@ -7,6 +8,10 @@ import com.c2se.roomily.payload.response.RentedRoomResponse;
 import java.util.List;
 
 public interface RentedRoomService {
+    RentedRoom getRentedRoomEntityById(String roomId);
+    void saveRentedRoom(RentedRoom rentedRoom);
+    RentedRoomResponse getRentedRoomActiveByUserIdOrCoTenantIdAndRoomId(String userId, String roomId);
+    List<RentedRoomResponse> getRentedRoomActiveByUserIdOrCoTenantId(String userId);
     List<RentedRoomResponse> getRentedRoomsByLandlordId(String landlordId);
 
     List<RentedRoomResponse> getRentedRoomHistoryByRoomId(String roomId);

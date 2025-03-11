@@ -15,6 +15,12 @@ import java.util.List;
 public class RentedRoomController extends BaseController {
     RentedRoomService rentedRoomService;
 
+    @GetMapping
+    public List<RentedRoomResponse> getRentedRoomsByUserId() {
+        String userId = this.getUserInfo().getId();
+        return rentedRoomService.getRentedRoomActiveByUserIdOrCoTenantId(userId);
+    }
+
     @GetMapping("/landlord/{landlordId}")
     public List<RentedRoomResponse> getRentedRoomsByLandlordId(@PathVariable String landlordId) {
         return rentedRoomService.getRentedRoomsByLandlordId(landlordId);
@@ -25,17 +31,12 @@ public class RentedRoomController extends BaseController {
         return rentedRoomService.getRentedRoomByRoomId(roomId);
     }
 
-    @GetMapping("/user/{userId}")
-    public List<RentedRoomResponse> getRentedRoomsByUserId(@PathVariable String userId) {
-        return rentedRoomService.getRentedRoomsByUserId(userId);
-    }
-
     @GetMapping("/history/{roomId}")
     public List<RentedRoomResponse> getRentedRoomHistoryByRoomId(@PathVariable String roomId) {
         return rentedRoomService.getRentedRoomHistoryByRoomId(roomId);
     }
 
-    @PostMapping("/request")
+    @PostMapping("/request/create")
     public ResponseEntity<String> createRentedRoom(@RequestBody CreateRentedRoomRequest createRentedRoomRequest) {
         String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(rentedRoomService.requestRent(userId, createRentedRoomRequest));
@@ -45,13 +46,6 @@ public class RentedRoomController extends BaseController {
     public ResponseEntity<Void> cancelRentRequest(@RequestParam String roomId) {
         String userId = this.getUserInfo().getId();
         rentedRoomService.cancelRentRequest(userId, roomId);
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping("/cancel/{roomId}")
-    public ResponseEntity<Void> cancelRent(@PathVariable String roomId) {
-        String userId = this.getUserInfo().getId();
-        rentedRoomService.cancelRent(userId, roomId);
         return ResponseEntity.ok().build();
     }
 
@@ -69,4 +63,10 @@ public class RentedRoomController extends BaseController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/{roomId}")
+    public ResponseEntity<Void> cancelRent(@PathVariable String roomId) {
+        String userId = this.getUserInfo().getId();
+        rentedRoomService.cancelRent(userId, roomId);
+        return ResponseEntity.ok().build();
+    }
 }

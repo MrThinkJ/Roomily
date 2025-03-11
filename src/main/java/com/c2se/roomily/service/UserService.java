@@ -8,6 +8,7 @@ import java.util.Set;
 
 public interface UserService {
     User getUserEntity(String id);
+    User getCurrentUser();
     User getUserEntityByPrivateId(String privateId);
     Set<User> getUserEntities(List<String> ids);
     Set<User> getUserEntitiesByPrivateIds(List<String> privateIds);

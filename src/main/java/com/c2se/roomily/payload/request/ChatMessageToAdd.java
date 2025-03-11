@@ -9,7 +9,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class ChatMessageToAdd {
     private String content;
     private String senderId;
-    private String roomId;
     private String chatRoomId;
     private MultipartFile image;
 }

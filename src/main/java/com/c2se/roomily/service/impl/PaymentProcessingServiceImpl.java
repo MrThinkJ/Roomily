@@ -1,27 +1,26 @@
 package com.c2se.roomily.service.impl;
 
+import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.entity.Transaction;
 import com.c2se.roomily.entity.User;
-import com.c2se.roomily.enums.ErrorCode;
-import com.c2se.roomily.enums.TransactionStatus;
-import com.c2se.roomily.enums.TransactionType;
+import com.c2se.roomily.enums.*;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.internal.PayOsTransactionDto;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.request.CreatePaymentLinkRequest;
+import com.c2se.roomily.payload.request.CreateRentedRoomActivityRequest;
 import com.c2se.roomily.payload.response.CheckoutResponse;
 import com.c2se.roomily.payload.response.PaymentLinkResponse;
 import com.c2se.roomily.repository.TransactionRepository;
-import com.c2se.roomily.service.NotificationService;
-import com.c2se.roomily.service.PaymentProcessingService;
-import com.c2se.roomily.service.UserService;
+import com.c2se.roomily.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.payos.PayOS;
 import vn.payos.type.*;
 
@@ -38,17 +37,17 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     TransactionRepository transactionRepository;
     UserService userService;
     NotificationService notificationService;
+    RentedRoomService rentedRoomService;
+    RentedRoomActivityService rentedRoomActivityService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest) {
         log.info("Creating payment link for amount: {}", paymentLinkRequest.getPrice());
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-//        User user = userRepository.findByUsernameOrEmail(userDetails.getUsername(), userDetails.getUsername())
-//                .orElseThrow(() -> new ResourceNotFoundException("User", "username", userDetails.getUsername()));
         try {
             final String productName = paymentLinkRequest.getProductName();
             final String description = paymentLinkRequest.getDescription();
+            final boolean isInAppWallet = paymentLinkRequest.isInAppWallet();
             final String returnUrl = "/success";
             final String cancelUrl = "/cancel";
             final int price = paymentLinkRequest.getPrice();
@@ -62,26 +61,12 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                     .item(item).returnUrl(returnUrl).cancelUrl(cancelUrl).build();
 
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-            Transaction transaction = Transaction.builder()
-                    .amount(BigDecimal.valueOf(data.getAmount()))
-                    .status(TransactionStatus.PENDING)
-                    .type(TransactionType.DEPOSIT)
-//                    .user(user)
-                    .paymentId(data.getPaymentLinkId())
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-            transactionRepository.save(transaction);
-//            log.info("Successfully created payment link for user: {}", userDetails.getUsername());
-            return CheckoutResponse.builder()
-                    .accountNumber(data.getAccountNumber())
-                    .accountName(data.getAccountName())
-                    .amount(data.getAmount())
-                    .description(data.getDescription())
-                    .checkoutUrl(data.getCheckoutUrl())
-                    .qrCode(data.getQrCode())
-                    .orderCode(data.getOrderCode())
-                    .status(data.getStatus())
-                    .build();
+            User user = userService.getCurrentUser();
+            if (isInAppWallet) {
+                return createPaymentLinkForInAppWallet(data, user);
+            } else {
+                return createPaymentLinkForRentedRoomWallet(data, user, paymentLinkRequest.getRentedRoomId());
+            }
         } catch (Exception e) {
             log.error("Payment link creation failed: {}", e.getMessage(), e);
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
@@ -171,24 +156,15 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                             .userId(transaction.getUser().getId())
                             .build();
                     notificationService.sendNotification(notification);
-                    log.error("Payment link amount remaining is greater than 0 for order code: {}", data.getOrderCode());
+                    log.error("Payment link amount remaining is greater than 0 for order code: {}",
+                            data.getOrderCode());
                     return;
                 }
-                transaction.setStatus(TransactionStatus.COMPLETED);
-                transaction.setUpdatedAt(LocalDateTime.now());
-                transactionRepository.save(transaction);
-
-                User user = transaction.getUser();
-                user.setBalance(user.getBalance().add(BigDecimal.valueOf(data.getAmount())));
-                userService.saveUser(user);
-
-                CreateNotificationRequest notification = CreateNotificationRequest.builder()
-                        .header("Thanh toán thành công")
-                        .body("Thanh toán của bạn đã thực hiện thành công.")
-                        .userId(user.getId())
-                        .build();
-                notificationService.sendNotification(notification);
-                log.info("Successfully handled payos transfer for user: {}", user.getUsername());
+                if (transaction.getType().equals(TransactionType.DEPOSIT)) {
+                    handleTopUpInAppWallet(transaction, data);
+                } else if (transaction.getType().equals(TransactionType.RENT_PAYMENT)) {
+                    handleTopUpRentedRoomWallet(transaction, data);
+                }
             } else {
                 Transaction transaction = transactionRepository.findByPaymentId(data.getPaymentLinkId());
                 transaction.setStatus(TransactionStatus.FAILED);
@@ -208,15 +184,120 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         }
     }
 
-    private PayOsTransactionDto mapTransactionData(vn.payos.type.Transaction transaction) {
-        return PayOsTransactionDto.builder()
-                .reference(transaction.getReference())
-                .amount(transaction.getAmount())
-                .accountNumber(transaction.getAccountNumber())
-                .description(transaction.getDescription())
-                .transactionDateTime(transaction.getTransactionDateTime())
+    private CheckoutResponse createPaymentLinkForInAppWallet(CheckoutResponseData data, User user) {
+        Transaction transaction = Transaction.builder()
+                .amount(BigDecimal.valueOf(data.getAmount()))
+                .status(TransactionStatus.PENDING)
+                .type(TransactionType.DEPOSIT)
+                .user(user)
+                .paymentId(data.getPaymentLinkId())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        transactionRepository.save(transaction);
+        log.info("Successfully created payment link to top up in-app wallet for user: {}", user.getUsername());
+        return CheckoutResponse.builder()
+                .accountNumber(data.getAccountNumber())
+                .accountName(data.getAccountName())
+                .amount(data.getAmount())
+                .description(data.getDescription())
+                .checkoutUrl(data.getCheckoutUrl())
+                .qrCode(data.getQrCode())
+                .orderCode(data.getOrderCode())
+                .status(data.getStatus())
                 .build();
     }
+
+    private CheckoutResponse createPaymentLinkForRentedRoomWallet(CheckoutResponseData data,
+                                                                  User user,
+                                                                  String rentedRoomId) {
+        RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
+        Transaction transaction = Transaction.builder()
+                .amount(BigDecimal.valueOf(data.getAmount()))
+                .status(TransactionStatus.PENDING)
+                .type(TransactionType.RENT_PAYMENT)
+                .user(user)
+                .paymentId(data.getPaymentLinkId())
+                .metadata(rentedRoom.getId())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        transactionRepository.save(transaction);
+        log.info("Successfully created payment link to top up rented room wallet for user: {}", user.getUsername());
+        return CheckoutResponse.builder()
+                .accountNumber(data.getAccountNumber())
+                .accountName(data.getAccountName())
+                .amount(data.getAmount())
+                .description(data.getDescription())
+                .checkoutUrl(data.getCheckoutUrl())
+                .qrCode(data.getQrCode())
+                .orderCode(data.getOrderCode())
+                .status(data.getStatus())
+                .build();
+    }
+
+    private void handleTopUpInAppWallet(Transaction transaction, WebhookData data) {
+        transaction.setStatus(TransactionStatus.COMPLETED);
+        transaction.setUpdatedAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
+
+        User user = transaction.getUser();
+        user.setBalance(user.getBalance().add(BigDecimal.valueOf(data.getAmount())));
+        userService.saveUser(user);
+
+        CreateNotificationRequest notification = CreateNotificationRequest.builder()
+                .header("Nạp tiền thành công")
+                .body("Nạp tiền vào ví của bạn đã thực hiện thành công.")
+                .userId(user.getId())
+                .build();
+        notificationService.sendNotification(notification);
+        log.info("Successfully handled payos transfer for user: {}", user.getUsername());
+    }
+
+    private void handleTopUpRentedRoomWallet(Transaction transaction, WebhookData data) {
+        transaction.setStatus(TransactionStatus.COMPLETED);
+        transaction.setUpdatedAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
+        String rentedRoomId = transaction.getMetadata();
+        RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
+
+        BigDecimal currentBalance = rentedRoom.getRentedRoomWallet() != null ?
+                rentedRoom.getRentedRoomWallet() : BigDecimal.ZERO;
+        BigDecimal newBalance = currentBalance.add(BigDecimal.valueOf(data.getAmount()));
+        rentedRoom.setRentedRoomWallet(newBalance);
+        CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
+                .rentedRoomId(rentedRoomId)
+                .message(String.format("%s thanh toán %s cho phòng thuê", transaction.getUser().getFullName(),
+                        data.getAmount()))
+                .activityType(RentedRoomActivityType.PAYMENT_MADE.name())
+                .build();
+        rentedRoomActivityService.createRentedRoomActivity(activityRequest);
+        CreateNotificationRequest tenantNotification = CreateNotificationRequest.builder()
+                .header("Thanh toán tiền thuê thành công")
+                .body("Bạn đã thanh toán thành công " + data.getAmount() + " vào ví phòng thuê.")
+                .userId(transaction.getUser().getId())
+                .build();
+        notificationService.sendNotification(tenantNotification);
+        if (rentedRoom.getStatus() == RentedRoomStatus.DEBT && newBalance.compareTo(BigDecimal.ZERO) >= 0) {
+            rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+            CreateRentedRoomActivityRequest fullPaymentActivity = CreateRentedRoomActivityRequest.builder()
+                    .rentedRoomId(rentedRoomId)
+                    .activityType(RentedRoomActivityType.RENT_PAID_IN_FULL.name())
+                    .message("Đã thanh toán đầy đủ tiền thuê cho tháng này.")
+                    .build();
+            rentedRoomActivityService.createRentedRoomActivity(fullPaymentActivity);
+        }
+        rentedRoomService.saveRentedRoom(rentedRoom);
+        CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
+                .header("Nhận thanh toán tiền thuê")
+                .body(transaction.getUser().getFullName() + " đã thanh toán " +
+                        data.getAmount() + " cho phòng " + rentedRoom.getRoom().getId())
+                .userId(rentedRoom.getLandlord().getId())
+                .build();
+        notificationService.sendNotification(landlordNotification);
+
+        log.info("Successfully topped up rentedRoomWallet for room: {}, tenant: {}, amount: {}",
+                rentedRoom.getRoom().getId(), transaction.getUser().getUsername(), data.getAmount());
+    }
+
 
     private PaymentLinkResponse mapToPaymentLinkDto(PaymentLinkData data) {
         return PaymentLinkResponse.builder()
@@ -231,6 +312,29 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 .canceledAt(data.getCanceledAt())
                 .transactions(data.getTransactions().stream()
                         .map(this::mapTransactionData).collect(Collectors.toList()))
+                .build();
+    }
+
+    private CheckoutResponse buildCheckoutResponse(CheckoutResponseData data) {
+        return CheckoutResponse.builder()
+                .accountNumber(data.getAccountNumber())
+                .accountName(data.getAccountName())
+                .amount(data.getAmount())
+                .description(data.getDescription())
+                .checkoutUrl(data.getCheckoutUrl())
+                .qrCode(data.getQrCode())
+                .orderCode(data.getOrderCode())
+                .status(data.getStatus())
+                .build();
+    }
+
+    private PayOsTransactionDto mapTransactionData(vn.payos.type.Transaction transaction) {
+        return PayOsTransactionDto.builder()
+                .reference(transaction.getReference())
+                .amount(transaction.getAmount())
+                .accountNumber(transaction.getAccountNumber())
+                .description(transaction.getDescription())
+                .transactionDateTime(transaction.getTransactionDateTime())
                 .build();
     }
 }

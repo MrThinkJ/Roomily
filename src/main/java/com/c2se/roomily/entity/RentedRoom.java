@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -29,8 +30,12 @@ public class RentedRoom {
     private LocalDate startDate;
     @Column(name = "end_date")
     private LocalDate endDate;
+    @Column(name = "rental_deposit")
+    private BigDecimal rentalDeposit;
     @Column(name = "debt_date")
     private LocalDate debtDate;
+    @Column(name = "rented_room_wallet")
+    private BigDecimal rentedRoomWallet;
     @Enumerated(EnumType.STRING)
     private RentedRoomStatus status;
     @CreationTimestamp

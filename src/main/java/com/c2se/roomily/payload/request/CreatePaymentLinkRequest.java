@@ -12,5 +12,7 @@ public class CreatePaymentLinkRequest {
     private String description;
     //    @NotNull(message = "Price is required")
 //    @Min(value = 0, message = "Price must be a positive number")
+    private boolean isInAppWallet;
+    private String rentedRoomId;
     private int price;
 }
