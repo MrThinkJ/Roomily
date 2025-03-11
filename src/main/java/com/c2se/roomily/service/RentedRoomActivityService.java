@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface RentedRoomActivityService {
     void createRentedRoomActivity(CreateRentedRoomActivityRequest createRentedRoomActivityRequest);
+
     List<RentedRoomActivityResponse> getRentedRoomActivitiesByRentedRoomId(String rentedRoomId, String pivotId,
                                                                            String timestamp, int limit);
 }

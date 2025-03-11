@@ -39,7 +39,8 @@ public class RoomExpireEventHandler {
     public void handleRoomExpireEvent(RoomExpireEvent event) {
         log.info("Handling room expire event for room {}", event.getRoomId());
         RentedRoom rentedRoom = rentedRoomRepository.findActiveByRoomId(event.getRentedRoomId(),
-                List.of(RentedRoomStatus.IN_USE, RentedRoomStatus.DEBT));
+                                                                        List.of(RentedRoomStatus.IN_USE,
+                                                                                RentedRoomStatus.DEBT));
         rentedRoom.setStatus(RentedRoomStatus.DEBT);
         rentedRoom.setDebtDate(rentedRoom.getEndDate().plusDays(AppConstants.DEBT_DATE_THRESHOLD));
         rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getRoom().getPrice()));
@@ -47,7 +48,8 @@ public class RoomExpireEventHandler {
         CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
                 .rentedRoomId(rentedRoom.getId())
                 .activityType(RentedRoomActivityType.DEBT_RECORDED.name())
-                .message("Đã tới hạn thanh toán tiền phòng tháng này. Vui lòng cập nhật hóa đơn điện nước và thanh toán")
+                .message(
+                        "Đã tới hạn thanh toán tiền phòng tháng này. Vui lòng cập nhật hóa đơn điện nước và thanh toán")
                 .build();
         rentedRoomActivityService.createRentedRoomActivity(activityRequest);
         // TODO: Create bill log and handle

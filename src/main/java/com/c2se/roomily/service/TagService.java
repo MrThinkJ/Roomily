@@ -3,11 +3,12 @@ package com.c2se.roomily.service;
 import com.c2se.roomily.entity.Tag;
 
 import java.util.List;
-import java.util.Set;
 
 public interface TagService {
     List<Tag> getAllTags();
+
     List<Tag> getTagsByIdIn(List<String> tagIds);
+
     Tag getTagById(String tagId);
 
     Boolean createTag(String tagName);

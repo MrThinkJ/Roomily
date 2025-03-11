@@ -15,9 +15,9 @@ public class SchedulingConfig {
         scheduler.setPoolSize(10);
         scheduler.setThreadNamePrefix("subscription-renewal-");
         scheduler.setRejectedExecutionHandler((runnable, executor) ->
-                log.error("Task rejected, thread pool is full"));
+                                                      log.error("Task rejected, thread pool is full"));
         scheduler.setErrorHandler(throwable ->
-                log.error("Scheduled task error", throwable));
+                                          log.error("Scheduled task error", throwable));
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setAwaitTerminationSeconds(60);
         return scheduler;

@@ -36,7 +36,8 @@ public class LandlordReviewController extends BaseController {
     public ResponseEntity<List<LandlordReviewResponse>> getLandlordReviewsByLandlordIdAndReviewerId(
             @PathVariable String landlordId,
             @PathVariable String reviewerId) {
-        return ResponseEntity.ok(landlordReviewService.getLandlordReviewsByLandlordIdAndReviewerId(landlordId, reviewerId));
+        return ResponseEntity.ok(
+                landlordReviewService.getLandlordReviewsByLandlordIdAndReviewerId(landlordId, reviewerId));
     }
 
     @PostMapping("/landlords/{landlordId}")

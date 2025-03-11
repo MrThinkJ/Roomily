@@ -20,7 +20,6 @@ import com.c2se.roomily.service.SubscriptionService;
 import com.c2se.roomily.service.TagService;
 import com.c2se.roomily.service.UserService;
 import com.c2se.roomily.util.AppConstants;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -136,7 +135,7 @@ public class RoomServiceImpl implements RoomService {
                                                        double radiusKm) {
         List<String> landlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
         List<Room> rooms = roomRepository.findRoomsByLandlordIdsWithinRadius(landlordIds, latitude, longitude,
-                radiusKm);
+                                                                             radiusKm);
         return rooms.stream().map(this::mapToRoomResponse).collect(Collectors.toList());
     }
 
@@ -169,7 +168,7 @@ public class RoomServiceImpl implements RoomService {
                 .waterPrice(BigDecimal.valueOf(Double.parseDouble(createRoomRequest.getWaterPrice())))
                 .type(RoomType.valueOf(createRoomRequest.getType()))
                 .nearbyAmenities(getNearbyAmenitiesString(createRoomRequest.getLatitude(),
-                        createRoomRequest.getLongitude()))
+                                                          createRoomRequest.getLongitude()))
                 .maxPeople(createRoomRequest.getMaxPeople())
                 .landlord(landlord)
                 .rentalDeposit(createRoomRequest.getDeposit())
@@ -198,8 +197,8 @@ public class RoomServiceImpl implements RoomService {
         room.setType(RoomType.valueOf(updateRoomRequest.getType()));
         room.setMaxPeople(updateRoomRequest.getMaxPeople());
         room.setTags(updateRoomRequest.getTags().stream()
-                .map(tag -> Tag.builder().name(tag).build())
-                .collect(Collectors.toSet()));
+                             .map(tag -> Tag.builder().name(tag).build())
+                             .collect(Collectors.toSet()));
         room.setSquareMeters(updateRoomRequest.getSquareMeters());
         room.setRentalDeposit(updateRoomRequest.getDeposit());
         Room updatedRoom = roomRepository.save(room);

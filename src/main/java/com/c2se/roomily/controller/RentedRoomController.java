@@ -16,24 +16,36 @@ public class RentedRoomController extends BaseController {
     RentedRoomService rentedRoomService;
 
     @GetMapping
-    public List<RentedRoomResponse> getRentedRoomsByUserId() {
+    public ResponseEntity<List<RentedRoomResponse>> getRentedRoomsByUserId() {
         String userId = this.getUserInfo().getId();
-        return rentedRoomService.getRentedRoomActiveByUserIdOrCoTenantId(userId);
+        return ResponseEntity.ok(rentedRoomService.getRentedRoomActiveByUserIdOrCoTenantId(userId));
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<List<RentedRoomResponse>> getActiveRentedRoomsByUserId() {
+        String userId = this.getUserInfo().getId();
+        return ResponseEntity.ok(rentedRoomService.getRentedRoomActiveByUserIdOrCoTenantId(userId));
     }
 
     @GetMapping("/landlord/{landlordId}")
-    public List<RentedRoomResponse> getRentedRoomsByLandlordId(@PathVariable String landlordId) {
-        return rentedRoomService.getRentedRoomsByLandlordId(landlordId);
+    public ResponseEntity<List<RentedRoomResponse>> getRentedRoomsByLandlordId(@PathVariable String landlordId) {
+        return ResponseEntity.ok(rentedRoomService.getRentedRoomsByLandlordId(landlordId));
     }
 
     @GetMapping("/room/{roomId}")
-    public RentedRoomResponse getRentedRoomByRoomId(@PathVariable String roomId) {
-        return rentedRoomService.getRentedRoomByRoomId(roomId);
+    public ResponseEntity<RentedRoomResponse> getRentedRoomByRoomId(@PathVariable String roomId) {
+        return ResponseEntity.ok(rentedRoomService.getRentedRoomByRoomId(roomId));
     }
 
     @GetMapping("/history/{roomId}")
-    public List<RentedRoomResponse> getRentedRoomHistoryByRoomId(@PathVariable String roomId) {
-        return rentedRoomService.getRentedRoomHistoryByRoomId(roomId);
+    public ResponseEntity<List<RentedRoomResponse>> getRentedRoomHistoryByRoomId(@PathVariable String roomId) {
+        return ResponseEntity.ok(rentedRoomService.getRentedRoomHistoryByRoomId(roomId));
+    }
+
+    @GetMapping("/rented-before/{roomId}")
+    public ResponseEntity<Boolean> getRentedRoomBeforeByRoomId(@PathVariable String roomId) {
+        String userId = this.getUserInfo().getId();
+        return ResponseEntity.ok(rentedRoomService.isUserRentedRoomBefore(userId, roomId));
     }
 
     @PostMapping("/request/create")
@@ -50,14 +62,14 @@ public class RentedRoomController extends BaseController {
     }
 
     @PostMapping("/accept")
-    public ResponseEntity<Void> acceptRentedRoom(@RequestBody String privateCode){
+    public ResponseEntity<Void> acceptRentedRoom(@RequestBody String privateCode) {
         String landlordId = this.getUserInfo().getId();
         rentedRoomService.acceptRent(landlordId, privateCode);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/deny")
-    public ResponseEntity<Void> denyRentedRoom(@RequestBody String privateCode){
+    public ResponseEntity<Void> denyRentedRoom(@RequestBody String privateCode) {
         String landlordId = this.getUserInfo().getId();
         rentedRoomService.denyRent(landlordId, privateCode);
         return ResponseEntity.ok().build();

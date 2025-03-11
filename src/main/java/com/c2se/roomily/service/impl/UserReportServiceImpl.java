@@ -76,7 +76,8 @@ public class UserReportServiceImpl implements UserReportService {
     }
 
     @Override
-    public Boolean reportUser(String reporterId, String reportedUserId, CreateUserReportRequest createUserReportRequest) {
+    public Boolean reportUser(String reporterId, String reportedUserId,
+                              CreateUserReportRequest createUserReportRequest) {
         if (hasAlreadyReported(reporterId, reportedUserId))
             return false;
         User reporter = userRepository.findById(reporterId)
@@ -111,7 +112,8 @@ public class UserReportServiceImpl implements UserReportService {
     }
 
     @Override
-    public List<UserReportSummary> getUsersWithReportCountAboveThreshold(Integer threshold, Integer page, Integer size) {
+    public List<UserReportSummary> getUsersWithReportCountAboveThreshold(Integer threshold, Integer page,
+                                                                         Integer size) {
         Pageable pageable = PageRequest.of(page, size);
 //        return userReportRepository.findUsersWithReportCountAboveThreshold(threshold, pageable);
         return null;
@@ -134,11 +136,12 @@ public class UserReportServiceImpl implements UserReportService {
         report.setIsValid(isValid);
         userReportRepository.save(report);
         if (isValid) {
-            long validReportCount = userReportRepository.countValidReportsByReportedUserId(report.getReportedUser().getId());
+            long validReportCount = userReportRepository.countValidReportsByReportedUserId(
+                    report.getReportedUser().getId());
             if (validReportCount >= AppConstants.VALID_REPORT_THRESHOLD) { // Configurable threshold
                 banService.banUser(report.getReportedUser().getId(),
-                        "Multiple valid reports received",
-                        LocalDateTime.now());
+                                   "Multiple valid reports received",
+                                   LocalDateTime.now());
             }
         }
         return true;
@@ -159,15 +162,15 @@ public class UserReportServiceImpl implements UserReportService {
     private UserReportPageResponse getUserReportPageResponse(Page<UserReport> userReports) {
         return UserReportPageResponse.builder()
                 .userReportResponses(userReports.getContent().stream()
-                        .map(this::mapToUserReportResponse)
-                        .collect(Collectors.toList()))
+                                             .map(this::mapToUserReportResponse)
+                                             .collect(Collectors.toList()))
                 .pageResponse(PageResponse.builder()
-                        .currentPage(userReports.getNumber())
-                        .totalPages(userReports.getTotalPages())
-                        .totalElements(userReports.getTotalElements())
-                        .hasNext(userReports.hasNext())
-                        .hasPrevious(userReports.hasPrevious())
-                        .build())
+                                      .currentPage(userReports.getNumber())
+                                      .totalPages(userReports.getTotalPages())
+                                      .totalElements(userReports.getTotalElements())
+                                      .hasNext(userReports.hasNext())
+                                      .hasPrevious(userReports.hasPrevious())
+                                      .build())
                 .build();
     }
 }

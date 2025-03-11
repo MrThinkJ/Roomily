@@ -11,7 +11,6 @@ import com.c2se.roomily.payload.request.UpdateSubscriptionRequest;
 import com.c2se.roomily.payload.response.ActiveSubscriptionResponse;
 import com.c2se.roomily.payload.response.UserSubscriptionResponse;
 import com.c2se.roomily.repository.SubscriptionRepository;
-import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.repository.UserSubscriptionRepository;
 import com.c2se.roomily.service.EventService;
 import com.c2se.roomily.service.NotificationService;
@@ -52,20 +51,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         if (user.getBalance().compareTo(subscription.getPrice()) < 0) {
             throw new APIException(HttpStatus.BAD_REQUEST,
-                    ErrorCode.INSUFFICIENT_BALANCE,
-                    subscription.getPrice(),
-                    user.getBalance());
+                                   ErrorCode.INSUFFICIENT_BALANCE,
+                                   subscription.getPrice(),
+                                   user.getBalance());
         }
 
         UserSubscription userSubscription = userSubscriptionRepository.findByUserIdAndEndDateAfter(
                         userId, LocalDateTime.now())
                 .orElse(UserSubscription.builder()
-                        .user(user)
-                        .subscription(subscription)
-                        .startDate(LocalDateTime.now())
-                        .endDate(LocalDateTime.now().plusMonths(subscription.getDuration()))
-                        .autoRenew(true)
-                        .build());
+                                .user(user)
+                                .subscription(subscription)
+                                .startDate(LocalDateTime.now())
+                                .endDate(LocalDateTime.now().plusMonths(subscription.getDuration()))
+                                .autoRenew(true)
+                                .build());
 
         user.setBalance(user.getBalance().subtract(subscription.getPrice()));
         userSubscriptionRepository.save(userSubscription);
@@ -74,7 +73,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     public void unsubscribe(String userId) {
         UserSubscription userSubscription = userSubscriptionRepository.findByUserIdAndEndDateAfter(userId,
-                        LocalDateTime.now())
+                                                                                                   LocalDateTime.now())
                 .orElseThrow(() -> new IllegalArgumentException("User not subscribed to this subscription"));
         userSubscription.setAutoRenew(false);
         userSubscriptionRepository.save(userSubscription);
@@ -83,7 +82,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     public void renewSubscription(String userId) {
         UserSubscription userSubscription = userSubscriptionRepository.findByUserIdAndEndDateAfter(userId,
-                        LocalDateTime.now())
+                                                                                                   LocalDateTime.now())
                 .orElseThrow(() -> new IllegalArgumentException("User not subscribed to this subscription"));
         if (userSubscription.isAutoRenew()) {
             throw new IllegalArgumentException("Subscription is already set to auto-renew");
@@ -145,6 +144,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public boolean hasActiveSubscription(String landlordId) {
         return userSubscriptionRepository.hasActiveSubscription(landlordId);
     }
+
     @Override
     public String getMostPopularSubscriptionId() {
         LocalDateTime now = LocalDateTime.now();
@@ -180,10 +180,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .findByEndDateBetweenAndAutoRenewIsTrue(startOfDay, endOfDay);
 
         todayRenewals.forEach(subscription ->
-                eventService.publishEvent(SubscriptionRenewalEvent.builder()
-                        .renewalTime(subscription.getEndDate())
-                        .subscriptionId(subscription.getId())
-                        .build())
+                                      eventService.publishEvent(SubscriptionRenewalEvent.builder()
+                                                                        .renewalTime(subscription.getEndDate())
+                                                                        .subscriptionId(subscription.getId())
+                                                                        .build())
         );
     }
 

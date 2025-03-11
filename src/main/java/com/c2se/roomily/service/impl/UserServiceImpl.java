@@ -5,7 +5,6 @@ import com.c2se.roomily.enums.UserStatus;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.repository.UserRepository;
 import com.c2se.roomily.service.UserService;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +15,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+
     @Override
     public User getUserEntity(String id) {
         return userRepository.findById(id).orElseThrow(

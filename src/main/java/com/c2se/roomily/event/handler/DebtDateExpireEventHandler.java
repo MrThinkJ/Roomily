@@ -28,12 +28,14 @@ public class DebtDateExpireEventHandler {
     UserRepository userRepository;
     RentedRoomRepository rentedRoomRepository;
     RentedRoomActivityService rentedRoomActivityService;
+
     @EventListener
     @Async
     public void handleDebtDateExpireEvent(DebtDateExpireEvent event) {
         log.info("Handling debt date expire event");
         RentedRoom rentedRoom = rentedRoomRepository.findActiveByRoomId(event.getRentedRoomId(),
-                List.of(RentedRoomStatus.IN_USE, RentedRoomStatus.DEBT));
+                                                                        List.of(RentedRoomStatus.IN_USE,
+                                                                                RentedRoomStatus.DEBT));
         CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
                 .rentedRoomId(rentedRoom.getId())
                 .activityType(RentedRoomActivityType.DEBT_RECORDED.name())

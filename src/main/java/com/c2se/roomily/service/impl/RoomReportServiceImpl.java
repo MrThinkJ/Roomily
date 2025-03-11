@@ -29,7 +29,7 @@ public class RoomReportServiceImpl implements RoomReportService {
                 () -> new ResourceNotFoundException("User", "id", reporterId));
         if (roomReportRepository.existsByReporterIdAndRoomId(reporterId, createRoomReportRequest.getRoomId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                    "You have already reported this room");
+                                   "You have already reported this room");
         }
         RoomReport roomReport = RoomReport.builder()
                 .reporter(reporter)

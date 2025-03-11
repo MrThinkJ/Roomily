@@ -13,6 +13,7 @@ import java.util.Optional;
 @Repository
 public interface FavoriteRepository extends JpaRepository<Favorite, String> {
     boolean existsByUserIdAndRoomId(String userId, String roomId);
+
     Optional<Favorite> findByUserIdAndRoomId(String userId, String roomId);
 
     @Modifying
@@ -24,6 +25,7 @@ public interface FavoriteRepository extends JpaRepository<Favorite, String> {
     void deleteByUserIdAndRoomId(String userId, String roomId);
 
     List<Favorite> findAllByUserId(String userId);
+
     @Query("SELECT f FROM Favorite f WHERE f.user.id = :userId AND f.isFavorite = true")
     List<Favorite> findByUserIdAndFavoriteIsTrue(String userId);
 

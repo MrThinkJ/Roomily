@@ -1,6 +1,5 @@
 package com.c2se.roomily.controller;
 
-import com.c2se.roomily.payload.dao.RoomDao;
 import com.c2se.roomily.payload.request.CreateRoomRequest;
 import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
@@ -49,8 +48,8 @@ public class RoomController extends BaseController {
 
     @GetMapping("/subscribed/location")
     public ResponseEntity<List<RoomResponse>> getSubscribedRoomsByLocation(@RequestParam String city,
-                                                                          @RequestParam String district,
-                                                                          @RequestParam String ward) {
+                                                                           @RequestParam String district,
+                                                                           @RequestParam String ward) {
         return ResponseEntity.ok(roomService.getSubscribedRoomsByLocation(city, district, ward));
     }
 

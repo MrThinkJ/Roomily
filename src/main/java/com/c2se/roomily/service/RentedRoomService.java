@@ -9,16 +9,18 @@ import java.util.List;
 
 public interface RentedRoomService {
     RentedRoom getRentedRoomEntityById(String roomId);
+
     void saveRentedRoom(RentedRoom rentedRoom);
+
     RentedRoomResponse getRentedRoomActiveByUserIdOrCoTenantIdAndRoomId(String userId, String roomId);
+
     List<RentedRoomResponse> getRentedRoomActiveByUserIdOrCoTenantId(String userId);
+
     List<RentedRoomResponse> getRentedRoomsByLandlordId(String landlordId);
 
     List<RentedRoomResponse> getRentedRoomHistoryByRoomId(String roomId);
 
     RentedRoomResponse getRentedRoomByRoomId(String roomId);
-
-    List<RentedRoomResponse> getRentedRoomsByUserId(String userId);
 
     String requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest);
 
@@ -31,5 +33,7 @@ public interface RentedRoomService {
     void cancelRent(String userId, String roomId);
 
     void updateRentedRoom(String landlordId, String roomId, UpdateRentedRoomRequest updateRentedRoomRequest);
+
+    boolean isUserRentedRoomBefore(String userId, String roomId);
 //    void deleteRentedRoom(String landlordId, String roomId);
 }

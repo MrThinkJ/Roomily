@@ -35,4 +35,19 @@ public interface RentedRoomRepository extends JpaRepository<RentedRoom, String> 
     List<RentedRoom> findByEndDate(LocalDate endDate);
 
     List<RentedRoom> findByDebtDate(LocalDate debtDate);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(rr) > 0 THEN TRUE ELSE FALSE END
+            FROM RentedRoom rr JOIN rr.coTenants ct
+            WHERE rr.room.id = :roomId AND (rr.user.id = :userId OR ct.id = :userId)
+        """)
+    boolean existsByRoomIdAndUserIdOrCoTenantId(String roomId, String userId);
+    @Query(
+            """
+            SELECT rr FROM RentedRoom rr JOIN rr.coTenants ct
+            WHERE rr.room.id = :roomId AND (rr.user.id = :userId OR ct.id = :coTenantId)
+            AND rr.status IN :status
+            """
+    )
+    RentedRoom findActiveByRoomIdAndUserIdOrCoTenantId(String roomId, String userId, List<RentedRoomStatus> status);
 } 

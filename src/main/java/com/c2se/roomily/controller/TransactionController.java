@@ -66,6 +66,7 @@ public class TransactionController {
             @RequestParam(value = "sortBy", defaultValue = AppConstants.DEFAULT_SORT_BY) String sortBy,
             @RequestParam(value = "sortDir", defaultValue = AppConstants.DEFAULT_SORT_DIR) String sortDir
     ) {
-        return ResponseEntity.ok(transactionService.getTransactionsByTypeAndStatus(type, status, page, size, sortBy, sortDir));
+        return ResponseEntity.ok(
+                transactionService.getTransactionsByTypeAndStatus(type, status, page, size, sortBy, sortDir));
     }
 }

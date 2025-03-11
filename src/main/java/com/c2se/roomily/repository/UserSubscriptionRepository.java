@@ -38,14 +38,14 @@ public interface UserSubscriptionRepository extends JpaRepository<UserSubscripti
             AND us.endDate > CURRENT_TIMESTAMP
             """)
     boolean hasActiveSubscription(@Param("landlordId") String landlordId);
-    
+
     @Query("""
             SELECT us.user.id
             FROM UserSubscription us
             WHERE us.endDate > CURRENT_TIMESTAMP
             """)
     List<String> findLandlordsWithActiveSubscriptions();
-    
+
     @Query("""
             SELECT us.subscription.name
             FROM UserSubscription us

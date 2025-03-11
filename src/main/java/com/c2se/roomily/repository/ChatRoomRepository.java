@@ -13,13 +13,17 @@ import java.util.Optional;
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
     Optional<ChatRoom> findByFindPartnerPostId(String findPartnerPostId);
+
     Optional<ChatRoom> findByChatKey(String chatKey);
+
     @Modifying
     @Query("UPDATE ChatRoom c SET c.status = 'ARCHIVED' WHERE c.findPartnerPostId = :findPartnerPostId")
     void archiveAllByFindPartnerPostId(String findPartnerPostId);
+
     @Modifying
     @Query("UPDATE ChatRoom c SET c.status = :status WHERE c.id = :id")
     void updateStatusById(String id, String status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM ChatRoom c WHERE c.id = :id")
     Optional<ChatRoom> findByIdLocked(String id);
