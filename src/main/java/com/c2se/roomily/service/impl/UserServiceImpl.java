@@ -35,7 +35,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Set<User> getUserEntities(List<String> ids) {
-        return null;
+        return userRepository.findByIdIn(ids);
     }
 
     @Override

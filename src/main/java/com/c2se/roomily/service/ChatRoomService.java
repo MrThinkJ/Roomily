@@ -2,6 +2,7 @@ package com.c2se.roomily.service;
 
 import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.entity.User;
+import com.c2se.roomily.enums.ChatRoomStatus;
 import com.c2se.roomily.payload.response.ChatRoomResponse;
 import com.c2se.roomily.payload.response.ConversationResponse;
 
@@ -9,37 +10,41 @@ import java.util.List;
 import java.util.Set;
 
 public interface ChatRoomService {
-    ChatRoom getChatRoomEntity(String roomId);
+    ChatRoom getChatRoomEntity(String chatRoomId);
 
-    void updateChatRoomStatus(String roomId, String status);
+    void updateChatRoomStatus(String chatRoomId, ChatRoomStatus chatRoomStatus);
 
     void archiveAllChatRoomsByFindPartnerPostId(String findPartnerPostId);
 
-    String createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId);
+    ChatRoom createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId);
 
     ChatRoom getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId);
 
-    void addUserToGroupChatRoom(String roomId, String userId);
+    ChatRoom createDirectChatRoomToLandlord(String userId, String roomId);
 
-    void removeUserFromGroupChatRoom(String managerId, String roomId, String userId);
+    void addUserToGroupChatRoom(String chatRoomId, String userId);
 
-    void exitGroupChatRoom(String roomId, String userId);
+    void removeUserFromGroupChatRoom(String managerId, String chatRoomId, String userId);
 
-    void deleteGroupChatRoom(String managerId, String roomId);
+    void exitGroupChatRoom(String chatRoomId, String userId);
+
+    void deleteGroupChatRoom(String managerId, String chatRoomId);
 
     String getChatRoomIdByFindPartnerPostId(String findPartnerPostId);
 
-    List<User> getChatRoomUsers(String roomId);
+    List<User> getChatRoomUsers(String chatRoomId);
 
-    List<String> getChatRoomUserIds(String roomId);
+    List<String> getChatRoomUserIds(String chatRoomId);
 
     List<ConversationResponse> getChatRoomsByUserId(String userId);
 
-    ChatRoomResponse getChatRoomInfo(String roomId);
+    ChatRoomResponse getChatRoomInfo(String chatRoomId);
 
-    boolean isUserInChatRoom(String userId, String roomId);
+    boolean isUserInChatRoom(String userId, String chatRoomId);
 
-    boolean isUsersInChatRoom(Set<String> userIds, String roomId);
+    boolean isUsersInChatRoom(Set<String> userIds, String chatRoomId);
+
+    void reActivateChatRoom(String chatRoomId);
 
     void testNotifyChatRoom();
 }

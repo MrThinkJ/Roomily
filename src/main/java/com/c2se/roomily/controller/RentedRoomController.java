@@ -43,27 +43,27 @@ public class RentedRoomController extends BaseController {
     }
 
     @PostMapping("/request/create")
-    public ResponseEntity<String> createRentedRoom(@RequestBody CreateRentedRoomRequest createRentedRoomRequest) {
+    public ResponseEntity<String> requestRent(@RequestBody CreateRentedRoomRequest createRentedRoomRequest) {
         String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(rentedRoomService.requestRent(userId, createRentedRoomRequest));
     }
 
     @DeleteMapping("request/cancel")
-    public ResponseEntity<Void> cancelRentRequest(@RequestParam String roomId) {
+    public ResponseEntity<Void> cancelRentRequest(@RequestParam String privateCode) {
         String userId = this.getUserInfo().getId();
-        rentedRoomService.cancelRentRequest(userId, roomId);
+        rentedRoomService.cancelRentRequest(userId, privateCode);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/accept")
-    public ResponseEntity<Void> acceptRentedRoom(@RequestBody String privateCode) {
+    @PostMapping("/accept/{privateCode}")
+    public ResponseEntity<Void> acceptRentedRoom(@PathVariable String privateCode) {
         String landlordId = this.getUserInfo().getId();
         rentedRoomService.acceptRent(landlordId, privateCode);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/deny")
-    public ResponseEntity<Void> denyRentedRoom(@RequestBody String privateCode) {
+    @PostMapping("/deny/{privateCode}")
+    public ResponseEntity<Void> denyRentedRoom(@PathVariable String privateCode) {
         String landlordId = this.getUserInfo().getId();
         rentedRoomService.denyRent(landlordId, privateCode);
         return ResponseEntity.ok().build();

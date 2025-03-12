@@ -53,7 +53,7 @@ public class Room {
     @Column(name = "nearby_amenities")
     private String nearbyAmenities;
     private Integer maxPeople;
-    private String rentalDeposit;
+    private BigDecimal rentalDeposit;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

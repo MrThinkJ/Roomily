@@ -24,13 +24,14 @@ public class RentRequestRepositoryImpl implements RentRequestRepository {
 
     @Override
     public void save(String key, String value, int ttl) {
-        redisTemplate.opsForValue().set(key, value);
-        redisTemplate.expire(key, ttl, TimeUnit.MINUTES);
+        String keyPersisted = "rent_request:" + key;
+        redisTemplate.opsForValue().set(keyPersisted, value, ttl, TimeUnit.MINUTES);
     }
 
     @Override
     public String findByKey(String key) {
-        return redisTemplate.opsForValue().get("rent_request:" + key);
+        String keyPersisted = "rent_request:" + key;
+        return redisTemplate.opsForValue().get(keyPersisted);
     }
 
     @Override
@@ -39,9 +40,17 @@ public class RentRequestRepositoryImpl implements RentRequestRepository {
     }
 
     private String serializeRequest(CreateRentRequest createRentRequest) {
-        return createRentRequest.getUserId() +
-                "#" + createRentRequest.getRoomId() +
-                "#" + createRentRequest.getStartDate() +
-                "#" + createRentRequest.getFindPartnerPostId();
+        StringBuilder stringBuilder = new StringBuilder();
+        return stringBuilder
+                .append(createRentRequest.getUserId())
+                .append("#")
+                .append(createRentRequest.getRoomId())
+                .append("#")
+                .append(createRentRequest.getStartDate())
+                .append("#")
+                .append(createRentRequest.getFindPartnerPostId())
+                .append("#")
+                .append(createRentRequest.getChatRoomId())
+                .toString();
     }
 }

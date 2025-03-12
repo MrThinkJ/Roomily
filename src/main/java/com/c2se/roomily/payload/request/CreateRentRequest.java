@@ -11,7 +11,7 @@ import java.time.LocalDate;
 public class CreateRentRequest {
     private String userId;
     private String roomId;
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate startDate;
     private String findPartnerPostId;
+    private String chatRoomId;
 }
