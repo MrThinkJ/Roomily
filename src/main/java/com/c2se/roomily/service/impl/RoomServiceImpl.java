@@ -61,7 +61,7 @@ public class RoomServiceImpl implements RoomService {
                 .city(room.getCity())
                 .district(room.getDistrict())
                 .ward(room.getWard())
-                .electricPrice(room.getElectricPrice())
+                .electricPrice(room.getElectricityPrice())
                 .waterPrice(room.getWaterPrice())
                 .type(room.getType().name())
                 .nearbyAmenities(room.getNearbyAmenities())
@@ -164,7 +164,7 @@ public class RoomServiceImpl implements RoomService {
                 .city(createRoomRequest.getCity())
                 .district(createRoomRequest.getDistrict())
                 .ward(createRoomRequest.getWard())
-                .electricPrice(BigDecimal.valueOf(Double.parseDouble(createRoomRequest.getElectricPrice())))
+                .electricityPrice(BigDecimal.valueOf(Double.parseDouble(createRoomRequest.getElectricPrice())))
                 .waterPrice(BigDecimal.valueOf(Double.parseDouble(createRoomRequest.getWaterPrice())))
                 .type(RoomType.valueOf(createRoomRequest.getType()))
                 .nearbyAmenities(getNearbyAmenitiesString(createRoomRequest.getLatitude(),
@@ -192,7 +192,7 @@ public class RoomServiceImpl implements RoomService {
         room.setCity(updateRoomRequest.getCity());
         room.setDistrict(updateRoomRequest.getDistrict());
         room.setWard(updateRoomRequest.getWard());
-        room.setElectricPrice(BigDecimal.valueOf(Double.parseDouble(updateRoomRequest.getElectricPrice())));
+        room.setElectricityPrice(BigDecimal.valueOf(Double.parseDouble(updateRoomRequest.getElectricPrice())));
         room.setWaterPrice(BigDecimal.valueOf(Double.parseDouble(updateRoomRequest.getWaterPrice())));
         room.setType(RoomType.valueOf(updateRoomRequest.getType()));
         room.setMaxPeople(updateRoomRequest.getMaxPeople());
