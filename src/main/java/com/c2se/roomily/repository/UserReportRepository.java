@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,6 +32,7 @@ public interface UserReportRepository extends JpaRepository<UserReport, String> 
     Page<UserReport> findByStatus(ReportStatus status, Pageable pageable);
 
     @Modifying
+    @Transactional(rollbackFor = Exception.class)
     @Query("UPDATE UserReport r SET r.status = :status WHERE r.reportedUser.id = :reportedUserId")
     void markUserReportAsProcessed(@Param("reportStatus") ReportStatus status,
                                    @Param("reportedUserId") String reportedUserId);

@@ -21,12 +21,6 @@ public class RentedRoomController extends BaseController {
         return ResponseEntity.ok(rentedRoomService.getRentedRoomActiveByUserIdOrCoTenantId(userId));
     }
 
-    @GetMapping("/active")
-    public ResponseEntity<List<RentedRoomResponse>> getActiveRentedRoomsByUserId() {
-        String userId = this.getUserInfo().getId();
-        return ResponseEntity.ok(rentedRoomService.getRentedRoomActiveByUserIdOrCoTenantId(userId));
-    }
-
     @GetMapping("/landlord/{landlordId}")
     public ResponseEntity<List<RentedRoomResponse>> getRentedRoomsByLandlordId(@PathVariable String landlordId) {
         return ResponseEntity.ok(rentedRoomService.getRentedRoomsByLandlordId(landlordId));

@@ -44,7 +44,7 @@ public class Room {
     private String district;
     private String ward;
     @Column(name = "electric_price")
-    private BigDecimal electricPrice;
+    private BigDecimal electricityPrice;
     @Column(name = "water_price")
     private BigDecimal waterPrice;
     @Column(name = "room_type")

@@ -4,10 +4,7 @@ import com.c2se.roomily.payload.response.NotificationResponse;
 import com.c2se.roomily.service.NotificationService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -40,13 +37,13 @@ public class NotificationController extends BaseController {
         return ResponseEntity.ok(notificationService.getReadNotificationsByUser(userId));
     }
 
-    @GetMapping("/mark/{notificationId}")
+    @PostMapping("/mark/{notificationId}")
     public ResponseEntity<Boolean> markNotificationAsRead(@PathVariable String notificationId) {
         notificationService.markNotificationAsRead(notificationId);
         return ResponseEntity.ok(true);
     }
 
-    @GetMapping("/mark/all")
+    @PostMapping("/mark/all")
     public ResponseEntity<Boolean> markAllNotificationsAsRead() {
         String userId = this.getUserInfo().getId();
         notificationService.markAllNotificationsAsRead(userId);

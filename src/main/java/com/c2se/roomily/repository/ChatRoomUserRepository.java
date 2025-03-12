@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +27,7 @@ public interface ChatRoomUserRepository extends JpaRepository<ChatRoomUser, Stri
     boolean existsByChatRoomIdAndUserId(String chatRoomId, String userId);
 
     @Modifying
+    @Transactional(rollbackFor = Exception.class)
     @Query("DELETE FROM ChatRoomUser cru WHERE cru.chatRoom.id = :chatRoomId")
     void deleteByChatRoomId(String chatRoomId);
 }

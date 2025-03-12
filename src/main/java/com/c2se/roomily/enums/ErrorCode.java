@@ -50,7 +50,7 @@ public enum ErrorCode {
     INVALID_JWT_CLAIMS(2304, "JWT claim error"),
     INVALID_HASH(2305, "Invalid hash"),
     // System errors (5000-5999)
-    INTERNAL_ERROR(5000, "Internal server error"),
+    INTERNAL_ERROR(5000, "Internal server error: %s."),
     SERVICE_UNAVAILABLE(5001, "Service temporarily unavailable"),
     DATABASE_ERROR(5002, "Database operation failed"),
     FLEXIBLE_ERROR(9999, "%s");

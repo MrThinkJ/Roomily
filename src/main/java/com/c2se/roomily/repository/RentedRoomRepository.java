@@ -18,7 +18,7 @@ public interface RentedRoomRepository extends JpaRepository<RentedRoom, String> 
     RentedRoom findActiveByRoomId(@Param("roomId") String roomId, @Param("status") List<RentedRoomStatus> status);
 
     @Query("SELECT rr FROM RentedRoom rr WHERE rr.user.id = :userId AND rr.status IN :status AND rr.endDate >= CURRENT_DATE")
-    List<RentedRoom> findActiveByUserId(@Param("roomId") String roomId, @Param("status") List<RentedRoomStatus> status);
+    List<RentedRoom> findActiveByUserId(@Param("userId") String userId, @Param("status") List<RentedRoomStatus> status);
 
     @Query("""
              SELECT rr FROM RentedRoom rr JOIN rr.coTenants ct
