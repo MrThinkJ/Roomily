@@ -11,5 +11,4 @@ public class UpdateBillLogRequest {
     private Double water;
     private MultipartFile waterImage;
     private MultipartFile electricityImage;
-    private String status;
 }

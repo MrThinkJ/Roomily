@@ -1,17 +1,29 @@
 package com.c2se.roomily.service.impl;
 
+import com.c2se.roomily.config.StorageConfig;
 import com.c2se.roomily.entity.BillLog;
+import com.c2se.roomily.entity.RentedRoom;
+import com.c2se.roomily.enums.BillStatus;
+import com.c2se.roomily.enums.ErrorCode;
+import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.request.CheckBillLogRequest;
 import com.c2se.roomily.payload.request.CreateBillLogRequest;
+import com.c2se.roomily.payload.request.UpdateBillLogRequest;
 import com.c2se.roomily.payload.response.BillLogResponse;
 import com.c2se.roomily.repository.BillLogRepository;
 import com.c2se.roomily.service.BillLogService;
 import com.c2se.roomily.service.RentedRoomService;
 import com.c2se.roomily.service.RoomService;
+import com.c2se.roomily.service.StorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,6 +32,8 @@ public class BillLogServiceImpl implements BillLogService {
     private final BillLogRepository billLogRepository;
     private final RentedRoomService rentedRoomService;
     private final RoomService roomService;
+    private final StorageService storageService;
+    private final StorageConfig storageConfig;
 
     @Override
     public BillLog getBillLogEntityById(String billLogId) {
@@ -60,23 +74,78 @@ public class BillLogServiceImpl implements BillLogService {
     }
 
     @Override
-    public void checkBillLog(String billLogId) {
-
-    }
-
-    @Override
-    public void processBillLog(String billLogId) {
-
-    }
-
-    @Override
     public void createBillLog(CreateBillLogRequest createBillLogRequest) {
-
+        BillLog billLog = BillLog.builder()
+                .fromDate(createBillLogRequest.getFromDate())
+                .toDate(createBillLogRequest.getToDate())
+                .rentalCost(createBillLogRequest.getRentalCost())
+                .rentedRoom(rentedRoomService.getRentedRoomEntityById(createBillLogRequest.getRentedRoomId()))
+                .billStatus(BillStatus.MISSING)
+                .build();
+        billLogRepository.save(billLog);
     }
 
     @Override
-    public void updateBillLog(String billLogId, CreateBillLogRequest createBillLogRequest) {
+    public void checkBillLog(String billLogId, CheckBillLogRequest checkBillLogRequest) {
+        BillLog billLog = getBillLogEntityById(billLogId);
+        if (!checkBillLogRequest.getIsElectricityChecked() && !checkBillLogRequest.getIsWaterChecked()) {
+            billLog.setBillStatus(BillStatus.RE_ENTER);
+        } else if (!checkBillLogRequest.getIsWaterChecked()) {
+            billLog.setBillStatus(BillStatus.WATER_RE_ENTER);
+        } else if (!checkBillLogRequest.getIsElectricityChecked()) {
+            billLog.setBillStatus(BillStatus.ELECTRICITY_RE_ENTER);
+        } else {
+            billLog.setBillStatus(BillStatus.PENDING);
+        }
+        billLog.setLandlordComment(checkBillLogRequest.getLandlordComment());
+        billLogRepository.save(billLog);
+        processBillLog(billLogId);
+    }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void processBillLog(String billLogId) {
+        BillLog billLog = getBillLogEntityById(billLogId);
+        RentedRoom rentedRoom = billLog.getRentedRoom();
+        if (billLog.getBillStatus().equals(BillStatus.PENDING)) {
+            BigDecimal waterPrice = rentedRoom.getRoom().getWaterPrice();
+            BigDecimal electricityPrice = rentedRoom.getRoom().getElectricityPrice();
+            BigDecimal waterBill = waterPrice.multiply(BigDecimal.valueOf(billLog.getWater()));
+            BigDecimal electricityBill = electricityPrice.multiply(BigDecimal.valueOf(billLog.getElectricity()));
+            billLog.setWaterBill(waterBill);
+            billLog.setElectricityBill(electricityBill);
+            BigDecimal totalBill = waterBill.add(electricityBill).add(billLog.getRentalCost());
+            if (rentedRoom.getRentedRoomWallet().compareTo(totalBill) > 0){
+                rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(totalBill));
+                rentedRoomService.saveRentedRoom(rentedRoom);
+                billLog.setBillStatus(BillStatus.PAID);
+            }
+            billLogRepository.save(billLog);
+        }
+    }
+
+    @Override
+    public void updateBillLog(String billLogId, UpdateBillLogRequest updateBillLogRequest) {
+        BillLog billLog = getBillLogEntityById(billLogId);
+        if (updateBillLogRequest.getElectricity() != null)
+            billLog.setElectricity(updateBillLogRequest.getElectricity());
+        if (updateBillLogRequest.getWater() != null)
+            billLog.setWater(updateBillLogRequest.getWater());
+        try{
+            if (updateBillLogRequest.getWaterImage() != null)
+                storageService.putObject(updateBillLogRequest.getWaterImage(),
+                                     storageConfig.getBucketStore(),
+                                     generateBillLogImageUrl("water", billLogId));
+            if (updateBillLogRequest.getElectricityImage() != null)
+                storageService.putObject(updateBillLogRequest.getElectricityImage(),
+                                     storageConfig.getBucketStore(),
+                                     generateBillLogImageUrl("electricity", billLogId));
+        } catch (Exception e){
+            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR,
+                                   "Error while uploading image: " + e.getMessage());
+        }
+        billLog.setBillStatus(BillStatus.CHECKING);
+        billLogRepository.save(billLog);
     }
 
     private BillLogResponse mapBillLogToBillLogResponse(BillLog billLog) {
@@ -96,5 +165,9 @@ public class BillLogServiceImpl implements BillLogService {
                 .roomId(billLog.getRoomId())
                 .rentedRoomId(billLog.getRentedRoom().getId())
                 .build();
+    }
+
+    private String generateBillLogImageUrl(String billLogId, String type) {
+        return String.format("%s-%s-%s", billLogId, type, UUID.randomUUID());
     }
 }

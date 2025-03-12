@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,10 +23,12 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     List<Room> findByLandlordId(String landlordId);
 
     @Modifying
+    @Transactional(rollbackFor = Exception.class)
     @Query("UPDATE Room r SET r.status = :status WHERE r.id = :roomId")
     void updateRoomStatusById(String roomId, RoomStatus status);
 
     @Modifying
+    @Transactional(rollbackFor = Exception.class)
     @Query("UPDATE Room r SET r.status = :status WHERE r.landlord.id = :landlordId")
     void updateRoomStatusByLandlordId(String landlordId, RoomStatus status);
 
