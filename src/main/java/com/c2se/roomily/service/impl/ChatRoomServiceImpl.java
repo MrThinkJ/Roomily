@@ -2,9 +2,13 @@ package com.c2se.roomily.service.impl;
 
 import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.entity.ChatRoomUser;
+import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.ChatRoomStatus;
 import com.c2se.roomily.enums.ChatRoomType;
+import com.c2se.roomily.enums.ErrorCode;
+import com.c2se.roomily.enums.RoomStatus;
+import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.internal.ChatRoomUserData;
 import com.c2se.roomily.payload.response.ChatRoomResponse;
@@ -15,14 +19,12 @@ import com.c2se.roomily.service.ChatRoomService;
 import com.c2se.roomily.service.RoomService;
 import com.c2se.roomily.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,14 +37,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     SimpMessagingTemplate messagingTemplate;
 
     @Override
-    public ChatRoom getChatRoomEntity(String roomId) {
-        return chatRoomRepository.findById(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("ChatRoom", "Id", roomId));
+    public ChatRoom getChatRoomEntity(String chatRoomId) {
+        return chatRoomRepository.findById(chatRoomId).orElseThrow(
+                () -> new ResourceNotFoundException("ChatRoom", "Id", chatRoomId));
     }
 
     @Override
-    public void updateChatRoomStatus(String roomId, String status) {
-        chatRoomRepository.updateStatusById(roomId, status);
+    public void updateChatRoomStatus(String chatRoomId, ChatRoomStatus status) {
+        chatRoomRepository.updateStatusById(chatRoomId, status);
     }
 
     @Override
@@ -52,14 +54,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId) {
+    public ChatRoom createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId) {
         userIds.add(managerId);
         Set<User> users = userService.getUserEntities(List.copyOf(userIds));
         if (users.size() != userIds.size()) {
-            throw new IllegalArgumentException("Invalid user ids");
-        }
-        if (!chatRoomRepository.existsById(roomId)) {
-            throw new IllegalArgumentException("Invalid room id");
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid user ids");
         }
         ChatRoom chatRoom = ChatRoom.builder()
                 .name(chatRoomName)
@@ -75,7 +74,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .build()).toList();
         chatRoomUserRepository.saveAll(chatRoomUsers);
         users.forEach(user -> notifyNewChatRoom(savedChatRoom, user.getId()));
-        return savedChatRoom.getId();
+        return savedChatRoom;
     }
 
     @Override
@@ -117,9 +116,24 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public void addUserToGroupChatRoom(String roomId, String userId) {
-        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("ChatRoom", "Id", roomId));
+    public ChatRoom createDirectChatRoomToLandlord(String userId, String roomId) {
+        Room room = roomService.getRoomEntityById(roomId);
+        User landlord = userService.getUserEntity(room.getLandlord().getId());
+        User tenant = userService.getUserEntity(userId);
+        StringBuilder chatRoomName = new StringBuilder("DM_");
+        chatRoomName.append(tenant.getFullName()).append("_").append(landlord.getFullName());
+        Set<String> userIds = new HashSet<>();
+        userIds.add(landlord.getId());
+        userIds.add(tenant.getId());
+        return createGroupChatRoom(landlord.getId(),
+                                   userIds,
+                                   chatRoomName.toString(), roomId);
+    }
+
+    @Override
+    public void addUserToGroupChatRoom(String chatRoomId, String userId) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId).orElseThrow(
+                () -> new ResourceNotFoundException("ChatRoom", "Id", chatRoomId));
         if (chatRoom.getType() != ChatRoomType.GROUP) {
             throw new IllegalArgumentException("Invalid chat room type");
         }
@@ -133,9 +147,9 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public void removeUserFromGroupChatRoom(String managerId, String roomId, String userId) {
-        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("ChatRoom", "Id", roomId));
+    public void removeUserFromGroupChatRoom(String managerId, String chatRoomId, String userId) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId).orElseThrow(
+                () -> new ResourceNotFoundException("ChatRoom", "Id", chatRoomId));
         if (chatRoom.getType() != ChatRoomType.GROUP) {
             throw new IllegalArgumentException("Invalid chat room type");
         }
@@ -143,22 +157,22 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new IllegalArgumentException("Only manager can remove user from group chat room");
         User user = userService.getUserEntity(userId);
         ChatRoomUser chatRoomUser = chatRoomUserRepository.findByChatRoomAndUser(chatRoom, user).orElseThrow(
-                () -> new ResourceNotFoundException("ChatRoom", "ChatRoom Or User", roomId + " " + userId)
+                () -> new ResourceNotFoundException("ChatRoom", "ChatRoom Or User", chatRoomId + " " + userId)
         );
 
         chatRoomUserRepository.delete(chatRoomUser);
     }
 
     @Override
-    public void exitGroupChatRoom(String roomId, String userId) {
-        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("ChatRoom", "Id", roomId));
+    public void exitGroupChatRoom(String chatRoomId, String userId) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId).orElseThrow(
+                () -> new ResourceNotFoundException("ChatRoom", "Id", chatRoomId));
         if (chatRoom.getType() != ChatRoomType.GROUP) {
             throw new IllegalArgumentException("Invalid chat room type");
         }
         User user = userService.getUserEntity(userId);
         ChatRoomUser chatRoomUser = chatRoomUserRepository.findByChatRoomAndUser(chatRoom, user).orElseThrow(
-                () -> new ResourceNotFoundException("ChatRoom", "ChatRoom Or User", roomId + " " + userId)
+                () -> new ResourceNotFoundException("ChatRoom", "ChatRoom Or User", chatRoomId + " " + userId)
         );
         chatRoomUserRepository.delete(chatRoomUser);
     }
@@ -190,9 +204,9 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public List<String> getChatRoomUserIds(String roomId) {
-        getChatRoomEntity(roomId);
-        return chatRoomUserRepository.findUserIdInChatRoomByChatRoomId(roomId);
+    public List<String> getChatRoomUserIds(String chatRoomId) {
+        getChatRoomEntity(chatRoomId);
+        return chatRoomUserRepository.findUserIdInChatRoomByChatRoomId(chatRoomId);
     }
 
     @Override
@@ -213,8 +227,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public ChatRoomResponse getChatRoomInfo(String roomId) {
-        ChatRoom chatRoom = getChatRoomEntity(roomId);
+    public ChatRoomResponse getChatRoomInfo(String chatRoomId) {
+        ChatRoom chatRoom = getChatRoomEntity(chatRoomId);
         return ChatRoomResponse.builder()
                 .chatRoomId(chatRoom.getId())
                 .roomName(chatRoom.getName())
@@ -222,13 +236,24 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public boolean isUserInChatRoom(String userId, String roomId) {
-        return chatRoomUserRepository.existsByChatRoomIdAndUserId(roomId, userId);
+    public boolean isUserInChatRoom(String userId, String chatRoomId) {
+        return chatRoomUserRepository.existsByChatRoomIdAndUserId(chatRoomId, userId);
     }
 
     @Override
-    public boolean isUsersInChatRoom(Set<String> userIds, String roomId) {
+    public boolean isUsersInChatRoom(Set<String> userIds, String chatRoomId) {
         return false;
+    }
+
+    @Override
+    public void reActivateChatRoom(String chatRoomId) {
+        ChatRoom chatRoom = getChatRoomEntity(chatRoomId);
+        Room room = roomService.getRoomEntityById(chatRoom.getRoomId());
+        if (room.getStatus() != RoomStatus.AVAILABLE) {
+            throw new APIException(HttpStatus.FORBIDDEN, ErrorCode.FLEXIBLE_ERROR, "Room is not available");
+        }
+        chatRoom.setStatus(ChatRoomStatus.ACTIVE);
+        chatRoomRepository.save(chatRoom);
     }
 
     @Override

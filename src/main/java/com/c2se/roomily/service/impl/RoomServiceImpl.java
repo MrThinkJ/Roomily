@@ -68,7 +68,7 @@ public class RoomServiceImpl implements RoomService {
                 .maxPeople(room.getMaxPeople())
                 .landlordId(room.getLandlord().getId())
                 .tags(room.getTags())
-                .deposit(room.getRentalDeposit())
+                .deposit(room.getRentalDeposit().toString())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
                 .squareMeters(room.getSquareMeters())
@@ -171,7 +171,7 @@ public class RoomServiceImpl implements RoomService {
                                                           createRoomRequest.getLongitude()))
                 .maxPeople(createRoomRequest.getMaxPeople())
                 .landlord(landlord)
-                .rentalDeposit(createRoomRequest.getDeposit())
+                .rentalDeposit(BigDecimal.valueOf(Double.parseDouble(createRoomRequest.getDeposit())))
                 .tags(new HashSet<>(tags))
                 .squareMeters(createRoomRequest.getSquareMeters())
                 .build();
@@ -200,7 +200,7 @@ public class RoomServiceImpl implements RoomService {
                              .map(tag -> Tag.builder().name(tag).build())
                              .collect(Collectors.toSet()));
         room.setSquareMeters(updateRoomRequest.getSquareMeters());
-        room.setRentalDeposit(updateRoomRequest.getDeposit());
+        room.setRentalDeposit(BigDecimal.valueOf(Double.parseDouble(updateRoomRequest.getDeposit())));
         Room updatedRoom = roomRepository.save(room);
         return mapToRoomResponse(updatedRoom);
     }

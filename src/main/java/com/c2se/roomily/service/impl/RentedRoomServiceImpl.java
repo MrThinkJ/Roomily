@@ -4,10 +4,7 @@ import com.c2se.roomily.entity.FindPartnerPost;
 import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.User;
-import com.c2se.roomily.enums.ErrorCode;
-import com.c2se.roomily.enums.FindPartnerPostStatus;
-import com.c2se.roomily.enums.RentedRoomStatus;
-import com.c2se.roomily.enums.RoomStatus;
+import com.c2se.roomily.enums.*;
 import com.c2se.roomily.event.DebtDateExpireEvent;
 import com.c2se.roomily.event.RoomExpireEvent;
 import com.c2se.roomily.exception.APIException;
@@ -25,6 +22,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -95,6 +93,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .userId(userId)
                 .roomId(createRentedRoomRequest.getRoomId())
                 .startDate(createRentedRoomRequest.getStartDate())
+                .chatRoomId(createRentedRoomRequest.getChatRoomId())
                 .build();
         if (createRentedRoomRequest.getFindPartnerPostId() == null) {
             request.setFindPartnerPostId(null);
@@ -122,17 +121,24 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Transactional(rollbackFor = Exception.class)
     public void acceptRent(String landlordId, String privateCode) {
         String value = rentRequestRepository.findByKey(privateCode);
+        if (value == null)
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
         String[] parts = value.split("#");
         String userId = parts[0];
         String roomId = parts[1];
+        String chatRoomId = parts[4];
         User user = userService.getUserEntity(userId);
         Room room = roomService.getRoomEntityById(roomId);
+
+        // TODO: Remove this, this just for testing
+        landlordId = room.getLandlord().getId();
+
         if (room.getStatus() != RoomStatus.AVAILABLE)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not available");
         if (!landlordId.equals(room.getLandlord().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the landlord");
         LocalDate startDate = LocalDate.parse(parts[2]);
-        String findPartnerPostId = parts.length > 3 ? parts[4] : null;
+        String findPartnerPostId = parts.length > 4 ? parts[3] : null;
         RentedRoom rentedRoom = RentedRoom.builder()
                 .user(user)
                 .room(room)
@@ -140,20 +146,27 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .startDate(startDate)
                 .endDate(startDate.plusMonths(1))
                 .status(RentedRoomStatus.IN_USE)
+                .rentedRoomWallet(BigDecimal.ZERO)
+                .rentalDeposit(room.getRentalDeposit())
                 .build();
-        if (findPartnerPostId != null) {
+        if (!findPartnerPostId.equals("null")) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
             findPartnerService.updateFindPartnerPostStatus(findPartnerPostId,
                                                            FindPartnerPostStatus.COMPLETED.toString());
             findPartnerPost.getParticipants().remove(user);
             rentedRoom.setCoTenants(findPartnerPost.getParticipants());
+            findPartnerService.deleteFindPartnerPost(userId, findPartnerPostId);
+        } else {
+            List<String> usersInChatRoom = chatRoomService.getChatRoomUserIds(chatRoomId);
+            usersInChatRoom.remove(landlordId);
+            usersInChatRoom.remove(userId);
+            rentedRoom.setCoTenants(userService.getUserEntities(usersInChatRoom));
         }
+        chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.ACTIVE);
         rentedRoomRepository.save(rentedRoom);
         roomService.updateRoomStatus(roomId, RoomStatus.RENTED.toString());
         rentedRoom.setStatus(RentedRoomStatus.IN_USE);
         rentedRoomRepository.save(rentedRoom);
-        findPartnerService.deleteFindPartnerPost(userId, findPartnerPostId);
-        findPartnerService.deleteFindPartnerPostByRoomId(roomId);
         rentRequestRepository.deleteByKey(privateCode);
     }
 
@@ -161,18 +174,24 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Transactional(rollbackFor = Exception.class)
     public void denyRent(String landlordId, String privateCode) {
         String value = rentRequestRepository.findByKey(privateCode);
+        if (value == null)
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
         String[] parts = value.split("#");
         String roomId = parts[1];
-        String findPartnerPostId = parts.length > 3 ? parts[4] : null;
+        String findPartnerPostId = parts.length > 3 ? parts[3] : null;
         Room room = roomService.getRoomEntityById(roomId);
+
+        // TODO: Remove this, this just for testing
+        landlordId = room.getLandlord().getId();
+
         if (!landlordId.equals(room.getLandlord().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the landlord");
         rentRequestRepository.deleteByKey(privateCode);
-        if (findPartnerPostId != null) {
+        chatRoomService.updateChatRoomStatus(parts[4], ChatRoomStatus.CANCELED);
+        if (!findPartnerPostId.equals("null")) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
             findPartnerService.deleteFindPartnerPost(findPartnerPost.getPoster().getId(), findPartnerPostId);
-            String chatRoomId = chatRoomService.getChatRoomIdByFindPartnerPostId(findPartnerPostId);
-            chatRoomService.deleteGroupChatRoom(findPartnerPost.getPoster().getId(), chatRoomId);
+            chatRoomService.archiveAllChatRoomsByFindPartnerPostId(findPartnerPostId);
         }
     }
 

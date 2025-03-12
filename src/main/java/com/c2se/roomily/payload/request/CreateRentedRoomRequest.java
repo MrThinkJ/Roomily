@@ -2,6 +2,7 @@ package com.c2se.roomily.payload.request;
 
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 
@@ -9,6 +10,8 @@ import java.time.LocalDate;
 @Builder
 public class CreateRentedRoomRequest {
     private String roomId;
+    private String chatRoomId;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate startDate;
     private String findPartnerPostId;
 }

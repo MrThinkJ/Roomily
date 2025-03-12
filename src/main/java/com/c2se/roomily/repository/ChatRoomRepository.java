@@ -1,6 +1,7 @@
 package com.c2se.roomily.repository;
 
 import com.c2se.roomily.entity.ChatRoom;
+import com.c2se.roomily.enums.ChatRoomStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -25,7 +26,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
     @Modifying
     @Transactional(rollbackFor = Exception.class)
     @Query("UPDATE ChatRoom c SET c.status = :status WHERE c.id = :id")
-    void updateStatusById(String id, String status);
+    void updateStatusById(String id, ChatRoomStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM ChatRoom c WHERE c.id = :id")

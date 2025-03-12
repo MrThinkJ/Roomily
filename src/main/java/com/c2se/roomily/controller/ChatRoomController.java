@@ -1,5 +1,6 @@
 package com.c2se.roomily.controller;
 
+import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.payload.response.ChatRoomResponse;
 import com.c2se.roomily.payload.response.ConversationResponse;
 import com.c2se.roomily.service.ChatRoomService;
@@ -40,6 +41,12 @@ public class ChatRoomController extends BaseController {
     @GetMapping("/{roomId}/users")
     public ResponseEntity<List<String>> getChatRoomUserIds(@PathVariable String roomId) {
         return ResponseEntity.ok(chatRoomService.getChatRoomUserIds(roomId));
+    }
+
+    @PostMapping("/direct/landlord/{roomId}")
+    public ResponseEntity<ChatRoom> createDirectChatRoomToLandlord(@PathVariable String roomId) {
+        String userId = this.getUserInfo().getId();
+        return ResponseEntity.ok(chatRoomService.createDirectChatRoomToLandlord(userId, roomId));
     }
 
     @PostMapping("/direct/{userId}")
