@@ -29,7 +29,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     private final UserService userService;
     private final RoomService roomService;
     private final FindPartnerService findPartnerService;
-    private final RequestCacheService rentalRequestCacheService;
+    private final RequestCacheService requestCacheService;
     private final RentedRoomRepository rentedRoomRepository;
     private final ChatRoomService chatRoomService;
     private final EventService eventService;
@@ -90,7 +90,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .recipientId(room.getLandlord().getId())
                 .status(RequestStatus.PENDING)
                 .build();
-        RentalRequest savedRequest = rentalRequestCacheService.saveRequest(rentalRequest);
+        RentalRequest savedRequest = requestCacheService.saveRequest(rentalRequest);
         chatRoom.setRequestId(savedRequest.getId());
         chatRoomService.saveChatRoom(chatRoom);
         return savedRequest;
@@ -99,13 +99,14 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Override
     public void cancelRentRequest(String userId, String chatRoomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
-        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
+        RentalRequest rentalRequest = requestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
         if (rentalRequest == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
         if (!rentalRequest.getRequesterId().equals(userId))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the requester");
-        rentalRequestCacheService.removeRequest(chatRoom.getRequestId());
+        requestCacheService.removeRequest(chatRoom.getRequestId());
         chatRoom.setRequestId(null);
+        chatRoom.setStatus(ChatRoomStatus.ACTIVE);
         chatRoomService.saveChatRoom(chatRoom);
     }
 
@@ -113,7 +114,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Transactional(rollbackFor = Exception.class)
     public void acceptRent(String landlordId, String chatRoomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
-        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
+        RentalRequest rentalRequest = requestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
         if (rentalRequest == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
         if (!rentalRequest.getRecipientId().equals(landlordId))
@@ -157,21 +158,21 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         roomService.updateRoomStatus(chatRoom.getRoomId(), RoomStatus.RENTED.toString());
         rentedRoom.setStatus(RentedRoomStatus.IN_USE);
         rentedRoomRepository.save(rentedRoom);
-        rentalRequestCacheService.removeRequest(chatRoom.getRequestId());
+        requestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void rejectRent(String landlordId, String chatRoomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
-        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
+        RentalRequest rentalRequest = requestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
         if (rentalRequest == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
         String findPartnerPostId = chatRoom.getFindPartnerPostId();
         Room room = roomService.getRoomEntityById(chatRoom.getRoomId());
         if (!landlordId.equals(room.getLandlord().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the landlord");
-        rentalRequestCacheService.removeRequest(chatRoom.getRequestId());
+        requestCacheService.removeRequest(chatRoom.getRequestId());
         chatRoomService.updateChatRoomStatus(chatRoom.getId(), ChatRoomStatus.CANCELED);
         if (findPartnerPostId != null) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
