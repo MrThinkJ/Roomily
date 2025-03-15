@@ -3,6 +3,7 @@ package com.c2se.roomily.service;
 import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.ChatRoomStatus;
+import com.c2se.roomily.enums.ChatRoomType;
 import com.c2se.roomily.payload.response.ChatRoomResponse;
 import com.c2se.roomily.payload.response.ConversationResponse;
 
@@ -11,7 +12,7 @@ import java.util.Set;
 
 public interface ChatRoomService {
     ChatRoom getChatRoomEntity(String chatRoomId);
-
+    void saveChatRoom(ChatRoom chatRoom);
     void updateChatRoomStatus(String chatRoomId, ChatRoomStatus chatRoomStatus);
 
     void archiveAllChatRoomsByFindPartnerPostId(String findPartnerPostId);
@@ -30,7 +31,7 @@ public interface ChatRoomService {
 
     void deleteGroupChatRoom(String managerId, String chatRoomId);
 
-    String getChatRoomIdByFindPartnerPostId(String findPartnerPostId);
+    String getChatRoomIdByFindPartnerPostIdAndType(String findPartnerPostId, ChatRoomType chatRoomType);
 
     List<User> getChatRoomUsers(String chatRoomId);
 

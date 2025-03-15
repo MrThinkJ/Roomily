@@ -22,9 +22,9 @@ public class ChatRoomController extends BaseController {
         chatRoomService.testNotifyChatRoom();
     }
 
-    @GetMapping("/{roomId}")
-    public ResponseEntity<ChatRoomResponse> getChatRoomInfo(@PathVariable String roomId) {
-        return ResponseEntity.ok(chatRoomService.getChatRoomInfo(roomId));
+    @GetMapping("/{chatRoomId}")
+    public ResponseEntity<ChatRoomResponse> getChatRoomInfo(@PathVariable String chatRoomId) {
+        return ResponseEntity.ok(chatRoomService.getChatRoomInfo(chatRoomId));
     }
 
     @GetMapping("/users/{userId}")

@@ -43,6 +43,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
+    public void saveChatRoom(ChatRoom chatRoom) {
+        chatRoomRepository.save(chatRoom);
+    }
+
+    @Override
     public void updateChatRoomStatus(String chatRoomId, ChatRoomStatus status) {
         chatRoomRepository.updateStatusById(chatRoomId, status);
     }
@@ -56,6 +61,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Transactional(rollbackFor = Exception.class)
     public ChatRoom createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId) {
         userIds.add(managerId);
+
         Set<User> users = userService.getUserEntities(List.copyOf(userIds));
         if (users.size() != userIds.size()) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid user ids");
@@ -66,11 +72,13 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .type(ChatRoomType.GROUP)
                 .roomId(roomId)
                 .status(ChatRoomStatus.ACTIVE)
+                .nextSubId(0)
                 .build();
         ChatRoom savedChatRoom = chatRoomRepository.save(chatRoom);
         List<ChatRoomUser> chatRoomUsers = users.stream().map(user -> ChatRoomUser.builder()
                 .chatRoom(savedChatRoom)
                 .user(user)
+                .unreadMessageCount(0)
                 .build()).toList();
         chatRoomUserRepository.saveAll(chatRoomUsers);
         users.forEach(user -> notifyNewChatRoom(savedChatRoom, user.getId()));
@@ -97,6 +105,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .type(ChatRoomType.DIRECT)
                 .status(ChatRoomStatus.ACTIVE)
                 .findPartnerPostId(findPartnerPostId)
+                .nextSubId(0)
                 .build();
 
         chatRoomRepository.save(chatRoom);
@@ -109,6 +118,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         List<ChatRoomUser> chatRoomUsers = users.stream().map(user -> ChatRoomUser.builder()
                 .chatRoom(chatRoom)
                 .user(user)
+                .unreadMessageCount(0)
                 .build()).toList();
         chatRoomUserRepository.saveAll(chatRoomUsers);
         users.forEach(user -> notifyNewChatRoom(chatRoom, user.getId()));
@@ -120,6 +130,15 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         Room room = roomService.getRoomEntityById(roomId);
         User landlord = userService.getUserEntity(room.getLandlord().getId());
         User tenant = userService.getUserEntity(userId);
+        Optional<ChatRoom> existingChatRoom = chatRoomRepository.findByRoomIdAndUsers(
+                roomId,
+                landlord.getId(),
+                tenant.getId()
+        );
+
+        if (existingChatRoom.isPresent()) {
+            return existingChatRoom.get();
+        }
         StringBuilder chatRoomName = new StringBuilder("DM_");
         chatRoomName.append(tenant.getFullName()).append("_").append(landlord.getFullName());
         Set<String> userIds = new HashSet<>();
@@ -191,10 +210,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public String getChatRoomIdByFindPartnerPostId(String findPartnerPostId) {
-        return chatRoomRepository.findByFindPartnerPostId(findPartnerPostId).orElseThrow(
-                () -> new ResourceNotFoundException("ChatRoom", "FindPartnerPostId", findPartnerPostId)
-        ).getId();
+    public String getChatRoomIdByFindPartnerPostIdAndType(String findPartnerPostId, ChatRoomType chatRoomType) {
+        ChatRoom chatRoom = chatRoomRepository.findByFindPartnerPostIdAndType(findPartnerPostId, chatRoomType);
+        if (chatRoom != null){
+            return chatRoom.getId();
+        }
+        return null;
     }
 
     @Override
@@ -216,13 +237,13 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             return List.of();
         }
         return chatRoomUserData.stream().map(data -> ConversationResponse.builder()
-                .chatRoomId(data.roomId())
-                .roomName(data.roomName())
-                .lastMessage(data.lastMessage())
-                .lastMessageTime(data.lastMessageTimeStamp())
-                .lastMessageSender(data.lastMessageSender())
-                .unreadCount(data.unreadCount())
-                .isGroup(data.type() == ChatRoomType.GROUP)
+                .chatRoomId(data.getChatRoomId())
+                .roomName(data.getRoomName())
+                .lastMessage(data.getLastMessage())
+                .lastMessageTime(data.getLastMessageTimeStamp())
+                .lastMessageSender(data.getLastMessageSender())
+                .unreadCount(data.getUnreadCount())
+                .isGroup(data.getType() == ChatRoomType.GROUP)
                 .build()).collect(Collectors.toList());
     }
 
@@ -232,6 +253,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         return ChatRoomResponse.builder()
                 .chatRoomId(chatRoom.getId())
                 .roomName(chatRoom.getName())
+                .managerId(chatRoom.getManagerId())
+                .chatRoomType(chatRoom.getType().name())
+                .chatRoomStatus(chatRoom.getStatus().name())
+                .roomId(chatRoom.getRoomId())
+                .findPartnerPostId(chatRoom.getFindPartnerPostId())
+                .createdAt(chatRoom.getCreatedAt())
                 .build();
     }
 

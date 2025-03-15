@@ -30,9 +30,10 @@ public class ChatMessage {
     private boolean isRead;
     @Column(name = "image_url")
     private String imageUrl;
-    @Column(name = "room_id")
-    private String roomId;
     @ManyToOne
     @JoinColumn(name = "sender_id")
     private User sender;
+    @ManyToOne
+    @JoinColumn(name = "chat_room_id")
+    private ChatRoom chatRoom;
 }

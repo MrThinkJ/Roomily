@@ -8,6 +8,8 @@ services:
       - /var/lib/redis/data:/data
     environment:
       - REDIS_PORT=6379
+    networks:
+      - pi_shared_net
   minio:
     image: minio/minio
     container_name: minio

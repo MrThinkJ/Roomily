@@ -1,19 +1,15 @@
 package com.c2se.roomily.service.impl;
 
-import com.c2se.roomily.entity.FindPartnerPost;
-import com.c2se.roomily.entity.RentedRoom;
-import com.c2se.roomily.entity.Room;
-import com.c2se.roomily.entity.User;
+import com.c2se.roomily.entity.*;
 import com.c2se.roomily.enums.*;
 import com.c2se.roomily.event.DebtDateExpireEvent;
 import com.c2se.roomily.event.RoomExpireEvent;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
-import com.c2se.roomily.payload.request.CreateRentRequest;
 import com.c2se.roomily.payload.request.CreateRentedRoomRequest;
+import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.request.UpdateRentedRoomRequest;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
-import com.c2se.roomily.repository.RentRequestRepository;
 import com.c2se.roomily.repository.RentedRoomRepository;
 import com.c2se.roomily.service.*;
 import lombok.RequiredArgsConstructor;
@@ -30,12 +26,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class RentedRoomServiceImpl implements RentedRoomService {
-    private static final int RENT_REQUEST_TTL = 30;
     private final UserService userService;
     private final RoomService roomService;
     private final FindPartnerService findPartnerService;
+    private final RentalRequestCacheService rentalRequestCacheService;
     private final RentedRoomRepository rentedRoomRepository;
-    private final RentRequestRepository rentRequestRepository;
     private final ChatRoomService chatRoomService;
     private final EventService eventService;
     private final List<RentedRoomStatus> activeStatus = List.of(RentedRoomStatus.IN_USE, RentedRoomStatus.DEBT);
@@ -84,111 +79,101 @@ public class RentedRoomServiceImpl implements RentedRoomService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest) {
+    public RentalRequest requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest) {
         User user = userService.getUserEntity(userId);
         Room room = roomService.getRoomEntityById(createRentedRoomRequest.getRoomId());
+        ChatRoom chatRoom = chatRoomService.getChatRoomEntity(createRentedRoomRequest.getChatRoomId());
         if (room.getStatus() != RoomStatus.AVAILABLE)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not available");
-        CreateRentRequest request = CreateRentRequest.builder()
-                .userId(userId)
-                .roomId(createRentedRoomRequest.getRoomId())
-                .startDate(createRentedRoomRequest.getStartDate())
-                .chatRoomId(createRentedRoomRequest.getChatRoomId())
+        RentalRequest rentalRequest = RentalRequest.builder()
+                .requesterId(userId)
+                .recipientId(room.getLandlord().getId())
+                .status(RequestStatus.PENDING)
                 .build();
-        if (createRentedRoomRequest.getFindPartnerPostId() == null) {
-            request.setFindPartnerPostId(null);
-            return rentRequestRepository.generateKey(userId, request, RENT_REQUEST_TTL);
-        }
-        FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(
-                createRentedRoomRequest.getFindPartnerPostId());
-        if (!userId.equals(findPartnerPost.getPoster().getId()))
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                                   "You are not the poster of find partner post");
-        request.setFindPartnerPostId(createRentedRoomRequest.getFindPartnerPostId());
-        return rentRequestRepository.generateKey(userId, request, RENT_REQUEST_TTL);
+        RentalRequest savedRequest = rentalRequestCacheService.saveRequest(rentalRequest);
+        chatRoom.setRequestId(savedRequest.getId());
+        chatRoomService.saveChatRoom(chatRoom);
+        return savedRequest;
     }
 
     @Override
-    public void cancelRentRequest(String userId, String privateCode) {
-        String value = rentRequestRepository.findByKey(privateCode);
-        String[] parts = value.split("#");
-        if (!userId.equals(parts[0]))
+    public void cancelRentRequest(String userId, String chatRoomId) {
+        ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
+        if (!chatRoom.getManagerId().equals(userId))
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the manager");
+        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
+        if (rentalRequest == null)
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
+        if (!rentalRequest.getRequesterId().equals(userId))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the requester");
-        rentRequestRepository.deleteByKey(privateCode);
+        rentalRequestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void acceptRent(String landlordId, String privateCode) {
-        String value = rentRequestRepository.findByKey(privateCode);
-        if (value == null)
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
-        String[] parts = value.split("#");
-        String userId = parts[0];
-        String roomId = parts[1];
-        String chatRoomId = parts[4];
-        User user = userService.getUserEntity(userId);
-        Room room = roomService.getRoomEntityById(roomId);
+    public void acceptRent(String landlordId, String chatRoomId) {
+        ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
+        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRoomId()).orElse(null);
+        if (rentalRequest == null)
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
+        if (!rentalRequest.getRecipientId().equals(landlordId))
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the recipient");
 
-        // TODO: Remove this, this just for testing
-        landlordId = room.getLandlord().getId();
+        User user = userService.getUserEntity(rentalRequest.getRequesterId());
+        Room room = roomService.getRoomEntityById(chatRoom.getRoomId());
 
         if (room.getStatus() != RoomStatus.AVAILABLE)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not available");
         if (!landlordId.equals(room.getLandlord().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the landlord");
-        LocalDate startDate = LocalDate.parse(parts[2]);
-        String findPartnerPostId = parts.length > 4 ? parts[3] : null;
+
         RentedRoom rentedRoom = RentedRoom.builder()
                 .user(user)
                 .room(room)
                 .landlord(userService.getUserEntity(landlordId))
-                .startDate(startDate)
-                .endDate(startDate.plusMonths(1))
+                .startDate(LocalDate.now())
+                .endDate(LocalDate.now().plusMonths(1))
                 .status(RentedRoomStatus.IN_USE)
                 .rentedRoomWallet(BigDecimal.ZERO)
                 .rentalDeposit(room.getRentalDeposit())
                 .build();
-        if (!findPartnerPostId.equals("null")) {
+        String findPartnerPostId = chatRoom.getFindPartnerPostId();
+        if (findPartnerPostId != null) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
             findPartnerService.updateFindPartnerPostStatus(findPartnerPostId,
                                                            FindPartnerPostStatus.COMPLETED.toString());
             findPartnerPost.getParticipants().remove(user);
             rentedRoom.setCoTenants(findPartnerPost.getParticipants());
-            findPartnerService.deleteFindPartnerPost(userId, findPartnerPostId);
+            findPartnerService.deleteFindPartnerPost(findPartnerPost.getPoster().getId(), findPartnerPostId);
         } else {
             List<String> usersInChatRoom = chatRoomService.getChatRoomUserIds(chatRoomId);
             usersInChatRoom.remove(landlordId);
-            usersInChatRoom.remove(userId);
+            usersInChatRoom.remove(rentalRequest.getRequesterId());
             rentedRoom.setCoTenants(userService.getUserEntities(usersInChatRoom));
         }
+
         chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.ACTIVE);
         rentedRoomRepository.save(rentedRoom);
-        roomService.updateRoomStatus(roomId, RoomStatus.RENTED.toString());
+        roomService.updateRoomStatus(chatRoom.getRoomId(), RoomStatus.RENTED.toString());
         rentedRoom.setStatus(RentedRoomStatus.IN_USE);
         rentedRoomRepository.save(rentedRoom);
-        rentRequestRepository.deleteByKey(privateCode);
+        rentalRequestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void denyRent(String landlordId, String privateCode) {
-        String value = rentRequestRepository.findByKey(privateCode);
-        if (value == null)
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
-        String[] parts = value.split("#");
-        String roomId = parts[1];
-        String findPartnerPostId = parts.length > 3 ? parts[3] : null;
-        Room room = roomService.getRoomEntityById(roomId);
-
-        // TODO: Remove this, this just for testing
-        landlordId = room.getLandlord().getId();
-
+    public void rejectRent(String landlordId, String chatRoomId) {
+        ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
+        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
+        if (rentalRequest == null)
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
+        String findPartnerPostId = chatRoom.getFindPartnerPostId();
+        Room room = roomService.getRoomEntityById(chatRoom.getRoomId());
         if (!landlordId.equals(room.getLandlord().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the landlord");
-        rentRequestRepository.deleteByKey(privateCode);
-        chatRoomService.updateChatRoomStatus(parts[4], ChatRoomStatus.CANCELED);
-        if (!findPartnerPostId.equals("null")) {
+        rentalRequestCacheService.removeRequest(chatRoom.getRequestId());
+        chatRoomService.updateChatRoomStatus(chatRoom.getId(), ChatRoomStatus.CANCELED);
+        if (findPartnerPostId != null) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
             findPartnerService.deleteFindPartnerPost(findPartnerPost.getPoster().getId(), findPartnerPostId);
             chatRoomService.archiveAllChatRoomsByFindPartnerPostId(findPartnerPostId);
@@ -244,11 +229,6 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                                                                       .userId(rentedRoom.getUser().getId())
                                                                       .build()));
     }
-
-//    @Override
-//    public void deleteRentedRoom(String landlordId, String userId, String roomId) {
-//
-//    }
 
     private RentedRoomResponse mapToRentedRoomResponse(RentedRoom rentedRoom) {
         return RentedRoomResponse.builder()

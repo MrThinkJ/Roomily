@@ -11,11 +11,11 @@ import java.util.List;
 
 @RestController
 @AllArgsConstructor
-@RequestMapping("/api/chat")
+@RequestMapping("/api/v1/chat")
 public class ChatMessageController extends BaseController {
     ChatMessageService chatMessageService;
 
-    @PostMapping("test")
+    @PostMapping("/test")
     public ResponseEntity<ChatMessageResponse> test(@ModelAttribute ChatMessageToAdd chatMessageToAdd) {
         chatMessageToAdd.setSenderId(this.getUserInfo().getId());
         ChatMessageResponse message = chatMessageService.saveTestChatMessage(chatMessageToAdd);
@@ -23,12 +23,12 @@ public class ChatMessageController extends BaseController {
     }
 
     @GetMapping("/messages")
-    public ResponseEntity<List<ChatMessageResponse>> getChatMessages(@RequestParam String roomId,
+    public ResponseEntity<List<ChatMessageResponse>> getChatMessages(@RequestParam String chatRoomId,
                                                                      @RequestParam String pivot,
                                                                      @RequestParam String timestamp,
                                                                      @RequestParam int prev) {
         String user1 = this.getUserInfo().getId();
-        List<ChatMessageResponse> messages = chatMessageService.getChatMessages(roomId, user1, pivot, timestamp, prev);
+        List<ChatMessageResponse> messages = chatMessageService.getChatMessages(chatRoomId, user1, pivot, timestamp, prev);
         return ResponseEntity.ok(messages);
     }
 

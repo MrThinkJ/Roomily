@@ -15,6 +15,8 @@ public interface FindPartnerService {
 
     String requestToJoinFindPartnerPost(String userId, String findPartnerPostId, String chatRoomId);
 
+    void cancelRequestToJoinFindPartnerPost(String userId, String privateCode);
+
     void acceptRequestToJoinFindPartnerPost(String userId, String privateCode);
 
     void rejectRequestToJoinFindPartnerPost(String userId, String privateCode);

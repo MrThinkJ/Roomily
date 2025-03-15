@@ -38,21 +38,21 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Override
     public ChatMessageResponse saveChatMessage(ChatMessageToAdd chatMessageToAdd) {
         User sender = userService.getUserEntity(chatMessageToAdd.getSenderId());
-        String roomId = chatMessageToAdd.getChatRoomId();
-        if (!chatRoomRepository.existsById(roomId))
-            throw new ResourceNotFoundException("Chat room", "id", roomId);
-        ChatRoom chatRoom = chatRoomRepository.findByIdLocked(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("Chat room", "id", roomId)
+        String chatRoomId = chatMessageToAdd.getChatRoomId();
+        if (!chatRoomRepository.existsById(chatRoomId))
+            throw new ResourceNotFoundException("Chat room", "id", chatRoomId);
+        ChatRoom chatRoom = chatRoomRepository.findByIdLocked(chatRoomId).orElseThrow(
+                () -> new ResourceNotFoundException("Chat room", "id", chatRoomId)
         );
         ChatMessage chatMessage = ChatMessage.builder()
                 .sender(sender)
                 .imageUrl(null)
                 .message(chatMessageToAdd.getContent())
-                .roomId(roomId)
+                .chatRoom(chatRoom)
                 .subId(chatRoom.getNextSubId() + 1)
                 .build();
         if (chatMessageToAdd.getImage() != null) {
-            String fileName = roomId + "_" + UUID.randomUUID();
+            String fileName = chatRoomId + "_" + UUID.randomUUID();
             try {
                 storageService.putObject(chatMessageToAdd.getImage(), storageConfig.getBucketStore(), fileName);
                 chatMessage.setImageUrl(storageService.generatePresignedUrl(storageConfig.getBucketStore(), fileName));
@@ -67,7 +67,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
         chatRoomRepository.save(chatRoom);
         chatMessageRepository.save(chatMessage);
-        List<String> users = chatRoomService.getChatRoomUserIds(roomId);
+        List<String> users = chatRoomService.getChatRoomUserIds(chatRoomId);
         users.forEach(user -> messagingTemplate.convertAndSendToUser(user, "/queue/messages", chatMessage));
         return mapToResponse(chatMessage);
     }
@@ -80,7 +80,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .sender(sender)
                 .imageUrl(null)
                 .message(chatMessageToAdd.getContent())
-                .roomId(roomId)
+//                .chatRoom(roomId)
                 .subId(0)
                 .build();
         if (chatMessageToAdd.getImage() != null) {

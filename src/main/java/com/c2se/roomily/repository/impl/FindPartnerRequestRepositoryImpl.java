@@ -15,13 +15,14 @@ public class FindPartnerRequestRepositoryImpl implements FindPartnerRequestRepos
 
     @Override
     public void save(String key, String value, int ttl) {
-        redisTemplate.opsForValue().set("find_partner:" + key, value);
-        redisTemplate.expire("find_partner:" + key, ttl, TimeUnit.MINUTES);
+        String keyWithPrefix = "find_partner:" + key;
+        redisTemplate.opsForValue().set(keyWithPrefix, value, ttl, TimeUnit.MINUTES);
     }
 
     @Override
     public String findByKey(String key) {
-        return redisTemplate.opsForValue().get("find_partner:" + key);
+        String keyWithPrefix = "find_partner:" + key;
+        return redisTemplate.opsForValue().get(keyWithPrefix);
     }
 
     @Override
@@ -32,7 +33,7 @@ public class FindPartnerRequestRepositoryImpl implements FindPartnerRequestRepos
     @Override
     public String generateKey(String userId, String findPartnerPostId, String chatRoomId, int ttl) {
         String value = String.format("%s#%s#%s", userId, findPartnerPostId, chatRoomId);
-        String privateCode = UtilFunction.generatePrivateCode(value);
+        String privateCode = UtilFunction.hash(value);
         save(privateCode, value, ttl);
         return privateCode;
     }

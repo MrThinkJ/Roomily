@@ -33,7 +33,7 @@ public class FindPartnerPost {
     @ManyToOne
     @JoinColumn(name = "room_id")
     private Room room;
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "find_partner_participants",
             joinColumns = @JoinColumn(name = "find_partner_post_id"),

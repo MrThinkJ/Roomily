@@ -4,12 +4,15 @@ import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.UserStatus;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface UserService {
     User getUserEntity(String id);
 
     User getCurrentUser();
+
+    Optional<User> getUserEntityByUsernameOrEmail(String username, String email);
 
     User getUserEntityByPrivateId(String privateId);
 

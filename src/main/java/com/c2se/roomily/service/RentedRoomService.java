@@ -2,6 +2,7 @@ package com.c2se.roomily.service;
 
 import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.payload.request.CreateRentedRoomRequest;
+import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.request.UpdateRentedRoomRequest;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
 
@@ -22,13 +23,13 @@ public interface RentedRoomService {
 
     RentedRoomResponse getRentedRoomByRoomId(String roomId);
 
-    String requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest);
+    RentalRequest requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest);
 
-    void cancelRentRequest(String userId, String privateCode);
+    void cancelRentRequest(String userId, String chatRoomId);
 
-    void acceptRent(String landlordId, String privateCode);
+    void acceptRent(String landlordId, String chatRoomId);
 
-    void denyRent(String landlordId, String privateCode);
+    void rejectRent(String landlordId, String chatRoomId);
 
     void cancelRent(String userId, String roomId);
 
