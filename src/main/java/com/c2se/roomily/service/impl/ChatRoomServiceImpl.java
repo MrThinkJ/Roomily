@@ -59,7 +59,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public ChatRoom createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId) {
+    public ChatRoomResponse createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId) {
         userIds.add(managerId);
 
         Set<User> users = userService.getUserEntities(List.copyOf(userIds));
@@ -82,12 +82,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .build()).toList();
         chatRoomUserRepository.saveAll(chatRoomUsers);
         users.forEach(user -> notifyNewChatRoom(savedChatRoom, user.getId()));
-        return savedChatRoom;
+        return mapChatRoomToChatRoomResponse(savedChatRoom);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public ChatRoom getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId) {
+    public ChatRoomResponse getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId) {
         String chatKey = generateDirectChatKey(userId1, userId2);
         Optional<ChatRoom> existingChatRoom = chatRoomRepository.findByChatKey(chatKey);
         if (existingChatRoom.isPresent()) {
@@ -96,7 +96,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 chatRoom.setFindPartnerPostId(findPartnerPostId);
                 chatRoomRepository.save(chatRoom);
             }
-            return chatRoom;
+            return mapChatRoomToChatRoomResponse(chatRoom);
         }
 
         ChatRoom chatRoom = ChatRoom.builder()
@@ -122,11 +122,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .build()).toList();
         chatRoomUserRepository.saveAll(chatRoomUsers);
         users.forEach(user -> notifyNewChatRoom(chatRoom, user.getId()));
-        return chatRoom;
+        return mapChatRoomToChatRoomResponse(chatRoom);
     }
 
     @Override
-    public ChatRoom createDirectChatRoomToLandlord(String userId, String roomId) {
+    public ChatRoomResponse createDirectChatRoomToLandlord(String userId, String roomId) {
         Room room = roomService.getRoomEntityById(roomId);
         User landlord = userService.getUserEntity(room.getLandlord().getId());
         User tenant = userService.getUserEntity(userId);
@@ -137,7 +137,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         );
 
         if (existingChatRoom.isPresent()) {
-            return existingChatRoom.get();
+            return mapChatRoomToChatRoomResponse(existingChatRoom.get());
         }
         StringBuilder chatRoomName = new StringBuilder("DM_");
         chatRoomName.append(tenant.getFullName()).append("_").append(landlord.getFullName());
@@ -333,5 +333,18 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .isGroup(chatRoom.getType() == ChatRoomType.GROUP)
                 .build();
         messagingTemplate.convertAndSendToUser(userId, "/queue/chat-room", conversationResponse);
+    }
+
+    private ChatRoomResponse mapChatRoomToChatRoomResponse(ChatRoom chatRoom) {
+        return ChatRoomResponse.builder()
+                .chatRoomId(chatRoom.getId())
+                .roomName(chatRoom.getName())
+                .managerId(chatRoom.getManagerId())
+                .chatRoomType(chatRoom.getType().name())
+                .chatRoomStatus(chatRoom.getStatus().name())
+                .roomId(chatRoom.getRoomId())
+                .findPartnerPostId(chatRoom.getFindPartnerPostId())
+                .createdAt(chatRoom.getCreatedAt())
+                .build();
     }
 }

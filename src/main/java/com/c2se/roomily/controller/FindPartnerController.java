@@ -26,8 +26,7 @@ public class FindPartnerController extends BaseController {
     @PostMapping("/request")
     public ResponseEntity<String> requestToJoinFindPartnerPost(@RequestBody RequestJoinFindPartnerPostRequest request) {
         String userId = this.getUserInfo().getId();
-        // TODO: Implement userId, remove userId from request, it just use for testing
-        String privateCode = findPartnerService.requestToJoinFindPartnerPost(request.getUserId(),
+        String privateCode = findPartnerService.requestToJoinFindPartnerPost(userId,
                                                                              request.getFindPartnerPostId(),
                                                                              request.getChatRoomId());
         return ResponseEntity.ok(privateCode);

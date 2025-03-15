@@ -29,7 +29,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     private final UserService userService;
     private final RoomService roomService;
     private final FindPartnerService findPartnerService;
-    private final RentalRequestCacheService rentalRequestCacheService;
+    private final RequestCacheService rentalRequestCacheService;
     private final RentedRoomRepository rentedRoomRepository;
     private final ChatRoomService chatRoomService;
     private final EventService eventService;
@@ -99,21 +99,21 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Override
     public void cancelRentRequest(String userId, String chatRoomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
-        if (!chatRoom.getManagerId().equals(userId))
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the manager");
         RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
         if (rentalRequest == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
         if (!rentalRequest.getRequesterId().equals(userId))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the requester");
         rentalRequestCacheService.removeRequest(chatRoom.getRequestId());
+        chatRoom.setRequestId(null);
+        chatRoomService.saveChatRoom(chatRoom);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void acceptRent(String landlordId, String chatRoomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
-        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRoomId()).orElse(null);
+        RentalRequest rentalRequest = rentalRequestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
         if (rentalRequest == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
         if (!rentalRequest.getRecipientId().equals(landlordId))

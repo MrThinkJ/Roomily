@@ -13,6 +13,7 @@ import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateFindPartnerPostRequest;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.request.UpdateFindPartnerPostRequest;
+import com.c2se.roomily.payload.response.ChatRoomResponse;
 import com.c2se.roomily.repository.FindPartnerPostRepository;
 import com.c2se.roomily.repository.FindPartnerRequestRepository;
 import com.c2se.roomily.service.*;
@@ -30,11 +31,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FindPartnerServiceImpl implements FindPartnerService {
     private final FindPartnerPostRepository findPartnerPostRepository;
-    private final FindPartnerRequestRepository findPartnerRequestRepository;
     private final UserService userService;
     private final RoomService roomService;
     private final ChatRoomService chatRoomService;
     private final NotificationService notificationService;
+    private final RequestCacheService requestCacheService;
 
     @Override
     public FindPartnerPost getFindPartnerPostEntity(String findPartnerPostId) {
@@ -267,12 +268,12 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         findPartnerPost.setStatus(FindPartnerPostStatus.FULL);
         Set<User> participants = findPartnerPost.getParticipants();
         participants.add(findPartnerPost.getRoom().getLandlord());
-        ChatRoom chatRoom = chatRoomService.createGroupChatRoom(findPartnerPost.getPoster().getId(),
-                                                       participants.stream().map(User::getId).collect(
+        ChatRoomResponse chatRoom = chatRoomService.createGroupChatRoom(findPartnerPost.getPoster().getId(),
+                                                                        participants.stream().map(User::getId).collect(
                                                                         Collectors.toSet()),
-                                                       "Find partner, room: " + findPartnerPost.getRoom().getId(),
-                                                       findPartnerPost.getRoom().getId());
-        String chatRoomId = chatRoom.getId();
+                                                                        "Find partner, room: " + findPartnerPost.getRoom().getId(),
+                                                                        findPartnerPost.getRoom().getId());
+        String chatRoomId = chatRoom.getChatRoomId();
         participants.forEach(participant -> {
             CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder().header(
                     "You have been added to a group chat room").body("You have been added to a group chat room").userId(

@@ -17,11 +17,11 @@ public interface ChatRoomService {
 
     void archiveAllChatRoomsByFindPartnerPostId(String findPartnerPostId);
 
-    ChatRoom createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId);
+    ChatRoomResponse createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId);
 
-    ChatRoom getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId);
+    ChatRoomResponse getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId);
 
-    ChatRoom createDirectChatRoomToLandlord(String userId, String roomId);
+    ChatRoomResponse createDirectChatRoomToLandlord(String userId, String roomId);
 
     void addUserToGroupChatRoom(String chatRoomId, String userId);
 

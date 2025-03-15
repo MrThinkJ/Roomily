@@ -44,7 +44,7 @@ public class ChatRoomController extends BaseController {
     }
 
     @PostMapping("/direct/landlord/{roomId}")
-    public ResponseEntity<ChatRoom> createDirectChatRoomToLandlord(@PathVariable String roomId) {
+    public ResponseEntity<ChatRoomResponse> createDirectChatRoomToLandlord(@PathVariable String roomId) {
         String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(chatRoomService.createDirectChatRoomToLandlord(userId, roomId));
     }
@@ -53,10 +53,7 @@ public class ChatRoomController extends BaseController {
     public ResponseEntity<ChatRoomResponse> getOrCreateDirectChatRoom(@PathVariable String userId,
                                                                       @RequestParam(required = false) String findPartnerPostId) {
         String currentUserId = this.getUserInfo().getId();
-        ChatRoomResponse chatRoomResponse = ChatRoomResponse.builder()
-                .chatRoomId(chatRoomService.getOrCreateDirectChatRoom(currentUserId, userId, findPartnerPostId).getId())
-                .build();
-        return ResponseEntity.ok(chatRoomResponse);
+        return ResponseEntity.ok(chatRoomService.getOrCreateDirectChatRoom(currentUserId, userId, findPartnerPostId));
     }
 
     @PostMapping("/{roomId}/users/{userId}")
