@@ -2,6 +2,7 @@ package com.c2se.roomily.controller;
 
 import com.c2se.roomily.entity.FindPartnerPost;
 import com.c2se.roomily.payload.request.CreateFindPartnerPostRequest;
+import com.c2se.roomily.payload.request.RequestJoinFindPartnerPostRequest;
 import com.c2se.roomily.payload.request.UpdateFindPartnerPostRequest;
 import com.c2se.roomily.service.FindPartnerService;
 import lombok.AllArgsConstructor;
@@ -22,23 +23,32 @@ public class FindPartnerController extends BaseController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PostMapping("/{findPartnerPostId}/request")
-    public ResponseEntity<String> requestToJoinFindPartnerPost(@PathVariable String findPartnerPostId,
-                                                               @RequestParam String chatRoomId) {
+    @PostMapping("/request")
+    public ResponseEntity<String> requestToJoinFindPartnerPost(@RequestBody RequestJoinFindPartnerPostRequest request) {
         String userId = this.getUserInfo().getId();
-        String privateCode = findPartnerService.requestToJoinFindPartnerPost(userId, findPartnerPostId, chatRoomId);
+        // TODO: Implement userId, remove userId from request, it just use for testing
+        String privateCode = findPartnerService.requestToJoinFindPartnerPost(request.getUserId(),
+                                                                             request.getFindPartnerPostId(),
+                                                                             request.getChatRoomId());
         return ResponseEntity.ok(privateCode);
     }
 
-    @PostMapping("/accept-request")
-    public ResponseEntity<Void> acceptRequestToJoinFindPartnerPost(@RequestParam String privateCode) {
+    @DeleteMapping("/request/cancel/{privateCode}")
+    public ResponseEntity<Void> cancelRequestToJoinFindPartnerPost(@PathVariable String privateCode) {
+        String userId = this.getUserInfo().getId();
+        findPartnerService.cancelRequestToJoinFindPartnerPost(userId, privateCode);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/accept-request/{privateCode}")
+    public ResponseEntity<Void> acceptRequestToJoinFindPartnerPost(@PathVariable String privateCode) {
         String userId = this.getUserInfo().getId();
         findPartnerService.acceptRequestToJoinFindPartnerPost(userId, privateCode);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/reject-request")
-    public ResponseEntity<Void> rejectRequestToJoinFindPartnerPost(@RequestParam String privateCode) {
+    @DeleteMapping("/reject-request/{privateCode}")
+    public ResponseEntity<Void> rejectRequestToJoinFindPartnerPost(@PathVariable String privateCode) {
         String userId = this.getUserInfo().getId();
         findPartnerService.rejectRequestToJoinFindPartnerPost(userId, privateCode);
         return ResponseEntity.ok().build();

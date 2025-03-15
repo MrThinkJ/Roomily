@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -29,8 +30,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Optional<User> getUserEntityByUsernameOrEmail(String username, String email) {
+        return userRepository.findByUsernameOrEmail(username, email);
+    }
+
+    @Override
     public User getUserEntityByPrivateId(String privateId) {
-        return null;
+        return userRepository.findByPrivateId(privateId).orElseThrow(
+                () -> new ResourceNotFoundException("User", "privateId", privateId)
+        );
     }
 
     @Override
@@ -40,16 +48,17 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Set<User> getUserEntitiesByPrivateIds(List<String> privateIds) {
-        return null;
+        return userRepository.findByPrivateIdIn(privateIds);
     }
 
     @Override
     public void updateUserStatus(User user, UserStatus status) {
-
+        user.setStatus(status);
+        userRepository.save(user);
     }
 
     @Override
     public void saveUser(User user) {
-
+        userRepository.save(user);
     }
 }

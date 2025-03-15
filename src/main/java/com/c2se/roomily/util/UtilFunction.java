@@ -6,7 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 public class UtilFunction {
-    public static String generatePrivateCode(String value) {
+    public static String hash(String value) {
         String secret = UUID.randomUUID() + value;
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");

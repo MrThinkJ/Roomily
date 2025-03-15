@@ -1,6 +1,7 @@
 package com.c2se.roomily.controller;
 
 import com.c2se.roomily.payload.request.CreateRentedRoomRequest;
+import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
 import com.c2se.roomily.service.RentedRoomService;
 import lombok.AllArgsConstructor;
@@ -43,13 +44,13 @@ public class RentedRoomController extends BaseController {
     }
 
     @PostMapping("/request/create")
-    public ResponseEntity<String> requestRent(@RequestBody CreateRentedRoomRequest createRentedRoomRequest) {
+    public ResponseEntity<RentalRequest> requestRent(@RequestBody CreateRentedRoomRequest createRentedRoomRequest) {
         String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(rentedRoomService.requestRent(userId, createRentedRoomRequest));
     }
 
-    @DeleteMapping("request/cancel")
-    public ResponseEntity<Void> cancelRentRequest(@RequestParam String privateCode) {
+    @DeleteMapping("request/cancel/{privateCode}")
+    public ResponseEntity<Void> cancelRentRequest(@PathVariable String privateCode) {
         String userId = this.getUserInfo().getId();
         rentedRoomService.cancelRentRequest(userId, privateCode);
         return ResponseEntity.ok().build();
@@ -65,7 +66,7 @@ public class RentedRoomController extends BaseController {
     @PostMapping("/deny/{privateCode}")
     public ResponseEntity<Void> denyRentedRoom(@PathVariable String privateCode) {
         String landlordId = this.getUserInfo().getId();
-        rentedRoomService.denyRent(landlordId, privateCode);
+        rentedRoomService.rejectRent(landlordId, privateCode);
         return ResponseEntity.ok().build();
     }
 

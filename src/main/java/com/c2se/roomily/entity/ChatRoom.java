@@ -43,6 +43,8 @@ public class ChatRoom {
     private String roomId;
     @Column(name = "find_partner_post_id")
     private String findPartnerPostId;
+    @Column(name = "request_id")
+    private String requestId;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

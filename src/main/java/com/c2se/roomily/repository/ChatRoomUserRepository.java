@@ -17,8 +17,22 @@ import java.util.Optional;
 public interface ChatRoomUserRepository extends JpaRepository<ChatRoomUser, String> {
     Optional<ChatRoomUser> findByChatRoomAndUser(ChatRoom chatRoom, User user);
 
-    @Query("SELECT cru.user.id, cru.chatRoom.id, cru.chatRoom.name, cru.chatRoom.type, cru.chatRoom.lastMessage, cru.chatRoom.lastMessageTimeStamp, cru.chatRoom.lastMessageSender, cru.unreadMessageCount, cru.lastReadTimeStamp FROM ChatRoomUser cru " +
-            "where cru.user.id = :userId ORDER BY cru.chatRoom.lastMessageTimeStamp DESC")
+    @Query("""
+            SELECT
+                new com.c2se.roomily.payload.internal.ChatRoomUserData(
+                    cru.user.id,
+                    cru.chatRoom.id,
+                    cru.chatRoom.name,
+                    cru.chatRoom.type,
+                    cru.chatRoom.lastMessage,
+                    cru.chatRoom.lastMessageTimeStamp,
+                    cru.chatRoom.lastMessageSender,
+                    cru.unreadMessageCount ,
+                    cru.lastReadTimeStamp
+                )
+            FROM ChatRoomUser cru
+            WHERE cru.user.id = :userId ORDER BY cru.chatRoom.lastMessageTimeStamp DESC
+            """)
     List<ChatRoomUserData> findDataByUserId(String userId);
 
     @Query("SELECT cru.user.id FROM ChatRoomUser cru WHERE cru.chatRoom.id = :chatRoomId")

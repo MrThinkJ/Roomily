@@ -46,7 +46,7 @@ public class User {
     private Boolean isVerified;
     @Column(name = "balance", precision = 10, scale = 2)
     private BigDecimal balance = BigDecimal.valueOf(0.00);
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))

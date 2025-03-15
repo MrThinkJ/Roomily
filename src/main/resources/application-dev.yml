@@ -6,10 +6,10 @@ spring:
     username: postgres
     password: 28122003
   jpa:
+    generate-ddl: true
     hibernate:
       ddl-auto: update
     show-sql: true
-    generate-ddl: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     properties:
       hibernate:
@@ -21,26 +21,13 @@ spring:
   threads:
     virtual:
       enabled: true
+app:
+  jwt:
+    secret: b1ae877ce7cd4e8a5fbd1615b1bd1780057c0774d0cb26adafadabde66e33fb0
+    expiration: 604800000
 redis:
   host: localhost
   port: 6379
-logging:
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
-      enabled: true
-  threads:
-    virtual:
-      enabled: true
-  level:
-    org:
-      hibernate:
-        sql: debug
-        type:
-          descriptor:
-            sql:
-              basicBinder: trace
 minio:
   access-key: roomily
   secret-key: miniopassword

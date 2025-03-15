@@ -12,6 +12,7 @@ public class ConversationResponse {
     private String chatRoomId;
     private String roomName;
     private String lastMessage;
+    private String conversationStatus;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime lastMessageTime;
     private String lastMessageSender;
