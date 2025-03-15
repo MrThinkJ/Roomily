@@ -3,6 +3,7 @@ package com.c2se.roomily.controller;
 import com.c2se.roomily.payload.request.CreateRentedRoomRequest;
 import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
+import com.c2se.roomily.service.RequestCacheService;
 import com.c2se.roomily.service.RentedRoomService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class RentedRoomController extends BaseController {
     RentedRoomService rentedRoomService;
+    RequestCacheService rentalRequestCacheService;
 
     @GetMapping
     public ResponseEntity<List<RentedRoomResponse>> getRentedRoomsByUserId() {
@@ -43,30 +45,35 @@ public class RentedRoomController extends BaseController {
         return ResponseEntity.ok(rentedRoomService.isUserRentedRoomBefore(userId, roomId));
     }
 
+    @GetMapping("/request/{requestId}")
+    public ResponseEntity<RentalRequest> getRequest(@PathVariable String requestId) {
+        return ResponseEntity.ok(rentalRequestCacheService.getRequest(requestId).orElse(null));
+    }
+
     @PostMapping("/request/create")
     public ResponseEntity<RentalRequest> requestRent(@RequestBody CreateRentedRoomRequest createRentedRoomRequest) {
         String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(rentedRoomService.requestRent(userId, createRentedRoomRequest));
     }
 
-    @DeleteMapping("request/cancel/{privateCode}")
-    public ResponseEntity<Void> cancelRentRequest(@PathVariable String privateCode) {
+    @DeleteMapping("request/cancel/{chatRoomId}")
+    public ResponseEntity<Void> cancelRentRequest(@PathVariable String chatRoomId) {
         String userId = this.getUserInfo().getId();
-        rentedRoomService.cancelRentRequest(userId, privateCode);
+        rentedRoomService.cancelRentRequest(userId, chatRoomId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/accept/{privateCode}")
-    public ResponseEntity<Void> acceptRentedRoom(@PathVariable String privateCode) {
+    @PostMapping("/accept/{chatRoomId}")
+    public ResponseEntity<Void> acceptRentedRoom(@PathVariable String chatRoomId) {
         String landlordId = this.getUserInfo().getId();
-        rentedRoomService.acceptRent(landlordId, privateCode);
+        rentedRoomService.acceptRent(landlordId, chatRoomId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/deny/{privateCode}")
-    public ResponseEntity<Void> denyRentedRoom(@PathVariable String privateCode) {
+    @PostMapping("/deny/{chatRoomId}")
+    public ResponseEntity<Void> denyRentedRoom(@PathVariable String chatRoomId) {
         String landlordId = this.getUserInfo().getId();
-        rentedRoomService.rejectRent(landlordId, privateCode);
+        rentedRoomService.rejectRent(landlordId, chatRoomId);
         return ResponseEntity.ok().build();
     }
 

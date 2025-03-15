@@ -8,5 +8,4 @@ import lombok.Data;
 public class RequestJoinFindPartnerPostRequest {
     private String findPartnerPostId;
     private String chatRoomId;
-    private String userId;
 }

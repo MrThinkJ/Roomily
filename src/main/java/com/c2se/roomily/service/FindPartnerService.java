@@ -2,6 +2,7 @@ package com.c2se.roomily.service;
 
 import com.c2se.roomily.entity.FindPartnerPost;
 import com.c2se.roomily.payload.request.CreateFindPartnerPostRequest;
+import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.request.UpdateFindPartnerPostRequest;
 
 public interface FindPartnerService {
@@ -13,13 +14,13 @@ public interface FindPartnerService {
 
     void deleteFindPartnerPostByRoomId(String roomId);
 
-    String requestToJoinFindPartnerPost(String userId, String findPartnerPostId, String chatRoomId);
+    RentalRequest requestToJoinFindPartnerPost(String userId, String findPartnerPostId, String chatRoomId);
 
-    void cancelRequestToJoinFindPartnerPost(String userId, String privateCode);
+    void cancelRequestToJoinFindPartnerPost(String userId, String chatRoomId);
 
-    void acceptRequestToJoinFindPartnerPost(String userId, String privateCode);
+    void acceptRequestToJoinFindPartnerPost(String userId, String chatRoomId);
 
-    void rejectRequestToJoinFindPartnerPost(String userId, String privateCode);
+    void rejectRequestToJoinFindPartnerPost(String userId, String chatRoomId);
 
     void addParticipantToFindPartnerPost(String userId, String findPartnerPostId, String privateId);
 

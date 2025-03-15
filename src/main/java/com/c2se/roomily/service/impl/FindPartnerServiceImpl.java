@@ -4,15 +4,14 @@ import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.entity.FindPartnerPost;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.User;
-import com.c2se.roomily.enums.ChatRoomStatus;
-import com.c2se.roomily.enums.ChatRoomType;
-import com.c2se.roomily.enums.ErrorCode;
-import com.c2se.roomily.enums.FindPartnerPostStatus;
+import com.c2se.roomily.enums.*;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateFindPartnerPostRequest;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
+import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.request.UpdateFindPartnerPostRequest;
+import com.c2se.roomily.payload.response.ChatRoomResponse;
 import com.c2se.roomily.repository.FindPartnerPostRepository;
 import com.c2se.roomily.repository.FindPartnerRequestRepository;
 import com.c2se.roomily.service.*;
@@ -30,11 +29,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FindPartnerServiceImpl implements FindPartnerService {
     private final FindPartnerPostRepository findPartnerPostRepository;
-    private final FindPartnerRequestRepository findPartnerRequestRepository;
     private final UserService userService;
     private final RoomService roomService;
     private final ChatRoomService chatRoomService;
     private final NotificationService notificationService;
+    private final RequestCacheService requestCacheService;
 
     @Override
     public FindPartnerPost getFindPartnerPostEntity(String findPartnerPostId) {
@@ -86,82 +85,84 @@ public class FindPartnerServiceImpl implements FindPartnerService {
     }
 
     @Override
-    public String requestToJoinFindPartnerPost(String userId, String findPartnerPostId, String chatRoomId) {
+    public RentalRequest requestToJoinFindPartnerPost(String userId, String findPartnerPostId, String chatRoomId) {
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
+        ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
         if (!chatRoomService.isUserInChatRoom(userId, chatRoomId))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not in this chat room");
-        int REQUEST_TTL = 5;
-        String privateCode =  findPartnerRequestRepository.generateKey(userId, findPartnerPost.getId(), chatRoomId, REQUEST_TTL);
+        RentalRequest rentalRequest = RentalRequest.builder()
+                .requesterId(userId)
+                .recipientId(findPartnerPost.getPoster().getId())
+                .status(RequestStatus.PENDING)
+                .findPartnerPostId(findPartnerPostId)
+                .build();
+        RentalRequest savedRequest = requestCacheService.saveRequest(rentalRequest);
+        chatRoom.setRequestId(savedRequest.getId());
         chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.WAITING);
-        return privateCode;
+        return savedRequest;
     }
 
     @Override
-    public void cancelRequestToJoinFindPartnerPost(String userId, String privateCode) {
-        String value = findPartnerRequestRepository.findByKey(privateCode);
-        if (value == null) {
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
-        }
-        String[] parts = value.split("#");
-        String savedUserId = parts[0];
-        if (!savedUserId.equals(userId)) {
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                                   "You are not the requester of this request");
-        }
-        String chatRoomId = parts[2];
-        findPartnerRequestRepository.deleteByKey(privateCode);
-        chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.ACTIVE);
+    public void cancelRequestToJoinFindPartnerPost(String userId, String chatRoomId) {
+        ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
+        RentalRequest rentalRequest = requestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
+        if (rentalRequest == null)
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
+        if (!rentalRequest.getRequesterId().equals(userId))
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the requester");
+        requestCacheService.removeRequest(chatRoom.getRequestId());
+        chatRoom.setRequestId(null);
+        chatRoom.setStatus(ChatRoomStatus.ACTIVE);
+        chatRoomService.saveChatRoom(chatRoom);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void acceptRequestToJoinFindPartnerPost(String posterId, String privateCode) {
-        String value = findPartnerRequestRepository.findByKey(privateCode);
-        if (value == null) {
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
+    public void acceptRequestToJoinFindPartnerPost(String posterId, String chatRoomId) {
+        RentalRequest rentalRequest = requestCacheService.getRequest(chatRoomId).orElse(null);
+        if (rentalRequest == null) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
         }
-        String[] parts = value.split("#");
-        String userId = parts[0];
-        String findPartnerPostId = parts[1];
-        String chatRoomId = parts[2];
-        FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
+        if (!rentalRequest.getRecipientId().equals(posterId)) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the recipient");
+        }
+        FindPartnerPost findPartnerPost = getFindPartnerPostEntity(rentalRequest.getFindPartnerPostId());
         if (!findPartnerPost.getPoster().getId().equals(posterId)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You are not the poster of this post");
         }
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntity(rentalRequest.getRequesterId());
         findPartnerPost.getParticipants().add(user);
         findPartnerPost.setCurrentPeople(findPartnerPost.getCurrentPeople() + 1);
         findPartnerPostRepository.save(findPartnerPost);
-        findPartnerRequestRepository.deleteByKey(privateCode);
-        String chatRoomLandlordId = chatRoomService.getChatRoomIdByFindPartnerPostIdAndType(findPartnerPostId, ChatRoomType.GROUP);
+        requestCacheService.removeRequest(chatRoomId);
+        String chatRoomLandlordId = chatRoomService.getChatRoomIdByFindPartnerPostIdAndType(
+                findPartnerPost.getId(), ChatRoomType.GROUP);
         // If the chat room is already created, add the user to the chat room
         if (chatRoomLandlordId != null) {
-            chatRoomService.addUserToGroupChatRoom(chatRoomLandlordId
-                    ,user.getId());
+            chatRoomService.addUserToGroupChatRoom(chatRoomLandlordId,user.getId());
             return;
         }
-
         checkEnoughParticipants(findPartnerPost);
         chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.COMPLETED);
     }
 
     @Override
-    public void rejectRequestToJoinFindPartnerPost(String posterId, String privateCode) {
-        String value = findPartnerRequestRepository.findByKey(privateCode);
-        if (value == null) {
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid private code");
+    public void rejectRequestToJoinFindPartnerPost(String posterId, String chatRoomId) {
+        RentalRequest rentalRequest = requestCacheService.getRequest(chatRoomId).orElse(null);
+        if (rentalRequest == null) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
         }
-        String[] parts = value.split("#");
-        String findPartnerPostId = parts[1];
-        String roomId = parts[2];
-        FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
+        if (!rentalRequest.getRecipientId().equals(posterId)) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the recipient");
+        }
+        FindPartnerPost findPartnerPost = getFindPartnerPostEntity(rentalRequest.getFindPartnerPostId());
         if (!findPartnerPost.getPoster().getId().equals(posterId)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You are not the poster of this post");
         }
-        findPartnerRequestRepository.deleteByKey(privateCode);
-        chatRoomService.updateChatRoomStatus(roomId, ChatRoomStatus.ACTIVE);
+        requestCacheService.removeRequest(chatRoomId);
+        chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.ACTIVE);
     }
 
     @Override
@@ -267,12 +268,12 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         findPartnerPost.setStatus(FindPartnerPostStatus.FULL);
         Set<User> participants = findPartnerPost.getParticipants();
         participants.add(findPartnerPost.getRoom().getLandlord());
-        ChatRoom chatRoom = chatRoomService.createGroupChatRoom(findPartnerPost.getPoster().getId(),
-                                                       participants.stream().map(User::getId).collect(
+        ChatRoomResponse chatRoom = chatRoomService.createGroupChatRoom(findPartnerPost.getPoster().getId(),
+                                                                        participants.stream().map(User::getId).collect(
                                                                         Collectors.toSet()),
-                                                       "Find partner, room: " + findPartnerPost.getRoom().getId(),
-                                                       findPartnerPost.getRoom().getId());
-        String chatRoomId = chatRoom.getId();
+                                                                        "Find partner, room: " + findPartnerPost.getRoom().getId(),
+                                                                        findPartnerPost.getRoom().getId());
+        String chatRoomId = chatRoom.getChatRoomId();
         participants.forEach(participant -> {
             CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder().header(
                     "You have been added to a group chat room").body("You have been added to a group chat room").userId(
