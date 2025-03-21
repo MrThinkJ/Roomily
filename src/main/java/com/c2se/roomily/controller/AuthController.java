@@ -26,6 +26,12 @@ public class AuthController extends BaseController{
         return ResponseEntity.ok(authService.login(loginRequest));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String token) {
+        authService.logout(token);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/register")
     public ResponseEntity<Void> register(@RequestBody RegisterRequest registerRequest) {
         authService.register(registerRequest);

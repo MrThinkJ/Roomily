@@ -1,5 +1,6 @@
 package com.c2se.roomily.payload.response;
 
+import com.c2se.roomily.payload.request.RentalRequest;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,7 @@ public class ChatRoomResponse {
     private String chatRoomStatus;
     private String roomId;
     private String findPartnerPostId;
+    private RentalRequest rentalRequest;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 }

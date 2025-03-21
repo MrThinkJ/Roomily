@@ -31,8 +31,8 @@ public interface ChatRoomService {
 
     void deleteGroupChatRoom(String managerId, String chatRoomId);
 
-    String getChatRoomIdByFindPartnerPostIdAndType(String findPartnerPostId, ChatRoomType chatRoomType);
-
+    ChatRoom getChatRoomByFindPartnerPostIdAndType(String findPartnerPostId, ChatRoomType chatRoomType);
+    ChatRoom getDirectChatRoomByUserIds(String userId1, String userId2);
     List<User> getChatRoomUsers(String chatRoomId);
 
     List<String> getChatRoomUserIds(String chatRoomId);

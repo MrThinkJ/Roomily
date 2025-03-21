@@ -34,7 +34,14 @@ public class RoomImageServiceImpl implements RoomImageService {
         Room room = roomRepository.findById(roomId).orElseThrow(
                 () -> new ResourceNotFoundException("Room", "id", roomId)
         );
-        return roomImageRepository.findUrlsByRoomId(room.getId());
+        List<String> imageNames = roomImageRepository.getRoomImageNamesByRoomId(room.getId());
+        return imageNames.stream().map(name -> {
+            try {
+                return storageService.generatePresignedUrl(storageConfig.getBucketStore(), name);
+            } catch (Exception e) {
+                return null;
+            }
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -57,11 +64,9 @@ public class RoomImageServiceImpl implements RoomImageService {
             String imageName = generateImageName(roomId, image.getOriginalFilename());
             try {
                 storageService.putObject(image, storageConfig.getBucketStore(), imageName);
-                String imageUrl = storageService.generatePresignedUrl(storageConfig.getBucketStore(), imageName);
                 RoomImage roomImage = RoomImage.builder()
                         .name(imageName)
                         .room(room)
-                        .url(imageUrl)
                         .build();
                 roomImageRepository.save(roomImage);
             } catch (Exception e) {
@@ -100,10 +105,16 @@ public class RoomImageServiceImpl implements RoomImageService {
     }
 
     private RoomImageResponse mapToResponse(RoomImage roomImage) {
+        String url = null;
+        try {
+            url = storageService.generatePresignedUrl(storageConfig.getBucketStore(), roomImage.getName());
+        } catch (Exception e){
+            e.printStackTrace();
+        }
         return RoomImageResponse.builder()
                 .id(roomImage.getId())
                 .name(roomImage.getName())
-                .url(roomImage.getUrl())
+                .url(url)
                 .roomId(roomImage.getRoom().getId())
                 .createdAt(roomImage.getCreatedDate())
                 .build();

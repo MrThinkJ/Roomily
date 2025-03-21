@@ -81,6 +81,7 @@ public class StorageServiceImpl implements StorageService {
                         .method(Method.GET)
                         .bucket(bucket)
                         .object(objectName)
+                        .expiry(60 * 60)
                         .build()
         );
     }

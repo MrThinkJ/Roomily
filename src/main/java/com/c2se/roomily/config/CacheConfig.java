@@ -8,11 +8,12 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 @EnableCaching
-public class RedisConfig {
+public class CacheConfig {
     @Value("${redis.host}")
     private String redisHost;
     @Value("${redis.port}")
@@ -39,4 +40,12 @@ public class RedisConfig {
         redisTemplate.afterPropertiesSet();
         return redisTemplate;
     }
+
+//    @Bean
+//    public RedisTemplate<String, String> redisTemplateString(JedisConnectionFactory connectionFactory){
+//        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+//        redisTemplate.setConnectionFactory(connectionFactory);
+//        redisTemplate.afterPropertiesSet();
+//        return redisTemplate;
+//    }
 }

@@ -10,11 +10,9 @@ import com.c2se.roomily.payload.request.RegisterRequest;
 import com.c2se.roomily.payload.response.LoginResponse;
 import com.c2se.roomily.payload.response.UserResponse;
 import com.c2se.roomily.repository.RoleRepository;
+import com.c2se.roomily.security.CustomUserDetails;
 import com.c2se.roomily.security.JwtProvider;
-import com.c2se.roomily.service.AuthService;
-import com.c2se.roomily.service.BanService;
-import com.c2se.roomily.service.RoleService;
-import com.c2se.roomily.service.UserService;
+import com.c2se.roomily.service.*;
 import com.c2se.roomily.util.UtilFunction;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final BanService banService;
     private final UserService userService;
     private final RoleService roleService;
+    private final TokenBlackListService tokenBlackListService;
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
@@ -46,8 +45,13 @@ public class AuthServiceImpl implements AuthService {
             loginRequest.getUsernameOrEmail(),
             loginRequest.getPassword()
         ));
-
-        String token = provider.generateToken(authentication);
+        Object principal = authentication.getPrincipal();
+        if (principal == null){
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_CREDENTIALS);
+        }
+        
+        CustomUserDetails customUserDetails = (CustomUserDetails) principal;
+        String token = provider.generateToken(customUserDetails);
         String username = authentication.getName();
         User user = userService.getUserEntityByUsernameOrEmail(username, username).orElseThrow(
                 () -> new UsernameNotFoundException("User not found with username or email: " + username)
@@ -66,6 +70,11 @@ public class AuthServiceImpl implements AuthService {
                 .username(user.getUsername())
                 .role(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()))
                 .build();
+    }
+
+    @Override
+    public void logout(String token) {
+        tokenBlackListService.addTokenToBlackList(token);
     }
 
     @Override

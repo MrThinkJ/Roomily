@@ -3,9 +3,11 @@ package com.c2se.roomily.service.impl;
 import com.c2se.roomily.entity.*;
 import com.c2se.roomily.enums.*;
 import com.c2se.roomily.event.DebtDateExpireEvent;
+import com.c2se.roomily.event.DepositPayEvent;
 import com.c2se.roomily.event.RoomExpireEvent;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.request.ChatMessageToAdd;
 import com.c2se.roomily.payload.request.CreateRentedRoomRequest;
 import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.request.UpdateRentedRoomRequest;
@@ -14,12 +16,14 @@ import com.c2se.roomily.repository.RentedRoomRepository;
 import com.c2se.roomily.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,13 +36,15 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     private final RequestCacheService requestCacheService;
     private final RentedRoomRepository rentedRoomRepository;
     private final ChatRoomService chatRoomService;
+    private final ChatMessageService chatMessageService;
     private final EventService eventService;
     private final List<RentedRoomStatus> activeStatus = List.of(RentedRoomStatus.IN_USE, RentedRoomStatus.DEBT);
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
     @Override
-    public RentedRoom getRentedRoomEntityById(String roomId) {
-        return rentedRoomRepository.findById(roomId).orElseThrow(
-                () -> new ResourceNotFoundException("RentedRoom", "id", roomId));
+    public RentedRoom getRentedRoomEntityById(String rentedRoomId) {
+        return rentedRoomRepository.findById(rentedRoomId).orElseThrow(
+                () -> new ResourceNotFoundException("RentedRoom", "id", rentedRoomId));
     }
 
     @Override
@@ -73,7 +79,12 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     }
 
     @Override
-    public RentedRoomResponse getRentedRoomByRoomId(String roomId) {
+    public void deleteRentedRoomNotPaidDepositByRoomId(String roomId) {
+        rentedRoomRepository.deleteByRoomIdAndStatus(roomId, RentedRoomStatus.DEPOSIT_NOT_PAID);
+    }
+
+    @Override
+    public RentedRoomResponse getActiveRentedRoomByRoomId(String roomId) {
         return mapToRentedRoomResponse(rentedRoomRepository.findActiveByRoomId(roomId, activeStatus));
     }
 
@@ -92,7 +103,19 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .build();
         RentalRequest savedRequest = requestCacheService.saveRequest(rentalRequest);
         chatRoom.setRequestId(savedRequest.getId());
+        chatRoom.setStatus(ChatRoomStatus.WAITING);
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message("Bạn có yêu cầu thuê phòng từ " + user.getFullName())
+                .chatRoom(chatRoom)
+                .subId(chatRoom.getNextSubId() + 1)
+                .build();
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
+        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
         chatRoomService.saveChatRoom(chatRoom);
+        simpMessagingTemplate.convertAndSendToUser(room.getLandlord().getId(), "/queue/chat-room",
+                                                   chatRoom.getId());
         return savedRequest;
     }
 
@@ -134,9 +157,9 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .landlord(userService.getUserEntity(landlordId))
                 .startDate(LocalDate.now())
                 .endDate(LocalDate.now().plusMonths(1))
-                .status(RentedRoomStatus.IN_USE)
+                .status(RentedRoomStatus.DEPOSIT_NOT_PAID)
                 .rentedRoomWallet(BigDecimal.ZERO)
-                .rentalDeposit(room.getRentalDeposit())
+                .rentalDeposit(BigDecimal.ZERO)
                 .build();
         String findPartnerPostId = chatRoom.getFindPartnerPostId();
         if (findPartnerPostId != null) {
@@ -152,13 +175,23 @@ public class RentedRoomServiceImpl implements RentedRoomService {
             usersInChatRoom.remove(rentalRequest.getRequesterId());
             rentedRoom.setCoTenants(userService.getUserEntities(usersInChatRoom));
         }
-
-        chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.ACTIVE);
-        rentedRoomRepository.save(rentedRoom);
-        roomService.updateRoomStatus(chatRoom.getRoomId(), RoomStatus.RENTED.toString());
-        rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+        chatRoom.setStatus(ChatRoomStatus.COMPLETED);
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message("Yêu cầu thuê phòng đã được chấp nhận, vui lòng thanh toán tiền cọc trong 12 giờ, " +
+                                 "để hoàn tất quá trình thuê phòng, nếu không phòng sẽ được mở lại")
+                .chatRoom(chatRoom)
+                .subId(chatRoom.getNextSubId() + 1)
+                .build();
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
+        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
+        chatRoomService.saveChatRoom(chatRoom);
+        simpMessagingTemplate.convertAndSendToUser(rentalRequest.getRequesterId(), "/queue/chat-room",
+                                                   chatRoom.getId());
         rentedRoomRepository.save(rentedRoom);
         requestCacheService.removeRequest(chatRoom.getRequestId());
+        schedulePayDeposit(rentedRoom);
     }
 
     @Override
@@ -172,13 +205,25 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         Room room = roomService.getRoomEntityById(chatRoom.getRoomId());
         if (!landlordId.equals(room.getLandlord().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the landlord");
-        requestCacheService.removeRequest(chatRoom.getRequestId());
         chatRoomService.updateChatRoomStatus(chatRoom.getId(), ChatRoomStatus.CANCELED);
         if (findPartnerPostId != null) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
             findPartnerService.deleteFindPartnerPost(findPartnerPost.getPoster().getId(), findPartnerPostId);
             chatRoomService.archiveAllChatRoomsByFindPartnerPostId(findPartnerPostId);
         }
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message("Yêu cầu thuê phòng đã bị hủy bởi chủ trọ")
+                .chatRoom(chatRoom)
+                .subId(chatRoom.getNextSubId() + 1)
+                .build();
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
+        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
+        chatRoomService.saveChatRoom(chatRoom);
+        simpMessagingTemplate.convertAndSendToUser(rentalRequest.getRequesterId(), "/queue/chat-room",
+                                                   chatRoom.getId());
+        requestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
     @Override
@@ -229,6 +274,14 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                                                                       .landlordId(rentedRoom.getLandlord().getId())
                                                                       .userId(rentedRoom.getUser().getId())
                                                                       .build()));
+    }
+
+    private void schedulePayDeposit(RentedRoom rentedRoom) {
+        if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID) {
+            eventService.publishEvent(DepositPayEvent.builder()
+                                              .rentedRoomId(rentedRoom.getId())
+                                              .build());
+        }
     }
 
     private RentedRoomResponse mapToRentedRoomResponse(RentedRoom rentedRoom) {

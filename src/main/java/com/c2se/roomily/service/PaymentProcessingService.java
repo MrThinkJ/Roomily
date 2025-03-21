@@ -15,4 +15,6 @@ public interface PaymentProcessingService {
     ObjectNode confirmWebhook(String webhookUrl);
 
     void payosTransferHandler(ObjectNode body);
+
+    void mockTopUpToRoomWallet(String rentedRoomId, double amount);
 }

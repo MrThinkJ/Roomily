@@ -7,6 +7,7 @@ import com.c2se.roomily.payload.response.UserResponse;
 
 public interface AuthService {
     LoginResponse login(LoginRequest loginRequest);
+    void logout(String token);
     void register(RegisterRequest registerRequest);
     UserResponse me(String userId);
 }

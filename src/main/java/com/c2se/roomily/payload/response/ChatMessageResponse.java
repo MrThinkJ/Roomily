@@ -15,7 +15,7 @@ public class ChatMessageResponse {
     private LocalDateTime createdAt;
     private boolean isRead;
     private String imageUrl;
-    private String roomId;
     private String senderId;
-    private String recipientId;
+    private String chatRoomId;
+    private Integer subId;
 }

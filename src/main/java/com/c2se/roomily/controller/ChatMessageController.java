@@ -15,18 +15,11 @@ import java.util.List;
 public class ChatMessageController extends BaseController {
     ChatMessageService chatMessageService;
 
-    @PostMapping("/test")
-    public ResponseEntity<ChatMessageResponse> test(@ModelAttribute ChatMessageToAdd chatMessageToAdd) {
-        chatMessageToAdd.setSenderId(this.getUserInfo().getId());
-        ChatMessageResponse message = chatMessageService.saveTestChatMessage(chatMessageToAdd);
-        return ResponseEntity.ok(message);
-    }
-
     @GetMapping("/messages")
     public ResponseEntity<List<ChatMessageResponse>> getChatMessages(@RequestParam String chatRoomId,
-                                                                     @RequestParam String pivot,
-                                                                     @RequestParam String timestamp,
-                                                                     @RequestParam int prev) {
+                                                                     @RequestParam(required = false) String pivot,
+                                                                     @RequestParam(required = false) String timestamp,
+                                                                     @RequestParam(defaultValue = "5") int prev) {
         String user1 = this.getUserInfo().getId();
         List<ChatMessageResponse> messages = chatMessageService.getChatMessages(chatRoomId, user1, pivot, timestamp, prev);
         return ResponseEntity.ok(messages);

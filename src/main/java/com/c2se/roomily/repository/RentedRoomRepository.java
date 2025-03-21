@@ -3,9 +3,11 @@ package com.c2se.roomily.repository;
 import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.enums.RentedRoomStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -50,4 +52,9 @@ public interface RentedRoomRepository extends JpaRepository<RentedRoom, String> 
             """
     )
     RentedRoom findActiveByRoomIdAndUserIdOrCoTenantId(String roomId, String userId, List<RentedRoomStatus> status);
+    List<RentedRoom> findByRoomIdAndStatusIn(String roomId, List<RentedRoomStatus> status);
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM RentedRoom rr WHERE rr.room.id = :roomId AND rr.status = :status")
+    void deleteByRoomIdAndStatus(String roomId, RentedRoomStatus status);
 } 

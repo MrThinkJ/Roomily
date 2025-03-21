@@ -14,7 +14,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class RequestCacheServiceImpl implements RequestCacheService {
-    private static final int REQUEST_TTL = 60 * 60 * 24;
+    private static final int REQUEST_TTL = 60 * 24;
     private static final String REQUEST_KEY_PREFIX = "request:";
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -30,8 +30,12 @@ public class RequestCacheServiceImpl implements RequestCacheService {
 
     @Override
     public Optional<RentalRequest> getRequest(String requestId) {
-        RentalRequest request = (RentalRequest) redisTemplate.opsForValue()
+        Object value = redisTemplate.opsForValue()
                 .get(REQUEST_KEY_PREFIX + requestId);
+        if (value == null) {
+            return Optional.empty();
+        }
+        RentalRequest request = (RentalRequest) value;
         return Optional.of(request);
     }
 
