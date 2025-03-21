@@ -1,8 +1,11 @@
 package com.c2se.roomily.config;
 
+import com.c2se.roomily.security.WebSocketAuthChannelInterceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.converter.*;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -13,7 +16,9 @@ import java.util.List;
 
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private final WebSocketAuthChannelInterceptor interceptor;
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
@@ -39,5 +44,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.enableSimpleBroker("/topic", "/user");
         registry.setUserDestinationPrefix("/user");
         registry.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(interceptor);
     }
 }

@@ -20,8 +20,6 @@ public class FindPartnerPost {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "find_partner_post_id")
     private String id;
-    private String content;
-    private String title;
     private Integer currentPeople;
     private Integer maxPeople;
     @Enumerated(EnumType.STRING)

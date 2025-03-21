@@ -43,4 +43,10 @@ public class PaymentController {
         paymentProcessingService.payosTransferHandler(body);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/test/{rentedRoomId}/{amount}")
+    public ResponseEntity<ObjectNode> test(@PathVariable String rentedRoomId, @PathVariable Double amount) {
+        paymentProcessingService.mockTopUpToRoomWallet(rentedRoomId, amount);
+        return ResponseEntity.ok().build();
+    }
 }

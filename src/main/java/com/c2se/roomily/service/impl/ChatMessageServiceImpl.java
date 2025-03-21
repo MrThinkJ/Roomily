@@ -61,6 +61,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                                        "Error while saving image");
             }
         }
+
         chatRoom.setLastMessage(chatMessage.getMessage());
         chatRoom.setLastMessageTimeStamp(chatMessage.getCreatedAt());
         chatRoom.setLastMessageSender(chatMessage.getSender().getId());
@@ -68,43 +69,22 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         chatRoomRepository.save(chatRoom);
         chatMessageRepository.save(chatMessage);
         List<String> users = chatRoomService.getChatRoomUserIds(chatRoomId);
-        users.forEach(user -> messagingTemplate.convertAndSendToUser(user, "/queue/messages", chatMessage));
-        return mapToResponse(chatMessage);
+        ChatMessageResponse response = mapToResponse(chatMessage);
+        users.forEach(user -> messagingTemplate.convertAndSendToUser(user, "/queue/messages", response));
+        return response;
     }
 
     @Override
-    public ChatMessageResponse saveTestChatMessage(ChatMessageToAdd chatMessageToAdd) {
-        User sender = userService.getUserEntity(chatMessageToAdd.getSenderId());
-        String roomId = chatMessageToAdd.getChatRoomId();
-        ChatMessage chatMessage = ChatMessage.builder()
-                .sender(sender)
-                .imageUrl(null)
-                .message(chatMessageToAdd.getContent())
-//                .chatRoom(roomId)
-                .subId(0)
-                .build();
-        if (chatMessageToAdd.getImage() != null) {
-            String fileName = roomId + "_" + UUID.randomUUID();
-            try {
-                storageService.putObject(chatMessageToAdd.getImage(), storageConfig.getBucketStore(), fileName);
-                chatMessage.setImageUrl(storageService.generatePresignedUrl(storageConfig.getBucketStore(), fileName));
-            } catch (Exception e) {
-                throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
-                                       "Error while saving image");
-            }
-        }
-        messagingTemplate.convertAndSendToUser("70f70be9-fd3a-4314-85c7-8e3881d8579a",
-                                               "/queue/messages",
-                                               chatMessage);
-        return mapToResponse(chatMessage);
+    public void saveSystemMessage(ChatMessage chatMessage, ChatRoom chatRoom) {
+        chatMessageRepository.save(chatMessage);
+        List<String> users = chatRoomService.getChatRoomUserIds(chatRoom.getId());
+        ChatMessageResponse response = mapToResponse(chatMessage);
+        users.forEach(user -> messagingTemplate.convertAndSendToUser(user, "/queue/messages", response));
     }
 
     @Override
-    public List<ChatMessageResponse> getChatMessages(String userId, String roomId, String pivot, String timestamp,
+    public List<ChatMessageResponse> getChatMessages(String roomId, String userId, String pivot, String timestamp,
                                                      int prev) {
-        String[] users = roomId.split("_");
-        if (!users[1].equals(userId) && !users[2].equals(userId))
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid room id");
         List<ChatMessage> chatMessages;
         if (pivot == null && timestamp == null) chatMessages = chatMessageRepository.findLastedByRoomId(roomId, prev);
         else chatMessages = chatMessageRepository.findByRoomId(roomId, pivot, timestamp, prev);
@@ -112,8 +92,15 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     private ChatMessageResponse mapToResponse(ChatMessage chatMessage) {
-        return ChatMessageResponse.builder().id(chatMessage.getId()).senderId(chatMessage.getSender().getId()).message(
-                chatMessage.getMessage()).createdAt(chatMessage.getCreatedAt()).isRead(chatMessage.isRead()).imageUrl(
-                chatMessage.getImageUrl()).build();
+        return ChatMessageResponse.builder()
+                .id(chatMessage.getId())
+                .senderId(chatMessage.getSender() == null ? null : chatMessage.getSender().getId())
+                .message(chatMessage.getMessage())
+                .createdAt(chatMessage.getCreatedAt())
+                .isRead(chatMessage.isRead())
+                .imageUrl(chatMessage.getImageUrl())
+                .chatRoomId(chatMessage.getChatRoom().getId())
+                .subId(chatMessage.getSubId())
+                .build();
     }
 }

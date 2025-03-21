@@ -16,6 +16,7 @@ import com.c2se.roomily.payload.response.ConversationResponse;
 import com.c2se.roomily.repository.ChatRoomRepository;
 import com.c2se.roomily.repository.ChatRoomUserRepository;
 import com.c2se.roomily.service.ChatRoomService;
+import com.c2se.roomily.service.RequestCacheService;
 import com.c2se.roomily.service.RoomService;
 import com.c2se.roomily.service.UserService;
 import lombok.AllArgsConstructor;
@@ -35,6 +36,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     RoomService roomService;
     UserService userService;
     SimpMessagingTemplate messagingTemplate;
+    RequestCacheService requestCacheService;
 
     @Override
     public ChatRoom getChatRoomEntity(String chatRoomId) {
@@ -92,7 +94,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         Optional<ChatRoom> existingChatRoom = chatRoomRepository.findByChatKey(chatKey);
         if (existingChatRoom.isPresent()) {
             ChatRoom chatRoom = existingChatRoom.get();
-            if (findPartnerPostId != null && chatRoom.getFindPartnerPostId() == null) {
+            if (findPartnerPostId != null) {
                 chatRoom.setFindPartnerPostId(findPartnerPostId);
                 chatRoomRepository.save(chatRoom);
             }
@@ -210,12 +212,20 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public String getChatRoomIdByFindPartnerPostIdAndType(String findPartnerPostId, ChatRoomType chatRoomType) {
+    public ChatRoom getChatRoomByFindPartnerPostIdAndType(String findPartnerPostId, ChatRoomType chatRoomType) {
         ChatRoom chatRoom = chatRoomRepository.findByFindPartnerPostIdAndType(findPartnerPostId, chatRoomType);
         if (chatRoom != null){
-            return chatRoom.getId();
+            return chatRoom;
         }
         return null;
+    }
+
+    @Override
+    public ChatRoom getDirectChatRoomByUserIds(String userId1, String userId2) {
+        String chatKey = generateDirectChatKey(userId1, userId2);
+        return chatRoomRepository.findByChatKey(chatKey).orElseThrow(
+                () -> new ResourceNotFoundException("ChatRoom", "ChatKey", chatKey)
+        );
     }
 
     @Override
@@ -226,7 +236,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     public List<String> getChatRoomUserIds(String chatRoomId) {
-        getChatRoomEntity(chatRoomId);
         return chatRoomUserRepository.findUserIdInChatRoomByChatRoomId(chatRoomId);
     }
 
@@ -259,6 +268,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .roomId(chatRoom.getRoomId())
                 .findPartnerPostId(chatRoom.getFindPartnerPostId())
                 .createdAt(chatRoom.getCreatedAt())
+                .rentalRequest(chatRoom.getRequestId() == null ?
+                                       null : requestCacheService.getRequest(chatRoom.getRequestId()).orElse(null))
                 .build();
     }
 
@@ -344,6 +355,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .chatRoomStatus(chatRoom.getStatus().name())
                 .roomId(chatRoom.getRoomId())
                 .findPartnerPostId(chatRoom.getFindPartnerPostId())
+                .rentalRequest(chatRoom.getRequestId() == null ?
+                                       null : requestCacheService.getRequest(chatRoom.getRequestId()).orElse(null))
                 .createdAt(chatRoom.getCreatedAt())
                 .build();
     }

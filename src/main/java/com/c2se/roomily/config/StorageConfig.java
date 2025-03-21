@@ -17,6 +17,8 @@ public class StorageConfig {
     private String secretKey;
     @Value("${minio.bucket.image}")
     private String bucketStore;
+    @Value("${minio.bucket.contract}")
+    private String bucketContract;
     @Value("${minio.url}")
     private String url;
 
@@ -27,6 +29,7 @@ public class StorageConfig {
                 .endpoint(url)
                 .build();
         initBucket(minioClient, bucketStore);
+        initBucket(minioClient, bucketContract);
         return minioClient;
     }
 

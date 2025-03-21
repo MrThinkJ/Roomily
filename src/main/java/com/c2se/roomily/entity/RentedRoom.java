@@ -36,6 +36,8 @@ public class RentedRoom {
     private LocalDate debtDate;
     @Column(name = "rented_room_wallet")
     private BigDecimal rentedRoomWallet;
+    @Column(name = "wallet_debt")
+    private BigDecimal walletDebt;
     @Enumerated(EnumType.STRING)
     private RentedRoomStatus status;
     @CreationTimestamp

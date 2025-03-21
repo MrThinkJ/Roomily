@@ -9,7 +9,7 @@ import com.c2se.roomily.payload.response.RentedRoomResponse;
 import java.util.List;
 
 public interface RentedRoomService {
-    RentedRoom getRentedRoomEntityById(String roomId);
+    RentedRoom getRentedRoomEntityById(String rentedRoomId);
 
     void saveRentedRoom(RentedRoom rentedRoom);
 
@@ -20,8 +20,9 @@ public interface RentedRoomService {
     List<RentedRoomResponse> getRentedRoomsByLandlordId(String landlordId);
 
     List<RentedRoomResponse> getRentedRoomHistoryByRoomId(String roomId);
+    void deleteRentedRoomNotPaidDepositByRoomId(String roomId);
 
-    RentedRoomResponse getRentedRoomByRoomId(String roomId);
+    RentedRoomResponse getActiveRentedRoomByRoomId(String roomId);
 
     RentalRequest requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest);
 

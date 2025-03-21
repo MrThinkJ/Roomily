@@ -31,7 +31,7 @@ public class RentedRoomController extends BaseController {
 
     @GetMapping("/room/{roomId}")
     public ResponseEntity<RentedRoomResponse> getRentedRoomByRoomId(@PathVariable String roomId) {
-        return ResponseEntity.ok(rentedRoomService.getRentedRoomByRoomId(roomId));
+        return ResponseEntity.ok(rentedRoomService.getActiveRentedRoomByRoomId(roomId));
     }
 
     @GetMapping("/history/{roomId}")

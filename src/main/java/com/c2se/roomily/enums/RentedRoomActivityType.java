@@ -12,5 +12,6 @@ public enum RentedRoomActivityType {
     LANDLORD_ANNOUNCEMENT,
     TENANT_MESSAGE,
     CONTRACT_UPDATED,
+    DEPOSIT_PAID,
     OTHER
 }
