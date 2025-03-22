@@ -12,6 +12,7 @@ import com.c2se.roomily.service.RentedRoomService;
 import com.c2se.roomily.util.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
@@ -29,7 +30,7 @@ import java.util.Set;
 public class DepositPayEventHandler {
     private final RentedRoomRepository rentedRoomRepository;
     private final NotificationService notificationService;
-    private final TaskScheduler scheduler;
+    private final TaskScheduler taskScheduler;
     @EventListener
     @Async
     @Transactional
@@ -58,7 +59,7 @@ public class DepositPayEventHandler {
                     });
                 }
             };
-            scheduler.schedule(task, Instant.now().plus(AppConstants.DEPOSIT_PAYMENT_TIMEOUT, TimeUnit.MINUTES.toChronoUnit()));
+            taskScheduler.schedule(task, Instant.now().plus(AppConstants.DEPOSIT_PAYMENT_TIMEOUT, TimeUnit.MINUTES.toChronoUnit()));
         } catch (Exception e) {
             log.error("Error processing deposit pay event for rented room ID: {}", event.getRentedRoomId(), e);
         }

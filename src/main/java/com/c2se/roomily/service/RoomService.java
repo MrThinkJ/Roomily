@@ -27,7 +27,7 @@ public interface RoomService {
 
     List<RoomResponse> getSubscribedRoomsByLocation(String city, String district, String ward);
 
-    Boolean createRoom(CreateRoomRequest createRoomRequest, String landlordId);
+    String createRoom(CreateRoomRequest createRoomRequest, String landlordId);
 
     RoomResponse updateRoom(String roomId, UpdateRoomRequest updateRoomRequest);
 

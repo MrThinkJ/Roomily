@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Hợp đồng thuê phòng trọ</title>
     <style>
         body {
             margin: 0 auto;
             background-color: #f0f0f0;
-            padding: 20px;
+            padding: 10px;
         }
 
         .page {
@@ -47,20 +47,20 @@
             bottom: 20px;
             right: 20px;
             padding: 10px 20px;
-            background-color: #4CAF50;
+            background-color: #4caf50;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             transition: all 0.3s ease;
         }
 
         .print-button:hover {
             background-color: #45a049;
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         @media print {
@@ -77,11 +77,13 @@
         }
 
         @media print {
-            html, body {
+            html,
+            body {
                 margin: 0;
                 padding: 0;
                 background: none;
             }
+
             .info-line {
                 text-align: left !important;
             }
@@ -115,6 +117,9 @@
             margin: 0 5px;
             vertical-align: baseline;
             line-height: inherit;
+            background-color: #ffffff !important;
+            display: inline-block;
+            min-height: 1.2em;
         }
 
         .info-line {
@@ -145,72 +150,368 @@
             margin-bottom: 0.5em;
             font-weight: bold;
         }
+
+        .input-field.wrap {
+            width: 60%;
+            display: inline-block;
+            word-wrap: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+
+        .info-line {
+            margin-left: 1.5em;
+        }
+
+        .info-line .row {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
 <div class="page" data-header="" data-footer="">
-    <div class="header" style="margin-top: 2cm;">
+    <div class="header" style="margin-top: 2cm">
         <div>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
         <div>Độc lập - Tự do - Hạnh phúc</div>
     </div>
 
     <div class="title">HỢP ĐỒNG THUÊ PHÒNG TRỌ</div>
 
-    <div class="info-line" style="margin-left: 1.5em">
-        Hôm nay, ngày <input type="text" id="contractDay" class="input-field" style="width: 30px" placeholder="...">
-        tháng <input type="text" id="contractMonth" class="input-field" style="width: 30px" placeholder="...">
-        năm <input type="text" id="contractYear" class="input-field" style="width: 50px" placeholder="...">, tại địa chỉ: <input type="text" id="contractAddress" class="input-field" style="width: 100px" placeholder="Địa chỉ...">
+    <div class="info-line">
+        Hôm nay, ngày
+        <div
+                id="contractDay"
+                class="input-field"
+                style="width: 30px"
+
+        >
+        </div>
+        tháng
+        <div
+                id="contractMonth"
+                class="input-field"
+                style="width: 30px"
+
+        >
+        </div>
+        năm
+        <div
+                id="contractYear"
+                class="input-field"
+                style="width: 50px"
+
+        >
+        </div>
+        , tại địa chỉ:
+        <div
+                id="contractAddress"
+                class="input-field"
+                style="width: 100px"
+
+        >
+        </div>
     </div>
 
     <div class="content">
         <p><strong>Chúng tôi gồm:</strong></p>
         <p>1. Đại diện bên cho thuê phòng trọ (Bên A):</p>
-        <div class="info-line" style="margin-left: 1.5em">
-            Ông/bà: <input type="text" id="landlordName" class="input-field" style="width: 200px" placeholder="Họ và tên..."><br>
-            Sinh ngày: <input type="text" id="landlordBirthDate" class="input-field" style="width: 100px" placeholder="dd/mm/yyyy"><br>
-            Nơi đăng ký HK: <input type="text" id="landlordAddress" class="input-field" style="width: 300px" placeholder="Địa chỉ..."><br>
-            Số CCCD: <input type="text" id="landlordID" class="input-field" style="width: 150px" placeholder="Số CCCD">
-            cấp ngày <input type="text" id="landlordIDDay" class="input-field" style="width: 30px" placeholder="..."> /
-            <input type="text" id="landlordIDMonth" class="input-field" style="width: 30px" placeholder="..."> /
-            <input type="text" id="landlordIDYear" class="input-field" style="width: 50px" placeholder="...">
-            tại: <input type="text" id="landlordIDPlace" class="input-field" style="width: 150px" placeholder="Nơi cấp..."><br>
-            Số điện thoại: <input type="text" id="landlordPhone" class="input-field" style="width: 150px" placeholder="Số điện thoại...">
-        </div>
+        <div class="info-line">
+            <div class="row">
+                Ông/bà:
+                <div
+                        id="landlordName"
+                        class="input-field"
+                        style="width: 200px"
 
+                >
+                </div>
+            </div>
+            <div class="row">
+                Sinh ngày:
+                <div
+                        id="landlordBirthDate"
+                        class="input-field"
+                        style="width: 100px"
+
+                >
+                </div>
+            </div>
+            <div class="row">
+                Nơi đăng ký HK:
+                <div
+                        id="landlordAddress"
+                        class="input-field"
+                        style="width: 300px"
+
+                >
+                </div>
+            </div>
+            <div class="row">
+                Số CCCD:
+                <div
+                        id="landlordID"
+                        class="input-field"
+                        style="width: 150px"
+
+                >
+                </div>
+                cấp ngày
+                <div
+                        id="landlordIDDay"
+                        class="input-field"
+                        style="width: 30px"
+
+                >
+                </div>
+                /
+                <div
+                        id="landlordIDMonth"
+                        class="input-field"
+                        style="width: 30px"
+
+                >
+                </div>
+                /
+                <div
+                        id="landlordIDYear"
+                        class="input-field"
+                        style="width: 50px"
+
+                >
+                </div>
+                tại:
+                <div
+                        id="landlordIDPlace"
+                        class="input-field"
+                        style="width: 150px"
+
+                >
+                </div>
+            </div>
+            <div class="row">
+                Số điện thoại:
+                <div
+                        id="landlordPhone"
+                        class="input-field"
+                        style="width: 150px"
+
+                >
+                </div>
+            </div>
+        </div>
         <p>2. Bên thuê phòng trọ (Bên B):</p>
+        <div class="info-line">
+            <div class="row">
+                Ông/bà:
+                <div
+                        id="tenantName"
+                        class="input-field"
+                        style="width: 200px"
 
-        <div class="info-line" style="margin-left: 1.5em">
-            Ông/bà: <input type="text" id="tenantName" class="input-field" style="width: 200px" placeholder="Họ và tên..."><br>
-            Sinh ngày: <input type="text" id="tenantBirthDate" class="input-field" style="width: 100px" placeholder="dd/mm/yyyy"><br>
-            Nơi đăng ký HK thường trú: <input type="text" id="tenantAddress" class="input-field" style="width: 300px" placeholder="Địa chỉ..."><br>
-            Số CCCD: <input type="text" id="tenantID" class="input-field" style="width: 150px" placeholder="Số CCCD">
-            cấp ngày <input type="text" id="tenantIDDay" class="input-field" style="width: 30px" placeholder="..."> /
-            <input type="text" id="tenantIDMonth" class="input-field" style="width: 30px" placeholder="..."> /
-            <input type="text" id="tenantIDYear" class="input-field" style="width: 50px" placeholder="...">
-            tại: <input type="text" id="tenantIDPlace" class="input-field" style="width: 150px" placeholder="Nơi cấp..."><br>
-            Số điện thoại: <input type="text" id="tenantPhone" class="input-field" style="width: 150px" placeholder="Số điện thoại...">
+                >
+                </div>
+            </div>
+            <div class="row">
+                Sinh ngày:
+                <div
+                        id="tenantBirthDate"
+                        class="input-field"
+                        style="width: 100px"
+
+                >
+                </div>
+            </div>
+            <div class="row">
+                Nơi đăng ký HK thường trú:
+                <div
+                        id="tenantAddress"
+                        class="input-field"
+                        style="width: 300px"
+
+                >
+                </div>
+            </div>
+            <div class="row">
+                Số CCCD:
+                <div
+                        id="tenantID"
+                        class="input-field"
+                        style="width: 150px"
+
+                >
+                </div>
+                cấp ngày
+                <div
+                        id="tenantIDDay"
+                        class="input-field"
+                        style="width: 30px"
+
+                >
+                </div>
+                /
+                <div
+                        id="tenantIDMonth"
+                        class="input-field"
+                        style="width: 30px"
+
+                >
+                </div>
+                /
+                <div
+                        id="tenantIDYear"
+                        class="input-field"
+                        style="width: 50px"
+
+                >
+                </div>
+                tại:
+                <div
+                        id="tenantIDPlace"
+                        class="input-field"
+                        style="width: 150px"
+
+                >
+                </div>
+            </div>
+            <div class="row">
+                Số điện thoại:
+                <div
+                        id="tenantPhone"
+                        class="input-field"
+                        style="width: 150px"
+
+                >
+                </div>
+            </div>
         </div>
 
-        <p>Sau khi bàn bạc trên tinh thần dân chủ, hai bên cùng có lợi, cùng thống nhất như sau:</p>
+        <p>
+            Sau khi bàn bạc trên tinh thần dân chủ, hai bên cùng có lợi, cùng
+            thống nhất như sau:
+        </p>
 
-        <p>Bên A đồng ý cho bên B thuê 01 phòng ở tại địa chỉ: <input type="text" id="rentalAddress" class="input-field" style="width: 300px" placeholder="Địa chỉ phòng trọ..."></p>
+        <p>Bên A đồng ý cho bên B thuê 01 phòng ở tại địa chỉ:</p>
 
-        <p>Giá thuê: <input type="text" id="rentalPrice" class="input-field" style="width: 150px" placeholder="Số tiền..."> đ/tháng</p>
+        <div class="info-line">
+            <div class="row">
+                Giá thuê:
+                <div
+                        id="rentalPrice"
+                        class="input-field"
+                        style="width: 150px"
 
-        <p>Hình thức thanh toán: <input type="text" id="paymentMethod" class="input-field" style="width: 300px" placeholder="Hình thức thanh toán..."></p>
+                >
+                </div>
+                đ/tháng
+            </div>
+        </div>
 
-        <p>Tiền điện <input type="text" id="electricityRate" class="input-field" style="width: 100px" placeholder="Số tiền..."> đ/kwh tính theo chỉ số công tơ, thanh toán vào cuối các tháng.</p>
+        <div class="info-line">
+            <div class="row">
+                Hình thức thanh toán:
+                <div
+                        id="paymentMethod"
+                        class="input-field"
+                        style="width: 300px"
 
-        <p>Tiền nước: <input type="text" id="waterRate" class="input-field" style="width: 100px" placeholder="Số tiền..."> đ/người thanh toán vào đầu các tháng.</p>
+                >
+                </div>
+            </div>
+        </div>
 
-        <p>Tiền đặt cọc: <input type="text" id="deposit" class="input-field" style="width: 200px" placeholder="Số tiền đặt cọc..."></p>
+        <div class="info-line">
+            <div class="row">
+                Tiền điện
+                <div
+                        id="electricityRate"
+                        class="input-field"
+                        style="width: 100px"
 
-        <p>Hợp đồng có giá trị kể từ ngày <input type="text" id="contractStartDay" class="input-field" style="width: 30px" placeholder="...">
-            tháng <input type="text" id="contractStartMonth" class="input-field" style="width: 30px" placeholder="...">
-            năm <input type="text" id="contractStartYear" class="input-field" style="width: 50px" placeholder="...">
-            đến ngày <input type="text" id="contractEndDay" class="input-field" style="width: 20px" placeholder="...">
-            tháng <input type="text" id="contractEndMonth" class="input-field" style="width: 20px" placeholder="...">
-            năm <input type="text" id="contractEndYear" class="input-field" style="width: 30px" placeholder="..."></p>
+                >
+                </div>
+                đ/kwh tính theo chỉ số công tơ, thanh toán vào cuối các tháng.
+            </div>
+        </div>
+
+        <div class="info-line">
+            <div class="row">
+                Tiền nước:
+                <div
+                        id="waterRate"
+                        class="input-field"
+                        style="width: 100px"
+
+                >
+                </div>
+                đ/người thanh toán vào đầu các tháng.
+            </div>
+        </div>
+
+        <div class="info-line">
+            <div class="row">
+                Tiền đặt cọc:
+                <div
+                        id="deposit"
+                        class="input-field"
+                        style="width: 200px"
+
+                >
+                </div>
+            </div>
+        </div>
+
+        <div class="info-line">
+            <div class="row">
+                Hợp đồng có giá trị kể từ ngày
+                <div
+                        id="contractStartDay"
+                        class="input-field"
+                        style="width: 30px"
+
+                >
+                </div>
+                tháng
+                <div
+                        id="contractStartMonth"
+                        class="input-field"
+                        style="width: 30px"
+
+                >
+                </div>
+                năm
+                <div
+                        id="contractStartYear"
+                        class="input-field"
+                        style="width: 50px"
+
+                >
+                </div>
+                đến ngày
+                <div
+                        id="contractEndDay"
+                        class="input-field"
+                        style="width: 20px"
+
+                >
+                </div>
+                tháng
+                <div
+                        id="contractEndMonth"
+                        class="input-field"
+                        style="width: 20px"
+
+                >
+                </div>
+                năm
+                <div
+                        id="contractEndYear"
+                        class="input-field"
+                        style="width: 30px"
+
+                >
+                </div>
+            </div>
+        </div>
 
         <p><strong>TRÁCH NHIỆM CỦA CÁC BÊN</strong></p>
 
@@ -218,7 +519,9 @@
         <div class="responsibility-section">
             <p><b>* Trách nhiệm của bên A:</b></p>
             <div id="responsibilitiesA">
-                <p>- Tạo mọi điều kiện thuận lợi để bên B thực hiện theo hợp đồng.</p>
+                <p>
+                    - Tạo mọi điều kiện thuận lợi để bên B thực hiện theo hợp đồng.
+                </p>
                 <p>- Cung cấp nguồn điện, nước, wifi cho bên B sử dụng.</p>
             </div>
         </div>
@@ -228,11 +531,24 @@
             <p><b>* Trách nhiệm của bên B:</b></p>
             <div id="responsibilitiesB">
                 <p>- Thanh toán đầy đủ các khoản tiền theo đúng thỏa thuận.</p>
-                <p>- Bảo quản các trang thiết bị và cơ sở vật chất của bên A trang bị cho ban đầu (làm hỏng phải sửa, mất phải đền).</p>
-                <p>- Không được tự ý sửa chữa, cải tạo cơ sở vật chất khi chưa được sự đồng ý của bên A.</p>
+                <p>
+                    - Bảo quản các trang thiết bị và cơ sở vật chất của bên A trang bị
+                    cho ban đầu (làm hỏng phải sửa, mất phải đền).
+                </p>
+                <p>
+                    - Không được tự ý sửa chữa, cải tạo cơ sở vật chất khi chưa được
+                    sự đồng ý của bên A.
+                </p>
                 <p>- Giữ gìn vệ sinh trong và ngoài khuôn viên của phòng trọ.</p>
-                <p>- Bên B phải chấp hành mọi quy định của pháp luật Nhà nước và quy định của địa phương.</p>
-                <p>- Nếu bên B cho khách ở qua đêm thì phải báo và được sự đồng ý của chủ nhà đồng thời phải chịu trách nhiệm về các hành vi vi phạm pháp luật của khách trong thời gian ở lại.</p>
+                <p>
+                    - Bên B phải chấp hành mọi quy định của pháp luật Nhà nước và quy
+                    định của địa phương.
+                </p>
+                <p>
+                    - Nếu bên B cho khách ở qua đêm thì phải báo và được sự đồng ý của
+                    chủ nhà đồng thời phải chịu trách nhiệm về các hành vi vi phạm
+                    pháp luật của khách trong thời gian ở lại.
+                </p>
             </div>
         </div>
 
@@ -241,17 +557,39 @@
             <p><strong>TRÁCH NHIỆM CHUNG</strong></p>
             <div id="responsibilitiesCommon">
                 <p>- Hai bên phải tạo điều kiện cho nhau thực hiện hợp đồng.</p>
-                <p>- Trong thời gian hợp đồng còn hiệu lực nếu bên nào vi phạm các điều khoản đã thỏa thuận thì bên còn lại có quyền đơn phương chấm dứt hợp đồng; nếu sự vi phạm hợp đồng đó gây tổn thất cho bên bị vi phạm hợp đồng thì bên vi phạm hợp đồng phải bồi thường thiệt hại.</p>
-                <p>- Một trong hai bên muốn chấm dứt hợp đồng trước thời hạn thì phải báo trước cho bên kia ít nhất 30 ngày và hai bên phải có sự thống nhất.</p>
+                <p>
+                    - Trong thời gian hợp đồng còn hiệu lực nếu bên nào vi phạm các
+                    điều khoản đã thỏa thuận thì bên còn lại có quyền đơn phương chấm
+                    dứt hợp đồng; nếu sự vi phạm hợp đồng đó gây tổn thất cho bên bị
+                    vi phạm hợp đồng thì bên vi phạm hợp đồng phải bồi thường thiệt
+                    hại.
+                </p>
+                <p>
+                    - Một trong hai bên muốn chấm dứt hợp đồng trước thời hạn thì phải
+                    báo trước cho bên kia ít nhất 30 ngày và hai bên phải có sự thống
+                    nhất.
+                </p>
                 <p>- Bên A phải trả lại tiền đặt cọc cho bên B.</p>
-                <p>- Bên nào vi phạm điều khoản chung thì phải chịu trách nhiệm trước pháp luật.</p>
-                <p>- Hợp đồng được lập thành 02 bản có giá trị pháp lý như nhau, mỗi bên giữ một bản.</p>
+                <p>
+                    - Bên nào vi phạm điều khoản chung thì phải chịu trách nhiệm trước
+                    pháp luật.
+                </p>
+                <p>
+                    - Hợp đồng được lập thành 02 bản có giá trị pháp lý như nhau, mỗi
+                    bên giữ một bản.
+                </p>
             </div>
         </div>
 
-        <p style="text-align:center"><strong>ĐẠI DIỆN BÊN B&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;ĐẠI DIỆN BÊN A</strong></p>
+        <p style="text-align: center">
+            <strong
+            >ĐẠI DIỆN BÊN B&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                &nbsp;ĐẠI DIỆN BÊN A</strong
+            >
+        </p>
 
-        <p style="text-align:center">&nbsp;</p>
+        <p style="text-align: center">&nbsp;</p>
 
         <p>&nbsp;</p>
 
@@ -259,9 +597,7 @@
     </div>
 </div>
 
-<button class="print-button" onclick="window.print()">
-    🖨️ In trang
-</button>
+<button class="print-button" onclick="window.print()">🖨️ In trang</button>
 
 <script>
     function handlePrint() {

@@ -40,9 +40,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public void subscribe(String userId, String subscriptionId) {
-        if (userSubscriptionRepository.existsByUserIdAndSubscriptionIdAndEndDateAfter(
-                userId, subscriptionId, LocalDateTime.now())) {
-            throw new IllegalArgumentException("User already subscribed to this subscription");
+        if (userSubscriptionRepository.existsByUserIdAndEndDateAfter(
+                userId, LocalDateTime.now())) {
+            throw new IllegalArgumentException("User already has an active subscription");
         }
 
         User user = userService.getUserEntity(userId);
@@ -106,7 +106,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public ActiveSubscriptionResponse getActiveSubscription(String userId) {
-        UserSubscription userSubscription = userSubscriptionRepository.findByEndDateAfter(LocalDateTime.now())
+        UserSubscription userSubscription = userSubscriptionRepository.findByUserIdAndEndDateAfter(userId,
+                                                                                                   LocalDateTime.now())
                 .orElse(null);
 
         if (userSubscription == null) {

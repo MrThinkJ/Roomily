@@ -15,10 +15,7 @@ import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.repository.RoomRepository;
-import com.c2se.roomily.service.RoomService;
-import com.c2se.roomily.service.SubscriptionService;
-import com.c2se.roomily.service.TagService;
-import com.c2se.roomily.service.UserService;
+import com.c2se.roomily.service.*;
 import com.c2se.roomily.util.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +39,7 @@ public class RoomServiceImpl implements RoomService {
     private final TagService tagService;
     private final UserService userService;
     private final SubscriptionService subscriptionService;
+    private final ContractGenerationService contractGenerationService;
     private final BigDecimal DEFAULT_MIN_PRICE = BigDecimal.ZERO;
     private final BigDecimal DEFAULT_MAX_PRICE = BigDecimal.valueOf(1_000_000_000);
     private final int DEFAULT_MIN_PEOPLE = 0;
@@ -147,7 +145,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public Boolean createRoom(CreateRoomRequest createRoomRequest, String landlordId) {
+    public String createRoom(CreateRoomRequest createRoomRequest, String landlordId) {
         User landlord = userService.getUserEntity(landlordId);
         List<Tag> tags = tagService.getTagsByIdIn(createRoomRequest.getTagIds());
         if (tags.size() != createRoomRequest.getTagIds().size()) {
@@ -175,8 +173,9 @@ public class RoomServiceImpl implements RoomService {
                 .tags(new HashSet<>(tags))
                 .squareMeters(createRoomRequest.getSquareMeters())
                 .build();
-        roomRepository.save(room);
-        return true;
+        Room savedRoom = roomRepository.save(room);
+        contractGenerationService.generateDefaultContract(savedRoom);
+        return savedRoom.getId();
     }
 
     @Override
