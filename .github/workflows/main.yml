@@ -81,7 +81,6 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_CONNECT }} "
-            docker compose -f docker-compose.yml up -d && \
             docker load -i ${{ env.APP_NAME }}.tar && \
             docker rm -f ${{ env.APP_NAME }} || true && \
             docker run -d \

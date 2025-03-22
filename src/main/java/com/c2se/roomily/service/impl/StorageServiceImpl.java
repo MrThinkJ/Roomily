@@ -32,6 +32,32 @@ public class StorageServiceImpl implements StorageService {
     }
 
     @Override
+    public void putObject(byte[] data, String bucket, String fileName, String contentType) throws Exception {
+        InputStream inputStream = new ByteArrayInputStream(data);
+        minioClient.putObject(
+                PutObjectArgs.builder()
+                        .object(fileName)
+                        .bucket(bucket)
+                        .stream(inputStream, data.length, -1)
+                        .contentType(contentType)
+                        .build()
+        );
+    }
+
+    @Override
+    public void putObject(InputStream inputStream, String bucket, String fileName,
+                          String contentType) throws Exception {
+        minioClient.putObject(
+                PutObjectArgs.builder()
+                        .object(fileName)
+                        .bucket(bucket)
+                        .stream(inputStream, inputStream.available(), -1)
+                        .contentType(contentType)
+                        .build()
+        );
+    }
+
+    @Override
     public void putFolder(String folderName) throws Exception {
         minioClient.putObject(
                 PutObjectArgs.builder()

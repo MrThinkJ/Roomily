@@ -8,21 +8,16 @@ import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.payload.request.LandlordFillContractRequest;
 import com.c2se.roomily.payload.request.ModifyContractRequest;
 import com.c2se.roomily.payload.request.TenantFillContractRequest;
-import com.c2se.roomily.service.ContractService;
-import com.c2se.roomily.service.RentedRoomService;
-import com.c2se.roomily.service.RoomService;
-import com.c2se.roomily.service.StorageService;
-import com.c2se.roomily.util.AppConstants;
+import com.c2se.roomily.payload.response.ContractResponsibilitiesResponse;
+import com.c2se.roomily.payload.response.ContractUserInfoResponse;
+import com.c2se.roomily.service.*;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -30,41 +25,36 @@ import java.util.List;
 public class ContractServiceImpl implements ContractService {
     private final RentedRoomService rentedRoomService;
     private final RoomService roomService;
-    private final StorageService storageService;
-    private final StorageConfig storageConfig;
+    private final ContractStorageService contractStorageService;
+    private final ContractGenerationService contractGenerationService;
 
     @Override
     public void generateDefaultContract(String roomId) {
         Room room = roomService.getRoomEntityById(roomId);
-        if (room == null) {
-            throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room not found");
+        Document document = contractGenerationService.generateDefaultContract(room);
+        contractStorageService.saveRoomContract(roomId, document.html());
+    }
+
+    @Override
+    public ContractResponsibilitiesResponse getContractResponsibilities(String userId, String roomId) {
+        Room room = roomService.getRoomEntityById(roomId);
+        if (!room.getLandlord().getId().equals(userId)) {
+            throw new APIException(HttpStatus.FORBIDDEN, ErrorCode.FLEXIBLE_ERROR,
+                                   "You are not the landlord of this room");
         }
-
-        try {
-            String contractTemplatePath = AppConstants.CONTRACT_TEMPLATE_PATH;
-            String htmlContent = new String(Files.readAllBytes(Paths.get(contractTemplatePath)));
-            Document document = Jsoup.parse(htmlContent);
-
-            document.getElementById("rentalAddress").val(room.getAddress());
-            document.getElementById("deposit").val(room.getRentalDeposit().toString());
-            document.getElementById("rentalPrice").val(room.getPrice().toString());
-            document.getElementById("electricityRate").val(room.getElectricityPrice().toString());
-            document.getElementById("waterRate").val(room.getWaterPrice().toString());
-
-            ensureResponsibilitiesSection(document, "responsibilitiesA", "* Trách nhiệm của bên A:");
-            ensureResponsibilitiesSection(document, "responsibilitiesB", "* Trách nhiệm của bên B:");
-            ensureResponsibilitiesSection(document, "responsibilitiesCommon", "TRÁCH NHIỆM CHUNG");
-
-            String contractFilename = "contract_" + roomId + ".html";
-            storageService.putObject(
-                    MultipartFile.class.cast(document.html().getBytes()),
-                    storageConfig.getBucketContract(),
-                    contractFilename
-            );
-        } catch (Exception e) {
-            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
-                                   "Error generating default contract: " + e.getMessage());
-        }
+        byte[] contractBytes = contractStorageService.getRoomContract(roomId);
+        Document document = Jsoup.parse(new String(contractBytes));
+        List<String> responsibilitiesA = contractGenerationService.extractResponsibilities(
+                document, "responsibilitiesA");
+        List<String> responsibilitiesB = contractGenerationService.extractResponsibilities(
+                document, "responsibilitiesB");
+        List<String> commonResponsibilities = contractGenerationService.extractResponsibilities(
+                document, "responsibilitiesCommon");
+        return ContractResponsibilitiesResponse.builder()
+                .responsibilitiesA(responsibilitiesA)
+                .responsibilitiesB(responsibilitiesB)
+                .commonResponsibilities(commonResponsibilities)
+                .build();
     }
 
     @Override
@@ -73,70 +63,44 @@ public class ContractServiceImpl implements ContractService {
         if (room == null) {
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room not found");
         }
-
-        try {
-            String contractFilename = "contract_" + request.getRoomId() + ".html";
-            byte[] contractBytes = storageService.getObject(storageConfig.getBucketContract(), contractFilename)
-                    .readAllBytes();
-
-            Document document = Jsoup.parse(new String(contractBytes));
-
-            if (request.getContractDay() != null) {
-                document.getElementById("contractDay").val(request.getContractDay());
-            }
-            if (request.getContractMonth() != null) {
-                document.getElementById("contractMonth").val(request.getContractMonth());
-            }
-            if (request.getContractYear() != null) {
-                document.getElementById("contractYear").val(request.getContractYear());
-            }
-            if (request.getContractAddress() != null) {
-                document.getElementById("contractAddress").val(request.getContractAddress());
-            }
-            if (request.getRentalAddress() != null) {
-                document.getElementById("rentalAddress").val(request.getRentalAddress());
-            }
-            if (request.getDeposit() != null) {
-                document.getElementById("deposit").val(request.getDeposit().toString());
-            }
-            if (request.getResponsibilitiesA() != null) {
-                updateResponsibilities(document, request.getResponsibilitiesA(), "responsibilitiesA");
-            }
-            if (request.getResponsibilitiesB() != null) {
-                updateResponsibilities(document, request.getResponsibilitiesB(), "responsibilitiesB");
-            }
-            if (request.getResponsibilitiesCommon() != null) {
-                updateResponsibilities(document, request.getResponsibilitiesCommon(), "responsibilitiesCommon");
-            }
-
-            storageService.putObject(
-                    MultipartFile.class.cast(document.html().getBytes()),
-                    storageConfig.getBucketContract(),
-                    contractFilename
-            );
-        } catch (Exception e) {
-            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
-                                   "Error modifying contract: " + e.getMessage());
+        Document document = Jsoup.parse(new String(contractStorageService.getRoomContract(request.getRoomId())));
+        if (request.getContractDate() != null) {
+            document.getElementById("contractDay").val(String.valueOf(request.getContractDate().getDayOfMonth()));
+            document.getElementById("contractMonth").val(String.valueOf(request.getContractDate().getMonthValue()));
+            document.getElementById("contractYear").val(String.valueOf(request.getContractDate().getYear()));
         }
-    }
-
-    private void updateResponsibilities(Document document, List<String> responsibilities, String sectionId) {
-        var section = document.getElementById(sectionId);
-        if (section == null) {
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
-                                   "Section not found: " + sectionId);
+        if (request.getContractAddress() != null) {
+            document.getElementById("contractAddress").val(request.getContractAddress());
         }
-        section.children().remove();
-        for (String responsibility : responsibilities) {
-            section.append("<p>- " + responsibility + "</p>");
+        if (request.getRentalAddress() != null) {
+            var addressSpan = document.getElementById("rentalAddress");
+            if (addressSpan != null) {
+                addressSpan.text(request.getRentalAddress());
+            } else {
+                var labelParagraph = document.getElementsContainingOwnText("Bên A đồng ý cho bên B thuê 01 phòng ở tại địa chỉ:").first();
+                if (labelParagraph != null) {
+                    String newParagraphHtml = "Bên A đồng ý cho bên B thuê 01 phòng ở tại địa chỉ: " +
+                            request.getRentalAddress();
+                    labelParagraph.html(newParagraphHtml);
+                }
+            }
         }
-    }
-
-    private void ensureResponsibilitiesSection(Document document, String sectionId, String sectionTitle) {
-        if (document.getElementById(sectionId) == null) {
-            var content = document.select(".content").first();
-            content.append("<div id='" + sectionId + "'><h3>" + sectionTitle + "</h3></div>");
+        if (request.getDeposit() != null) {
+            document.getElementById("deposit").val(request.getDeposit().toString());
         }
+        if (request.getResponsibilitiesA() != null) {
+            contractGenerationService.updateResponsibilities(document, request.getResponsibilitiesA(),
+                                                             "responsibilitiesA");
+        }
+        if (request.getResponsibilitiesB() != null) {
+            contractGenerationService.updateResponsibilities(document, request.getResponsibilitiesB(),
+                                                             "responsibilitiesB");
+        }
+        if (request.getCommonResponsibilities() != null) {
+            contractGenerationService.updateResponsibilities(document, request.getCommonResponsibilities(),
+                                                             "responsibilitiesCommon");
+        }
+        contractStorageService.saveRoomContract(request.getRoomId(), document.html());
     }
 
     @Override
@@ -145,42 +109,23 @@ public class ContractServiceImpl implements ContractService {
         if (rentedRoom == null) {
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Rented room not found");
         }
-
-        try {
-            String roomId = rentedRoom.getRoom().getId();
-            String contractFilename = "contract_" + roomId + ".html";
-            byte[] contractBytes = storageService.getObject(storageConfig.getBucketContract(),
-                                                            contractFilename).readAllBytes();
-
-            Document document = Jsoup.parse(new String(contractBytes));
-
-            document.getElementById("landlordName").val(request.getLandlordFullName());
-            document.getElementById("landlordBirthDate").val(request.getLandlordDateOfBirth().toString());
-            document.getElementById("landlordAddress").val(request.getLandlordPermanentResidence());
-            document.getElementById("landlordID").val(request.getLandlordIdentityNumber());
-
-            if (request.getLandlordIdentityProvidedDate() != null) {
-                document.getElementById("landlordIDDay").val(
-                        String.valueOf(request.getLandlordIdentityProvidedDate().getDayOfMonth()));
-                document.getElementById("landlordIDMonth").val(
-                        String.valueOf(request.getLandlordIdentityProvidedDate().getMonthValue()));
-                document.getElementById("landlordIDYear").val(
-                        String.valueOf(request.getLandlordIdentityProvidedDate().getYear()));
-            }
-
-            document.getElementById("landlordIDPlace").val(request.getLandlordIdentityProvidedPlace());
-            document.getElementById("landlordPhone").val(request.getLandlordPhoneNumber());
-
-            String filledContractFilename = "contract_filled_" + request.getRentedRoomId() + ".html";
-            storageService.putObject(
-                    MultipartFile.class.cast(document.html().getBytes()),
-                    storageConfig.getBucketContract(),
-                    filledContractFilename
-            );
-        } catch (Exception e) {
-            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
-                                   "Error filling landlord information: " + e.getMessage());
+        Document document = Jsoup.parse(
+                new String(contractStorageService.getRentedRoomContract(request.getRentedRoomId())));
+        document.getElementById("landlordName").val(request.getLandlordFullName());
+        document.getElementById("landlordBirthDate").val(request.getLandlordDateOfBirth().toString());
+        document.getElementById("landlordAddress").val(request.getLandlordPermanentResidence());
+        document.getElementById("landlordID").val(request.getLandlordIdentityNumber());
+        if (request.getLandlordIdentityProvidedDate() != null) {
+            document.getElementById("landlordIDDay").val(
+                    String.valueOf(request.getLandlordIdentityProvidedDate().getDayOfMonth()));
+            document.getElementById("landlordIDMonth").val(
+                    String.valueOf(request.getLandlordIdentityProvidedDate().getMonthValue()));
+            document.getElementById("landlordIDYear").val(
+                    String.valueOf(request.getLandlordIdentityProvidedDate().getYear()));
         }
+        document.getElementById("landlordIDPlace").val(request.getLandlordIdentityProvidedPlace());
+        document.getElementById("landlordPhone").val(request.getLandlordPhoneNumber());
+        contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());
     }
 
     @Override
@@ -189,13 +134,9 @@ public class ContractServiceImpl implements ContractService {
         if (rentedRoom == null) {
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Rented room not found");
         }
-
         try {
-            String filledContractFilename = "contract_filled_" + request.getRentedRoomId() + ".html";
-            byte[] contractBytes = storageService.getObject(storageConfig.getBucketContract(), filledContractFilename)
-                    .readAllBytes();
-
-            Document document = Jsoup.parse(new String(contractBytes));
+            Document document = Jsoup.parse(
+                    new String(contractStorageService.getRentedRoomContract(request.getRentedRoomId())));
 
             document.getElementById("tenantName").val(request.getTenantFullName());
             document.getElementById("tenantBirthDate").val(request.getTenantDateOfBirth().toString());
@@ -214,11 +155,7 @@ public class ContractServiceImpl implements ContractService {
             document.getElementById("tenantIDPlace").val(request.getTenantIdentityProvidedPlace());
             document.getElementById("tenantPhone").val(request.getTenantPhoneNumber());
 
-            storageService.putObject(
-                    MultipartFile.class.cast(document.html().getBytes()),
-                    storageConfig.getBucketContract(),
-                    filledContractFilename
-            );
+            contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());
         } catch (Exception e) {
             throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
                                    "Error filling tenant information: " + e.getMessage());
@@ -226,43 +163,157 @@ public class ContractServiceImpl implements ContractService {
     }
 
     @Override
+    public byte[] getDefaultContractPdfByRoomId(String roomId) {
+        return contractStorageService.getRoomContractPdf(roomId);
+    }
+
+    @Override
+    public byte[] getContractPdfByRentedRoomId(String rentedRoomId) {
+        return contractStorageService.getRentedRoomContractPdf(rentedRoomId);
+    }
+
+    @Override
     public String getDefaultContract(String roomId) {
         try {
-            String contractFilename = "contract_" + roomId + ".html";
-            byte[] contractBytes = storageService.getObject(storageConfig.getBucketContract(), contractFilename)
-                    .readAllBytes();
-            return new String(contractBytes);
+            byte[] contract = contractStorageService.getRoomContract(roomId);
+            return new String(contract);
         } catch (Exception e) {
             generateDefaultContract(roomId);
             return getDefaultContract(roomId);
         }
     }
 
-    private List<String> extractResponsibilities(Document document, String sectionId) {
-        List<String> responsibilities = new ArrayList<>();
-        var section = document.getElementById(sectionId);
-        if (section != null) {
-            section.select("p").forEach(element -> {
-                String text = element.text();
-                if (text.startsWith("- ")) {
-                    text = text.substring(2);
-                }
-                responsibilities.add(text);
-            });
+    @Override
+    public ContractUserInfoResponse getContractUserInfo(String userId, String rentedRoomId) {
+        RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
+        byte[] contractBytes = contractStorageService.getRentedRoomContract(rentedRoomId);
+        if (contractBytes == null) {
+            throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR,
+                                   "Contract not found for rented room: " + rentedRoomId);
         }
-        return responsibilities;
+        Document document = Jsoup.parse(new String(contractBytes));
+        ContractUserInfoResponse userInfo = null;
+        if (userId.equals(rentedRoom.getLandlord().getId())) {
+            userInfo = extractLandlordInfo(document);
+        } else if (userId.equals(rentedRoom.getUser().getId())) {
+            userInfo = extractTenantInfo(document);
+        }
+        if (userInfo == null) {
+            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
+                                   "Error when extract data from html");
+        }
+        return userInfo;
     }
 
     @Override
     public String getContract(String rentedRoomId) {
         try {
-            String filledContractFilename = "contract_filled_" + rentedRoomId + ".html";
-            byte[] contractBytes = storageService.getObject(storageConfig.getBucketContract(), filledContractFilename)
-                    .readAllBytes();
+            byte[] contractBytes = contractStorageService.getRentedRoomContract(rentedRoomId);
             return new String(contractBytes);
         } catch (Exception e) {
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR,
                                    "Contract not found for rented room: " + rentedRoomId);
+        }
+    }
+
+    private ContractUserInfoResponse extractLandlordInfo(Document document) {
+        try {
+            String fullName = document.getElementById("landlordName").val();
+            String birthDateStr = document.getElementById("landlordBirthDate").val();
+            String address = document.getElementById("landlordAddress").val();
+            String identityNumber = document.getElementById("landlordID").val();
+            String idDay = document.getElementById("landlordIDDay").val();
+            String idMonth = document.getElementById("landlordIDMonth").val();
+            String idYear = document.getElementById("landlordIDYear").val();
+            String idPlace = document.getElementById("landlordIDPlace").val();
+            String phone = document.getElementById("landlordPhone").val();
+
+            LocalDate birthDate = null;
+            if (birthDateStr != null && !birthDateStr.isEmpty()) {
+                try {
+                    birthDate = LocalDate.parse(birthDateStr);
+                } catch (Exception e) {
+                }
+            }
+
+            LocalDate identityProvidedDate = null;
+            if (idDay != null && !idDay.isEmpty() &&
+                    idMonth != null && !idMonth.isEmpty() &&
+                    idYear != null && !idYear.isEmpty()) {
+                try {
+                    identityProvidedDate = LocalDate.of(
+                            Integer.parseInt(idYear),
+                            Integer.parseInt(idMonth),
+                            Integer.parseInt(idDay)
+                    );
+                } catch (Exception e) {
+                    throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
+                                           "Error when extract data from html");
+                }
+            }
+
+            return ContractUserInfoResponse.builder()
+                    .fullName(fullName)
+                    .dateOfBirth(birthDate)
+                    .permanentResidence(address)
+                    .identityNumber(identityNumber)
+                    .identityProvidedDate(identityProvidedDate)
+                    .identityProvidedPlace(idPlace)
+                    .phoneNumber(phone)
+                    .build();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private ContractUserInfoResponse extractTenantInfo(Document document) {
+        try {
+            String fullName = document.getElementById("tenantName").val();
+            String birthDateStr = document.getElementById("tenantBirthDate").val();
+            String address = document.getElementById("tenantAddress").val();
+            String identityNumber = document.getElementById("tenantID").val();
+            String idDay = document.getElementById("tenantIDDay").val();
+            String idMonth = document.getElementById("tenantIDMonth").val();
+            String idYear = document.getElementById("tenantIDYear").val();
+            String idPlace = document.getElementById("tenantIDPlace").val();
+            String phone = document.getElementById("tenantPhone").val();
+
+            LocalDate birthDate = null;
+            if (birthDateStr != null && !birthDateStr.isEmpty()) {
+                try {
+                    birthDate = LocalDate.parse(birthDateStr);
+                } catch (Exception e) {
+                    throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
+                                           "Error when extract data from html");
+                }
+            }
+
+            LocalDate identityProvidedDate = null;
+            if (idDay != null && !idDay.isEmpty() &&
+                    idMonth != null && !idMonth.isEmpty() &&
+                    idYear != null && !idYear.isEmpty()) {
+                try {
+                    identityProvidedDate = LocalDate.of(
+                            Integer.parseInt(idYear),
+                            Integer.parseInt(idMonth),
+                            Integer.parseInt(idDay)
+                    );
+                } catch (Exception e) {
+                    // Handle date parse errors
+                }
+            }
+
+            return ContractUserInfoResponse.builder()
+                    .fullName(fullName)
+                    .dateOfBirth(birthDate)
+                    .permanentResidence(address)
+                    .identityNumber(identityNumber)
+                    .identityProvidedDate(identityProvidedDate)
+                    .identityProvidedPlace(idPlace)
+                    .phoneNumber(phone)
+                    .build();
+        } catch (Exception e) {
+            return null;
         }
     }
 }

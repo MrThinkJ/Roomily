@@ -13,7 +13,7 @@ import java.util.Optional;
 @Repository
 public interface UserSubscriptionRepository extends JpaRepository<UserSubscription, String> {
     boolean existsByUserIdAndSubscriptionIdAndEndDateAfter(String userId, String subscriptionId, LocalDateTime endDate);
-
+    boolean existsByUserIdAndEndDateAfter(String userId, LocalDateTime endDate);
     List<UserSubscription> findByUserId(String userId);
 
     List<UserSubscription> findByEndDateBetweenAndAutoRenewIsTrue(LocalDateTime startDate, LocalDateTime endDate);
@@ -21,8 +21,6 @@ public interface UserSubscriptionRepository extends JpaRepository<UserSubscripti
     Optional<UserSubscription> findByUserIdAndSubscriptionId(String userId, String subscriptionId);
 
     Optional<UserSubscription> findByUserIdAndEndDateAfter(String userId, LocalDateTime endDate);
-
-    Optional<UserSubscription> findByEndDateAfter(LocalDateTime endDate);
 
     @Query("SELECT us.subscription.id FROM UserSubscription us " +
             "WHERE us.endDate > :now " +

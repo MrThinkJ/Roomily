@@ -54,7 +54,7 @@ public class RoomController extends BaseController {
     }
 
     @PostMapping
-    public ResponseEntity<Boolean> createRoom(@RequestBody CreateRoomRequest createRoomRequest) {
+    public ResponseEntity<String> createRoom(@RequestBody CreateRoomRequest createRoomRequest) {
         String landlordId = this.getUserInfo().getId();
         return ResponseEntity.ok(roomService.createRoom(createRoomRequest, landlordId));
     }

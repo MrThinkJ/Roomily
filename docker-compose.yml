@@ -21,10 +21,10 @@ services:
     environment:
       - MINIO_ROOT_USER=roomily
       - MINIO_ROOT_PASSWORD=miniopassword
-      - VIRTUAL_HOST=minio.mrthinkj.site
+      - VIRTUAL_HOST=storage.roomily.tech
       - VIRTUAL_PORT=9000
-      - LETSENCRYPT_HOST=minio.mrthinkj.site
-      - LETSENCRYPT_EMAIL=blog@minio.mrthinkj.site
+      - LETSENCRYPT_HOST=storage.roomily.tech
+      - LETSENCRYPT_EMAIL=blog@storage.roomily.tech
     volumes:
       - /var/lib/minio/data:/data
     command: server --console-address ':9001' /data
