@@ -16,6 +16,7 @@ public class UserResponse {
     private String privateId;
     private String username;
     private String fullName;
+    private Boolean gender;
     private String email;
     private String phone;
     private String profilePicture;

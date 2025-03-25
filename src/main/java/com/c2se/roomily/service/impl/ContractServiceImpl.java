@@ -10,6 +10,7 @@ import com.c2se.roomily.payload.request.ModifyContractRequest;
 import com.c2se.roomily.payload.request.TenantFillContractRequest;
 import com.c2se.roomily.payload.response.ContractResponsibilitiesResponse;
 import com.c2se.roomily.payload.response.ContractUserInfoResponse;
+import com.c2se.roomily.payload.response.RentedRoomResponse;
 import com.c2se.roomily.service.*;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
@@ -105,27 +106,33 @@ public class ContractServiceImpl implements ContractService {
 
     @Override
     public void fillContractByLandlord(LandlordFillContractRequest request) {
-        RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(request.getRentedRoomId());
-        if (rentedRoom == null) {
-            throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Rented room not found");
-        }
-        Document document = Jsoup.parse(
-                new String(contractStorageService.getRentedRoomContract(request.getRentedRoomId())));
-        document.getElementById("landlordName").val(request.getLandlordFullName());
-        document.getElementById("landlordBirthDate").val(request.getLandlordDateOfBirth().toString());
-        document.getElementById("landlordAddress").val(request.getLandlordPermanentResidence());
-        document.getElementById("landlordID").val(request.getLandlordIdentityNumber());
+        Room room = roomService.getRoomEntityById(request.getRoomId());
+        RentedRoomResponse rentedRoom = rentedRoomService.getActiveRentedRoomByRoomId(request.getRoomId());
+        Document roomDocument = Jsoup.parse(
+                new String(contractStorageService.getRoomContract(request.getRoomId())));
+        Document rentedRoomDocument = Jsoup.parse(
+                new String(contractStorageService.getRentedRoomContract(rentedRoom.getId())));
+        contractStorageService.saveRoomContract(room.getId(), fillLandlordInfo(roomDocument, request).html());
+        contractStorageService.saveRentedRoomContract(rentedRoom.getId(),
+                                                      fillLandlordInfo(rentedRoomDocument, request).html());
+    }
+
+    private Document fillLandlordInfo(Document document, LandlordFillContractRequest request) {
+        document.getElementById("landlordName").append(request.getLandlordFullName());
+        document.getElementById("landlordBirthDate").append(request.getLandlordDateOfBirth().toString());
+        document.getElementById("landlordAddress").append(request.getLandlordPermanentResidence());
+        document.getElementById("landlordID").append(request.getLandlordIdentityNumber());
         if (request.getLandlordIdentityProvidedDate() != null) {
-            document.getElementById("landlordIDDay").val(
+            document.getElementById("landlordIDDay").append(
                     String.valueOf(request.getLandlordIdentityProvidedDate().getDayOfMonth()));
-            document.getElementById("landlordIDMonth").val(
+            document.getElementById("landlordIDMonth").append(
                     String.valueOf(request.getLandlordIdentityProvidedDate().getMonthValue()));
-            document.getElementById("landlordIDYear").val(
+            document.getElementById("landlordIDYear").append(
                     String.valueOf(request.getLandlordIdentityProvidedDate().getYear()));
         }
-        document.getElementById("landlordIDPlace").val(request.getLandlordIdentityProvidedPlace());
-        document.getElementById("landlordPhone").val(request.getLandlordPhoneNumber());
-        contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());
+        document.getElementById("landlordIDPlace").append(request.getLandlordIdentityProvidedPlace());
+        document.getElementById("landlordPhone").append(request.getLandlordPhoneNumber());
+        return document;
     }
 
     @Override

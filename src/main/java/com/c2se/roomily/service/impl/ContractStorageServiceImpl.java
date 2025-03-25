@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.xhtmlrenderer.pdf.ITextRenderer;
@@ -20,6 +21,8 @@ import java.io.ByteArrayOutputStream;
 @Service
 @RequiredArgsConstructor
 public class ContractStorageServiceImpl implements ContractStorageService {
+    @Value("${app.resource.static-location}")
+    private String staticLocation;
     private final StorageService storageService;
     private final StorageConfig storageConfig;
 
@@ -165,7 +168,7 @@ public class ContractStorageServiceImpl implements ContractStorageService {
                     document.html();
             try (ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream()) {
                 ITextRenderer renderer = new ITextRenderer();
-                renderer.getFontResolver().addFont("src/main/resources/static/fonts/times.ttf", "Times New Roman",
+                renderer.getFontResolver().addFont(staticLocation+"/fonts/times.ttf", "Times New Roman",
                                                    BaseFont.IDENTITY_H, BaseFont.EMBEDDED, null);
                 renderer.setDocumentFromString(xhtml);
                 renderer.layout();

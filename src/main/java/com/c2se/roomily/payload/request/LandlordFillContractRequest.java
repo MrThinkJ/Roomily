@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Data
 @Builder
 public class LandlordFillContractRequest {
-    private String rentedRoomId;
+    private String roomId;
     private String landlordFullName;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate landlordDateOfBirth;

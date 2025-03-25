@@ -4,6 +4,7 @@ import com.c2se.roomily.entity.BanHistory;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.RoomStatus;
 import com.c2se.roomily.enums.UserStatus;
+import com.c2se.roomily.payload.request.BanUserRequest;
 import com.c2se.roomily.payload.response.BanHistoryResponse;
 import com.c2se.roomily.repository.BanHistoryRepository;
 import com.c2se.roomily.service.BanService;
@@ -29,37 +30,35 @@ public class BanServiceImpl implements BanService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean banUser(String userId, String reason, LocalDateTime expiresAt) {
-        User user = userService.getUserEntity(userId);
-        if (banHistoryRepository.existsActiveBanByUserId(userId)) {
-            return false;
+    public void banUser(BanUserRequest banUserRequest) {
+        User user = userService.getUserEntity(banUserRequest.getUserId());
+        if (banHistoryRepository.existsActiveBanByUserId(banUserRequest.getUserId())) {
+            return;
         }
-        if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now())) {
+        if (banUserRequest.getExpiresAt() != null && banUserRequest.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Ban expiration must be in the future");
         }
         BanHistory activeBan = BanHistory.builder()
                 .user(user)
-                .reason(reason)
+                .reason(banUserRequest.getReason())
                 .bannedAt(LocalDateTime.now())
-                .expiresAt(expiresAt)
+                .expiresAt(banUserRequest.getExpiresAt())
                 .build();
         banHistoryRepository.save(activeBan);
         userService.updateUserStatus(user, UserStatus.BANNED);
-        roomService.updateRoomStatusByLandlordId(userId, RoomStatus.BANNED);
-        return true;
+        roomService.updateRoomStatusByLandlordId(banUserRequest.getUserId(), RoomStatus.BANNED);
     }
 
     @Override
-    public Boolean unbanUser(String userId) {
+    public void unbanUser(String userId) {
         User user = userService.getUserEntity(userId);
         BanHistory activeBan = banHistoryRepository.findActiveBanByUserId(userId).orElse(null);
         if (activeBan == null)
-            return false;
+            return;
         activeBan.setExpiresAt(LocalDateTime.now());
         banHistoryRepository.save(activeBan);
         userService.updateUserStatus(user, UserStatus.ACTIVE);
         roomService.updateRoomStatusByLandlordId(userId, RoomStatus.AVAILABLE);
-        return true;
     }
 
     @Override

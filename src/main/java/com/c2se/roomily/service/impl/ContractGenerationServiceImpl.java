@@ -1,5 +1,6 @@
 package com.c2se.roomily.service.impl;
 
+import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.enums.ErrorCode;
 import com.c2se.roomily.exception.APIException;
@@ -10,6 +11,7 @@ import com.lowagie.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +25,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ContractGenerationServiceImpl implements ContractGenerationService {
+    @Value("${app.resource.static-location}")
+    private String staticLocation;
     private final ContractStorageService contractStorageService;
     @Override
     public Document generateDefaultContract(Room room) {
@@ -30,7 +34,7 @@ public class ContractGenerationServiceImpl implements ContractGenerationService 
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room not found");
         }
         try {
-            String contractTemplatePath = AppConstants.CONTRACT_TEMPLATE_PATH;
+            String contractTemplatePath = staticLocation+ AppConstants.CONTRACT_TEMPLATE_PATH;
             String htmlContent = new String(Files.readAllBytes(Paths.get(contractTemplatePath)));
             Document document = Jsoup.parse(htmlContent);
 
@@ -48,6 +52,25 @@ public class ContractGenerationServiceImpl implements ContractGenerationService 
         } catch (Exception e) {
             throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
                                    "Error generating default contract: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Document generateRentContract(RentedRoom rentedRoom) {
+        if (rentedRoom == null) {
+            throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Rented room not found");
+        }
+        try {
+            byte[] roomContract = contractStorageService.getRoomContract(rentedRoom.getRoom().getId());
+            if (roomContract == null) {
+                throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room contract not found");
+            }
+            Document document = Jsoup.parse(new String(roomContract));
+            contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());
+            return document;
+        } catch (Exception e) {
+            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
+                                   "Error generating rent contract: " + e.getMessage());
         }
     }
 

@@ -279,36 +279,22 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         transactionRepository.save(transaction);
         String rentedRoomId = transaction.getMetadata();
         RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
+        Room room = rentedRoom.getRoom();
         // Process the payment
         BigDecimal currentBalance = rentedRoom.getRentedRoomWallet() != null ?
                 rentedRoom.getRentedRoomWallet() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBalance.add(BigDecimal.valueOf(data.getAmount()));
         rentedRoom.setRentedRoomWallet(newBalance);
-        // Send notification to tenant and rented room
-        CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
-                .rentedRoomId(rentedRoomId)
-                .message(String.format("%s nạp %s cho phòng thuê", transaction.getUser().getFullName(),
-                                       data.getAmount()))
-                .activityType(RentedRoomActivityType.PAYMENT_MADE.name())
-                .build();
-        rentedRoomActivityService.createRentedRoomActivity(activityRequest);
-        CreateNotificationRequest tenantNotification = CreateNotificationRequest.builder()
-                .header("Nạp vào ví phòng thành công")
-                .body("Bạn đã nạp thành công " + data.getAmount() + " vào ví phòng thuê.")
-                .userId(transaction.getUser().getId())
-                .build();
-        notificationService.sendNotification(tenantNotification);
         // Check if the deposit needs to be paid
         if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID
-                && newBalance.compareTo(rentedRoom.getRentalDeposit()) >= 0) {
+                && newBalance.compareTo(room.getRentalDeposit()) >= 0) {
             roomService.updateRoomStatus(rentedRoom.getRoom().getId(), RoomStatus.RENTED.name());
             rentedRoom.setStatus(RentedRoomStatus.IN_USE);
-            roomService.updateRoomStatus(rentedRoom.getRoom().getId(), RoomStatus.RENTED.name());
-            rentedRoomService.deleteRentedRoomNotPaidDepositByRoomId(rentedRoom.getRoom().getId());
             rentedRoom.setRentedRoomWallet(newBalance.subtract(rentedRoom.getRentalDeposit()));
+            rentedRoom.setRentalDeposit(room.getRentalDeposit());
+            rentedRoomService.deleteRentedRoomNotPaidDepositByRoomId(rentedRoom.getRoom().getId());
             CreateRentedRoomActivityRequest depositPaidActivity = CreateRentedRoomActivityRequest.builder()
                     .rentedRoomId(rentedRoomId)
-                    .activityType(RentedRoomActivityType.DEPOSIT_PAID.name())
                     .message("Đã thanh toán tiền đặt cọc.")
                     .build();
             CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
@@ -318,27 +304,47 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                     .build();
             rentedRoomActivityService.createRentedRoomActivity(depositPaidActivity);
             notificationService.sendNotification(landlordNotification);
-
         }
         // Check if the debt needs to be paid
-        else if (rentedRoom.getStatus() == RentedRoomStatus.DEBT && newBalance.compareTo(
+        else if ((rentedRoom.getStatus() == RentedRoomStatus.DEBT ||
+                rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING)
+                && newBalance.compareTo(
                 rentedRoom.getWalletDebt()) >= 0) {
-            rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+            // Process the debt payment
+            // If the wallet balance is enough to pay the debt (already fill bill), deduct the debt from the wallet
+            if (rentedRoom.getStatus() == RentedRoomStatus.DEBT){
+                rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+                rentedRoom.setDebtDate(null);
+                CreateRentedRoomActivityRequest fullPaymentActivity = CreateRentedRoomActivityRequest.builder()
+                        .rentedRoomId(rentedRoomId)
+                        .message("Đã thanh toán đầy đủ tiền thuê cho tháng này.")
+                        .build();
+                rentedRoomActivityService.createRentedRoomActivity(fullPaymentActivity);
+                CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
+                        .header("Nhận thanh toán tiền thuê")
+                        .body("Phòng " + rentedRoom.getRoom().getId() + " đã được thanh toán đầy đủ tiền thuê.")
+                        .userId(rentedRoom.getLandlord().getId())
+                        .build();
+                notificationService.sendNotification(landlordNotification);
+            }
+            // If the wallet balance is enough to pay the debt (bill not filled), deduct the debt from the wallet
             rentedRoom.setRentedRoomWallet(newBalance.subtract(rentedRoom.getWalletDebt()));
-            CreateRentedRoomActivityRequest fullPaymentActivity = CreateRentedRoomActivityRequest.builder()
-                    .rentedRoomId(rentedRoomId)
-                    .activityType(RentedRoomActivityType.RENT_PAID_IN_FULL.name())
-                    .message("Đã thanh toán đầy đủ tiền thuê cho tháng này.")
-                    .build();
-            rentedRoomActivityService.createRentedRoomActivity(fullPaymentActivity);
-            CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
-                    .header("Nhận thanh toán tiền thuê")
-                    .body("Phòng " + rentedRoom.getRoom().getId() + " đã được thanh toán đầy đủ tiền thuê.")
-                    .userId(rentedRoom.getLandlord().getId())
-                    .build();
-            notificationService.sendNotification(landlordNotification);
+            rentedRoom.setWalletDebt(BigDecimal.ZERO);
         }
         rentedRoomService.saveRentedRoom(rentedRoom);
+        // Send notification to tenant and rented room
+        CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
+                .rentedRoomId(rentedRoomId)
+                .message(String.format("%s nạp %s cho phòng thuê", transaction.getUser().getFullName(),
+                                       data.getAmount()))
+                .build();
+        rentedRoomActivityService.createRentedRoomActivity(activityRequest);
+        CreateNotificationRequest tenantNotification = CreateNotificationRequest.builder()
+                .header("Nạp vào ví phòng thành công")
+                .body("Bạn đã nạp thành công " + data.getAmount() + " vào ví phòng thuê.")
+                .userId(transaction.getUser().getId())
+                .build();
+        notificationService.sendNotification(tenantNotification);
         log.info("Successfully topped up rentedRoomWallet for room: {}, tenant: {}, amount: {}",
                  rentedRoom.getRoom().getId(), transaction.getUser().getUsername(), data.getAmount());
     }

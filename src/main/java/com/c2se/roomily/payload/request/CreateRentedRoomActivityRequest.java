@@ -7,6 +7,5 @@ import lombok.Data;
 @Builder
 public class CreateRentedRoomActivityRequest {
     private String rentedRoomId;
-    private String activityType;
     private String message;
 }

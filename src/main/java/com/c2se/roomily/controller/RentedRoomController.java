@@ -50,6 +50,12 @@ public class RentedRoomController extends BaseController {
         return ResponseEntity.ok(rentalRequestCacheService.getRequest(requestId).orElse(null));
     }
 
+    @GetMapping("/active/{roomId}")
+    public ResponseEntity<RentedRoomResponse> getRentedRoomActiveByUserIdOrCoTenantIdAndRoomId(@PathVariable String roomId) {
+        String userId = this.getUserInfo().getId();
+        return ResponseEntity.ok(rentedRoomService.getRentedRoomActiveByUserIdOrCoTenantIdAndRoomId(roomId, userId));
+    }
+
     @PostMapping("/request/create")
     public ResponseEntity<RentalRequest> requestRent(@RequestBody CreateRentedRoomRequest createRentedRoomRequest) {
         String userId = this.getUserInfo().getId();
@@ -77,10 +83,29 @@ public class RentedRoomController extends BaseController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/{roomId}")
+    @DeleteMapping("/exit/{rentedRoomId}")
+    public ResponseEntity<Void> exitRent(@PathVariable String rentedRoomId) {
+        String userId = this.getUserInfo().getId();
+        rentedRoomService.exitRent(userId, rentedRoomId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/cancel/{roomId}")
     public ResponseEntity<Void> cancelRent(@PathVariable String roomId) {
         String userId = this.getUserInfo().getId();
         rentedRoomService.cancelRent(userId, roomId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/mock/expire/{rentedRoomId}")
+    public ResponseEntity<Void> mockPublishRoomExpireEvent(@PathVariable String rentedRoomId) {
+        rentedRoomService.mockPublishRoomExpireEvent(rentedRoomId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/mock/debt-expire/{rentedRoomId}")
+    public ResponseEntity<Void> mockPublishDebtDateExpireEvent(@PathVariable String rentedRoomId) {
+        rentedRoomService.mockPublishDebtDateExpireEvent(rentedRoomId);
         return ResponseEntity.ok().build();
     }
 }

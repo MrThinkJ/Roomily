@@ -10,8 +10,9 @@ public class AppConstants {
     public static final Integer VALID_REPORT_THRESHOLD = 10;
     public static final Integer DEBT_DATE_THRESHOLD = 7;
     public static final Double MIN_WEIGHT = 0.7;
-    public static final String CONTRACT_TEMPLATE_PATH = "src/main/resources/static/contract.html";
-    public static final Integer DEPOSIT_PAYMENT_TIMEOUT = 12*60;
+    public static final String CONTRACT_TEMPLATE_PATH = "/contract.html";
+    public static final Integer DEPOSIT_PAYMENT_TIMEOUT = 24*60;
+    public static final Integer DEFAULT_BAN_DURATION = 365;
     public static final List<String> DEFAULT_RESPONSIBILITIES_A = List.of(
             "- Tạo mọi điều kiện thuận lợi để bên B thực hiện theo hợp đồng.",
             "- Cung cấp nguồn điện, nước, wifi cho bên B sử dụng.");

@@ -1,6 +1,9 @@
 package com.c2se.roomily.repository;
 
 import com.c2se.roomily.entity.User;
+import com.c2se.roomily.enums.UserStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -16,4 +19,7 @@ public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByPrivateId(String privateId);
     Set<User> findByIdIn(List<String> ids);
     Set<User> findByPrivateIdIn(List<String> privateIds);
+    Page<User> findByStatus(UserStatus status, Pageable pageable);
+    Page<User> findByIsVerified(Boolean isVerified, Pageable pageable);
+    Page<User> findByRatingBetween(Double minRating, Double maxRating, Pageable pageable);
 }

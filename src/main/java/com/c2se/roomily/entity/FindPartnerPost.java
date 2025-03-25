@@ -1,6 +1,7 @@
 package com.c2se.roomily.entity;
 
 import com.c2se.roomily.enums.FindPartnerPostStatus;
+import com.c2se.roomily.enums.FindPartnerPostType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,4 +39,9 @@ public class FindPartnerPost {
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private Set<User> participants;
+    @Enumerated(EnumType.STRING)
+    private FindPartnerPostType type;
+    @ManyToOne
+    @JoinColumn(name = "rented_room_id")
+    private RentedRoom rentedRoom;
 }
