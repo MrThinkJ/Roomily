@@ -213,11 +213,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     public ChatRoom getChatRoomByFindPartnerPostIdAndType(String findPartnerPostId, ChatRoomType chatRoomType) {
-        ChatRoom chatRoom = chatRoomRepository.findByFindPartnerPostIdAndType(findPartnerPostId, chatRoomType);
-        if (chatRoom != null){
-            return chatRoom;
-        }
-        return null;
+        return chatRoomRepository.findByFindPartnerPostIdAndType(findPartnerPostId, chatRoomType);
     }
 
     @Override
@@ -230,8 +226,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     public List<User> getChatRoomUsers(String roomId) {
-        // TODO: After implement user service, implement this method, return user list of chat room, can return ids only
-        return null;
+        return chatRoomUserRepository.findById(roomId).stream().map(ChatRoomUser::getUser).collect(Collectors.toList());
     }
 
     @Override
@@ -314,6 +309,28 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         messagingTemplate.convertAndSendToUser("70f70be9-fd3a-4314-85c7-8e3881d8579a",
                                                "/queue/chat-room",
                                                conversationResponse);
+    }
+
+    @Override
+    public ChatRoom getChatRoomByRentedRoomId(String rentedRoomId) {
+        return chatRoomRepository.findByRentedRoomId(rentedRoomId).orElse(null);
+    }
+
+    @Override
+    public void updateChatRoomForRentedRoom(String chatRoomId, String rentedRoomId) {
+        ChatRoom chatRoom = getChatRoomEntity(chatRoomId);
+        chatRoom.setRentedRoomId(rentedRoomId);
+        chatRoomRepository.save(chatRoom);
+    }
+
+    @Override
+    public void handleDeletedRentedRoom(String rentedRoomId) {
+        ChatRoom chatRoom = getChatRoomByRentedRoomId(rentedRoomId);
+        if (chatRoom != null) {
+            chatRoom.setStatus(ChatRoomStatus.ARCHIVED);
+            chatRoom.setRentedRoomId(null);
+            chatRoomRepository.save(chatRoom);
+        }
     }
 
     private String generateDirectChatKey(String userId1, String userId2) {

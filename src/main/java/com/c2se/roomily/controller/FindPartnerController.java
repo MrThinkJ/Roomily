@@ -5,17 +5,36 @@ import com.c2se.roomily.payload.request.CreateFindPartnerPostRequest;
 import com.c2se.roomily.payload.request.RentalRequest;
 import com.c2se.roomily.payload.request.RequestJoinFindPartnerPostRequest;
 import com.c2se.roomily.payload.request.UpdateFindPartnerPostRequest;
+import com.c2se.roomily.payload.response.FindPartnerPostResponse;
 import com.c2se.roomily.service.FindPartnerService;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/find-partner")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class FindPartnerController extends BaseController {
-    FindPartnerService findPartnerService;
+    private final FindPartnerService findPartnerService;
+
+    @GetMapping("/active/{roomId}")
+    public ResponseEntity<List<FindPartnerPostResponse>> getActiveFindPartnerPosts(@PathVariable String roomId) {
+        return ResponseEntity.ok(findPartnerService.getActiveFindPartnerPostsByRoomId(roomId));
+    }
+
+    @GetMapping("/active/{userId}")
+    public ResponseEntity<List<FindPartnerPostResponse>> getActiveFindPartnerPostsByUserId(@PathVariable String userId) {
+        return ResponseEntity.ok(findPartnerService.getActiveFindPartnerPostsByUserId(userId));
+    }
+
+    @GetMapping("/active/{userId}/{roomId}")
+    public ResponseEntity<Boolean> isUserInActiveFindPartnerPostOfRoom(@PathVariable String userId,
+                                                                     @PathVariable String roomId) {
+        return ResponseEntity.ok(findPartnerService.isUserInActiveFindPartnerPostOfRoom(userId, roomId));
+    }
 
     @PostMapping
     public ResponseEntity<Void> createFindPartnerPost(@RequestBody CreateFindPartnerPostRequest request) {
@@ -80,13 +99,6 @@ public class FindPartnerController extends BaseController {
     public ResponseEntity<Void> deleteFindPartnerPost(@PathVariable String findPartnerPostId) {
         String userId = this.getUserInfo().getId();
         findPartnerService.deleteFindPartnerPost(userId, findPartnerPostId);
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping("/{findPartnerPostId}/exit-when-full")
-    public ResponseEntity<Void> exitWhenChatRoomIsFull(@PathVariable String findPartnerPostId) {
-        String userId = this.getUserInfo().getId();
-        findPartnerService.exitWhenChatRoomIsFull(userId, findPartnerPostId);
         return ResponseEntity.ok().build();
     }
 

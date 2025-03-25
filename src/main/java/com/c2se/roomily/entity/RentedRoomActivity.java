@@ -24,9 +24,6 @@ public class RentedRoomActivity {
     @ManyToOne
     @JoinColumn(name = "rented_room_id")
     private RentedRoom rentedRoom;
-    @Column(name = "activity_type")
-    @Enumerated(EnumType.STRING)
-    private RentedRoomActivityType activityType;
     @Column(name = "message", length = 500)
     private String message;
     @CreationTimestamp

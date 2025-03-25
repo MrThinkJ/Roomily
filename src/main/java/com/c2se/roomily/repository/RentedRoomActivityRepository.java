@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -19,6 +20,6 @@ public interface RentedRoomActivityRepository extends JpaRepository<RentedRoomAc
             """, nativeQuery = true)
     List<RentedRoomActivity> findByRentedRoomId(@Param("rentedRoomId") String rentedRoomId,
                                                 @Param("pivotId") String pivotId,
-                                                @Param("timestamp") String timestamp,
+                                                @Param("timestamp") LocalDateTime timestamp,
                                                 @Param("limit") int limit);
 }

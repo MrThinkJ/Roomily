@@ -8,5 +8,7 @@ RUN mvn -T 1C package -Dmaven.test.skip=true
 FROM eclipse-temurin:21-jre-alpine as production
 WORKDIR /app
 COPY --from=build target/*.jar target/app.jar
+COPY --from=build ./src/main/resources/static/contract.html resources/static/contract.html
+COPY --from=build ./src/main/resources/static/fonts/times.ttf resources/static/fonts/times.ttf
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "target/app.jar", "--spring.profiles.active=prod"]

@@ -12,9 +12,8 @@ import java.util.List;
 
 public interface RoomService {
     Room getRoomEntityById(String roomId);
-
     RoomResponse getRoomById(String roomId);
-
+    void saveRoom(Room room);
     void updateRoomStatus(String roomId, String status);
 
     boolean isRoomExist(String roomId);
@@ -32,6 +31,8 @@ public interface RoomService {
     RoomResponse updateRoom(String roomId, UpdateRoomRequest updateRoomRequest);
 
     void deleteRoom(String roomId);
+
+    void setRoomFindPartnerOnly(String roomId);
 
     BigDecimal getAveragePriceAroundRoom(String roomId, Double radius);
 

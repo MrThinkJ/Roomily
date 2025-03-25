@@ -4,5 +4,6 @@ public enum RoomStatus {
     AVAILABLE,
     RENTED,
     DELETED,
-    BANNED
+    BANNED,
+    FIND_PARTNER_ONLY
 }

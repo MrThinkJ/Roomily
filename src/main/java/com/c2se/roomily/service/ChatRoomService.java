@@ -48,4 +48,10 @@ public interface ChatRoomService {
     void reActivateChatRoom(String chatRoomId);
 
     void testNotifyChatRoom();
+
+    ChatRoom getChatRoomByRentedRoomId(String rentedRoomId);
+
+    void updateChatRoomForRentedRoom(String chatRoomId, String rentedRoomId);
+
+    void handleDeletedRentedRoom(String rentedRoomId);
 }

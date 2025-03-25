@@ -5,6 +5,7 @@ import com.c2se.roomily.entity.UserReport;
 import com.c2se.roomily.enums.ReportStatus;
 import com.c2se.roomily.enums.UserReportType;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.request.BanUserRequest;
 import com.c2se.roomily.payload.request.CreateUserReportRequest;
 import com.c2se.roomily.payload.response.PageResponse;
 import com.c2se.roomily.payload.response.UserReportPageResponse;
@@ -139,9 +140,12 @@ public class UserReportServiceImpl implements UserReportService {
             long validReportCount = userReportRepository.countValidReportsByReportedUserId(
                     report.getReportedUser().getId());
             if (validReportCount >= AppConstants.VALID_REPORT_THRESHOLD) { // Configurable threshold
-                banService.banUser(report.getReportedUser().getId(),
-                                   "Multiple valid reports received",
-                                   LocalDateTime.now());
+                BanUserRequest banUserRequest = BanUserRequest.builder()
+                        .userId(report.getReportedUser().getId())
+                        .reason("Multiple valid reports received")
+                        .expiresAt(LocalDateTime.now().plusDays(AppConstants.DEFAULT_BAN_DURATION))
+                        .build();
+                banService.banUser(banUserRequest);
             }
         }
         return true;

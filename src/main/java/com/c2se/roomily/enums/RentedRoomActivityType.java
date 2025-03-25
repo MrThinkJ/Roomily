@@ -13,5 +13,6 @@ public enum RentedRoomActivityType {
     TENANT_MESSAGE,
     CONTRACT_UPDATED,
     DEPOSIT_PAID,
+    DEDUCT_FROM_DEPOSIT,
     OTHER
 }

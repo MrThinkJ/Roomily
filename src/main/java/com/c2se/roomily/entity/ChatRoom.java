@@ -48,4 +48,6 @@ public class ChatRoom {
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    @Column(name = "rented_room_id")
+    private String rentedRoomId;
 }

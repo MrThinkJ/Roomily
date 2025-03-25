@@ -29,10 +29,10 @@ public class BillLog {
     private String id;
     private LocalDate fromDate;
     private LocalDate toDate;
-    private Double electricity;
-    private Double water;
-    private BigDecimal electricityBill;
-    private BigDecimal waterBill;
+    private Double electricityAmount;
+    private Double waterAmount;
+    private BigDecimal electricityCost;
+    private BigDecimal waterCost;
     private BigDecimal rentalCost;
     private String roomId;
     @Enumerated(EnumType.STRING)

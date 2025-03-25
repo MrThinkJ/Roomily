@@ -20,6 +20,7 @@ public interface RentedRoomService {
     List<RentedRoomResponse> getRentedRoomsByLandlordId(String landlordId);
 
     List<RentedRoomResponse> getRentedRoomHistoryByRoomId(String roomId);
+
     void deleteRentedRoomNotPaidDepositByRoomId(String roomId);
 
     RentedRoomResponse getActiveRentedRoomByRoomId(String roomId);
@@ -32,9 +33,15 @@ public interface RentedRoomService {
 
     void rejectRent(String landlordId, String chatRoomId);
 
-    void cancelRent(String userId, String roomId);
+    void exitRent(String userId, String rentedRoomId);
+
+    void cancelRent(String userId, String rentedRoomId);
 
     void updateRentedRoom(String landlordId, String roomId, UpdateRentedRoomRequest updateRentedRoomRequest);
+
+    void mockPublishRoomExpireEvent(String rentedRoomId);
+
+    void mockPublishDebtDateExpireEvent(String rentedRoomId);
 
     boolean isUserRentedRoomBefore(String userId, String roomId);
 //    void deleteRentedRoom(String landlordId, String roomId);

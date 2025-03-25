@@ -87,6 +87,11 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
+    public void saveRoom(Room room) {
+        roomRepository.save(room);
+    }
+
+    @Override
     public void updateRoomStatus(String roomId, String status) {
         Room room = getRoomEntityById(roomId);
         room.setStatus(RoomStatus.valueOf(status));
@@ -238,7 +243,18 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public void updateRoomStatusByLandlordId(String landlordId, RoomStatus status) {
+        List<Room> rooms = roomRepository.findByLandlordId(landlordId);
+        for (Room room : rooms) {
+            room.setStatus(status);
+        }
+        roomRepository.saveAll(rooms);
+    }
 
+    @Override
+    public void setRoomFindPartnerOnly(String roomId) {
+        Room room = getRoomEntityById(roomId);
+        room.setStatus(RoomStatus.FIND_PARTNER_ONLY);
+        roomRepository.save(room);
     }
 
     private FilterParameters normalizeRoomFilterRequest(RoomFilterRequest request) {

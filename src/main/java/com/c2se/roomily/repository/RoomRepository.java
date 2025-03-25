@@ -151,7 +151,7 @@ public interface RoomRepository extends JpaRepository<Room, String> {
                         ELSE (r.landlord_id = ANY(:subscribedLandlordIds)) 
                     END as is_subscribed
                 FROM rooms r
-                WHERE r.room_status = 'AVAILABLE'
+                WHERE (r.room_status = 'AVAILABLE' OR r.room_status = 'FIND_PARTNER_ONLY')
                 AND (:type IS NULL OR r.room_type = :type)
                 AND r.price BETWEEN :minPrice AND :maxPrice
                 AND r.max_people BETWEEN :minPeople AND :maxPeople

@@ -5,6 +5,7 @@ import com.c2se.roomily.entity.BillLog;
 import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.enums.BillStatus;
 import com.c2se.roomily.enums.ErrorCode;
+import com.c2se.roomily.enums.RentedRoomStatus;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CheckBillLogRequest;
@@ -110,16 +111,23 @@ public class BillLogServiceImpl implements BillLogService {
         if (billLog.getBillStatus().equals(BillStatus.PENDING)) {
             BigDecimal waterPrice = rentedRoom.getRoom().getWaterPrice();
             BigDecimal electricityPrice = rentedRoom.getRoom().getElectricityPrice();
-            BigDecimal waterBill = waterPrice.multiply(BigDecimal.valueOf(billLog.getWater()));
-            BigDecimal electricityBill = electricityPrice.multiply(BigDecimal.valueOf(billLog.getElectricity()));
-            billLog.setWaterBill(waterBill);
-            billLog.setElectricityBill(electricityBill);
-            BigDecimal totalBill = waterBill.add(electricityBill).add(billLog.getRentalCost());
-            if (rentedRoom.getRentedRoomWallet().compareTo(totalBill) > 0){
+            BigDecimal waterBill = waterPrice.multiply(BigDecimal.valueOf(billLog.getWaterAmount()));
+            BigDecimal electricityBill = electricityPrice.multiply(BigDecimal.valueOf(billLog.getElectricityAmount()));
+            billLog.setWaterCost(waterBill);
+            billLog.setElectricityCost(electricityBill);
+            BigDecimal totalBill = waterBill.add(electricityBill).add(rentedRoom.getWalletDebt());
+            // Check if the rented room has enough money to pay the bill
+            if (rentedRoom.getRentedRoomWallet().compareTo(totalBill) >= 0){
                 rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(totalBill));
-                rentedRoomService.saveRentedRoom(rentedRoom);
+                rentedRoom.setDebtDate(null);
+                rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+                rentedRoom.setWalletDebt(BigDecimal.ZERO);
                 billLog.setBillStatus(BillStatus.PAID);
+            } else {
+                rentedRoom.setStatus(RentedRoomStatus.DEBT);
+                rentedRoom.setWalletDebt(totalBill);
             }
+            rentedRoomService.saveRentedRoom(rentedRoom);
             billLogRepository.save(billLog);
         }
     }
@@ -128,9 +136,9 @@ public class BillLogServiceImpl implements BillLogService {
     public void updateBillLog(String billLogId, UpdateBillLogRequest updateBillLogRequest) {
         BillLog billLog = getBillLogEntityById(billLogId);
         if (updateBillLogRequest.getElectricity() != null)
-            billLog.setElectricity(updateBillLogRequest.getElectricity());
+            billLog.setElectricityAmount(updateBillLogRequest.getElectricity());
         if (updateBillLogRequest.getWater() != null)
-            billLog.setWater(updateBillLogRequest.getWater());
+            billLog.setWaterAmount(updateBillLogRequest.getWater());
         try{
             if (updateBillLogRequest.getWaterImage() != null)
                 storageService.putObject(updateBillLogRequest.getWaterImage(),
@@ -153,10 +161,10 @@ public class BillLogServiceImpl implements BillLogService {
                 .id(billLog.getId())
                 .fromDate(billLog.getFromDate())
                 .toDate(billLog.getToDate())
-                .electricity(billLog.getElectricity())
-                .water(billLog.getWater())
-                .electricityBill(billLog.getElectricityBill())
-                .waterBill(billLog.getWaterBill())
+                .electricity(billLog.getElectricityAmount())
+                .water(billLog.getWaterAmount())
+                .electricityBill(billLog.getElectricityCost())
+                .waterBill(billLog.getWaterCost())
                 .electricityImageUrl(billLog.getElectricityImage())
                 .waterImageUrl(billLog.getWaterImage())
                 .rentalCost(billLog.getRentalCost())

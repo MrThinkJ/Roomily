@@ -33,12 +33,12 @@ public class User {
     private String privateId;
     private String username;
     private String password;
+    private Boolean gender;
     private String fullName;
     private String email;
     private String phone;
     private String profilePicture;
     private String address;
-    @Column(name = "rating")
     private Double rating = 0.00;
     @Enumerated(EnumType.STRING)
     private UserStatus status;

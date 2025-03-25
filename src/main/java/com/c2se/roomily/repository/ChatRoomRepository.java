@@ -22,7 +22,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
 
     @Modifying
     @Transactional(rollbackFor = Exception.class)
-    @Query("UPDATE ChatRoom c SET c.status = 'ARCHIVED' WHERE c.findPartnerPostId = :findPartnerPostId")
+    @Query("UPDATE ChatRoom c SET c.status = 'ARCHIVED', c.requestId = NULL, c.findPartnerPostId = NULL WHERE c.findPartnerPostId = :findPartnerPostId")
     void archiveAllByFindPartnerPostId(String findPartnerPostId);
 
     @Modifying
@@ -46,5 +46,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
             @Param("userId1") String userId1,
             @Param("userId2") String userId2
     );
+
+    Optional<ChatRoom> findByRentedRoomId(String rentedRoomId);
 
 }
