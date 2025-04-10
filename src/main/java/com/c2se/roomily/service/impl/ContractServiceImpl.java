@@ -1,6 +1,7 @@
 package com.c2se.roomily.service.impl;
 
 import com.c2se.roomily.config.StorageConfig;
+import com.c2se.roomily.entity.LandlordInfo;
 import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.enums.ErrorCode;
@@ -11,28 +12,42 @@ import com.c2se.roomily.payload.request.TenantFillContractRequest;
 import com.c2se.roomily.payload.response.ContractResponsibilitiesResponse;
 import com.c2se.roomily.payload.response.ContractUserInfoResponse;
 import com.c2se.roomily.payload.response.RentedRoomResponse;
+import com.c2se.roomily.payload.response.RoomResponse;
+import com.c2se.roomily.security.CustomUserDetails;
 import com.c2se.roomily.service.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.internal.util.StringHelper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ContractServiceImpl implements ContractService {
     private final RentedRoomService rentedRoomService;
     private final RoomService roomService;
     private final ContractStorageService contractStorageService;
     private final ContractGenerationService contractGenerationService;
+    private final LandlordInfoService landlordInfoService;
 
     @Override
     public void generateDefaultContract(String roomId) {
         Room room = roomService.getRoomEntityById(roomId);
-        Document document = contractGenerationService.generateDefaultContract(room);
+        Document document = contractGenerationService.generateRoomContract(room);
+        if (landlordInfoService.existsByUserId(room.getLandlord().getId())) {
+            LandlordInfo landlordInfo = landlordInfoService.getLandlordInfoByLandlordId(room.getLandlord().getId());
+            fillLandlordInfoFromEntity(document, landlordInfo);
+        }
         contractStorageService.saveRoomContract(roomId, document.html());
     }
 
@@ -66,12 +81,12 @@ public class ContractServiceImpl implements ContractService {
         }
         Document document = Jsoup.parse(new String(contractStorageService.getRoomContract(request.getRoomId())));
         if (request.getContractDate() != null) {
-            document.getElementById("contractDay").val(String.valueOf(request.getContractDate().getDayOfMonth()));
-            document.getElementById("contractMonth").val(String.valueOf(request.getContractDate().getMonthValue()));
-            document.getElementById("contractYear").val(String.valueOf(request.getContractDate().getYear()));
+            document.getElementById("contractDay").html(String.valueOf(request.getContractDate().getDayOfMonth()));
+            document.getElementById("contractMonth").html(String.valueOf(request.getContractDate().getMonthValue()));
+            document.getElementById("contractYear").html(String.valueOf(request.getContractDate().getYear()));
         }
         if (request.getContractAddress() != null) {
-            document.getElementById("contractAddress").val(request.getContractAddress());
+            document.getElementById("contractAddress").html(request.getContractAddress());
         }
         if (request.getRentalAddress() != null) {
             var addressSpan = document.getElementById("rentalAddress");
@@ -87,7 +102,7 @@ public class ContractServiceImpl implements ContractService {
             }
         }
         if (request.getDeposit() != null) {
-            document.getElementById("deposit").val(request.getDeposit().toString());
+            document.getElementById("deposit").html(request.getDeposit().toString());
         }
         if (request.getResponsibilitiesA() != null) {
             contractGenerationService.updateResponsibilities(document, request.getResponsibilitiesA(),
@@ -106,33 +121,63 @@ public class ContractServiceImpl implements ContractService {
 
     @Override
     public void fillContractByLandlord(LandlordFillContractRequest request) {
-        Room room = roomService.getRoomEntityById(request.getRoomId());
-        RentedRoomResponse rentedRoom = rentedRoomService.getActiveRentedRoomByRoomId(request.getRoomId());
-        Document roomDocument = Jsoup.parse(
-                new String(contractStorageService.getRoomContract(request.getRoomId())));
-        Document rentedRoomDocument = Jsoup.parse(
-                new String(contractStorageService.getRentedRoomContract(rentedRoom.getId())));
-        contractStorageService.saveRoomContract(room.getId(), fillLandlordInfo(roomDocument, request).html());
-        contractStorageService.saveRentedRoomContract(rentedRoom.getId(),
-                                                      fillLandlordInfo(rentedRoomDocument, request).html());
+        CustomUserDetails customUserDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+        if (customUserDetails.getAuthorities().stream().noneMatch(auth -> auth.getAuthority().equals("ROLE_LANDLORD"))) {
+            throw new APIException(HttpStatus.FORBIDDEN, ErrorCode.FLEXIBLE_ERROR,
+                                   "You are not the landlord");
+        }
+        String landlordId = customUserDetails.getId();
+        LandlordInfo landlordInfo = landlordInfoService.getLandlordInfoByLandlordId(landlordId);
+        if (landlordInfo == null) {
+            landlordInfo = landlordInfoService.saveLandlordInfo(landlordId, request);
+        } else {
+            landlordInfo = landlordInfoService.updateLandlordInfo(landlordId, request);
+        }
+        updateAllContractsForLandlord(landlordId, landlordInfo);
     }
 
-    private Document fillLandlordInfo(Document document, LandlordFillContractRequest request) {
-        document.getElementById("landlordName").append(request.getLandlordFullName());
-        document.getElementById("landlordBirthDate").append(request.getLandlordDateOfBirth().toString());
-        document.getElementById("landlordAddress").append(request.getLandlordPermanentResidence());
-        document.getElementById("landlordID").append(request.getLandlordIdentityNumber());
-        if (request.getLandlordIdentityProvidedDate() != null) {
-            document.getElementById("landlordIDDay").append(
-                    String.valueOf(request.getLandlordIdentityProvidedDate().getDayOfMonth()));
-            document.getElementById("landlordIDMonth").append(
-                    String.valueOf(request.getLandlordIdentityProvidedDate().getMonthValue()));
-            document.getElementById("landlordIDYear").append(
-                    String.valueOf(request.getLandlordIdentityProvidedDate().getYear()));
+    private void updateAllContractsForLandlord(String landlordId, LandlordInfo landlordInfo) {
+        try {
+            List<RoomResponse> landlordRooms = roomService.getRoomsByLandlordId(landlordId);
+            List<CompletableFuture<Void>> roomFutures = landlordRooms.stream()
+                    .map(room -> CompletableFuture.runAsync(() -> {
+                        try {
+                            byte[] contractBytes = contractStorageService.getRoomContract(room.getId());
+                            if (contractBytes != null) {
+                                Document document = Jsoup.parse(new String(contractBytes));
+                                fillLandlordInfoFromEntity(document, landlordInfo);
+                                contractStorageService.saveRoomContract(room.getId(), document.html());
+                            }
+                        } catch (Exception e) {
+                            log.error("Error updating contract for room {}: {}", room.getId(), e.getMessage());
+                        }
+                    }))
+                    .toList();
+            CompletableFuture.allOf(roomFutures.toArray(new CompletableFuture[0])).join();
+        } catch (Exception e) {
+            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
+                                   "Error updating contracts: " + e.getMessage());
         }
-        document.getElementById("landlordIDPlace").append(request.getLandlordIdentityProvidedPlace());
-        document.getElementById("landlordPhone").append(request.getLandlordPhoneNumber());
-        return document;
+    }
+
+    private void fillLandlordInfoFromEntity(Document document, LandlordInfo landlordInfo) {
+        document.getElementById("landlordName").html(landlordInfo.getFullName());
+        if (landlordInfo.getDateOfBirth() != null) {
+            document.getElementById("landlordBirthDate").html(landlordInfo.getDateOfBirth().toString());
+        }
+        document.getElementById("landlordAddress").html(landlordInfo.getPermanentResidence());
+        document.getElementById("landlordID").html(landlordInfo.getIdentityNumber());
+        if (landlordInfo.getIdentityProvidedDate() != null) {
+            document.getElementById("landlordIDDay").html(
+                    String.valueOf(landlordInfo.getIdentityProvidedDate().getDayOfMonth()));
+            document.getElementById("landlordIDMonth").html(
+                    String.valueOf(landlordInfo.getIdentityProvidedDate().getMonthValue()));
+            document.getElementById("landlordIDYear").html(
+                    String.valueOf(landlordInfo.getIdentityProvidedDate().getYear()));
+        }
+        document.getElementById("landlordIDPlace").html(landlordInfo.getIdentityProvidedPlace());
+        document.getElementById("landlordPhone").html(landlordInfo.getPhoneNumber());
     }
 
     @Override
@@ -145,22 +190,22 @@ public class ContractServiceImpl implements ContractService {
             Document document = Jsoup.parse(
                     new String(contractStorageService.getRentedRoomContract(request.getRentedRoomId())));
 
-            document.getElementById("tenantName").val(request.getTenantFullName());
-            document.getElementById("tenantBirthDate").val(request.getTenantDateOfBirth().toString());
-            document.getElementById("tenantAddress").val(request.getTenantPermanentResidence());
-            document.getElementById("tenantID").val(request.getTenantIdentityNumber());
+            document.getElementById("tenantName").html(request.getTenantFullName());
+            document.getElementById("tenantBirthDate").html(request.getTenantDateOfBirth().toString());
+            document.getElementById("tenantAddress").html(request.getTenantPermanentResidence());
+            document.getElementById("tenantID").html(request.getTenantIdentityNumber());
 
             if (request.getTenantIdentityProvidedDate() != null) {
-                document.getElementById("tenantIDDay").val(
+                document.getElementById("tenantIDDay").html(
                         String.valueOf(request.getTenantIdentityProvidedDate().getDayOfMonth()));
-                document.getElementById("tenantIDMonth").val(
+                document.getElementById("tenantIDMonth").html(
                         String.valueOf(request.getTenantIdentityProvidedDate().getMonthValue()));
-                document.getElementById("tenantIDYear").val(
+                document.getElementById("tenantIDYear").html(
                         String.valueOf(request.getTenantIdentityProvidedDate().getYear()));
             }
 
-            document.getElementById("tenantIDPlace").val(request.getTenantIdentityProvidedPlace());
-            document.getElementById("tenantPhone").val(request.getTenantPhoneNumber());
+            document.getElementById("tenantIDPlace").html(request.getTenantIdentityProvidedPlace());
+            document.getElementById("tenantPhone").html(request.getTenantPhoneNumber());
 
             contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());
         } catch (Exception e) {
@@ -225,15 +270,15 @@ public class ContractServiceImpl implements ContractService {
 
     private ContractUserInfoResponse extractLandlordInfo(Document document) {
         try {
-            String fullName = document.getElementById("landlordName").val();
-            String birthDateStr = document.getElementById("landlordBirthDate").val();
-            String address = document.getElementById("landlordAddress").val();
-            String identityNumber = document.getElementById("landlordID").val();
-            String idDay = document.getElementById("landlordIDDay").val();
-            String idMonth = document.getElementById("landlordIDMonth").val();
-            String idYear = document.getElementById("landlordIDYear").val();
-            String idPlace = document.getElementById("landlordIDPlace").val();
-            String phone = document.getElementById("landlordPhone").val();
+            String fullName = document.getElementById("landlordName").html();
+            String birthDateStr = document.getElementById("landlordBirthDate").html();
+            String address = document.getElementById("landlordAddress").html();
+            String identityNumber = document.getElementById("landlordID").html();
+            String idDay = document.getElementById("landlordIDDay").html();
+            String idMonth = document.getElementById("landlordIDMonth").html();
+            String idYear = document.getElementById("landlordIDYear").html();
+            String idPlace = document.getElementById("landlordIDPlace").html();
+            String phone = document.getElementById("landlordPhone").html();
 
             LocalDate birthDate = null;
             if (birthDateStr != null && !birthDateStr.isEmpty()) {
@@ -275,15 +320,15 @@ public class ContractServiceImpl implements ContractService {
 
     private ContractUserInfoResponse extractTenantInfo(Document document) {
         try {
-            String fullName = document.getElementById("tenantName").val();
-            String birthDateStr = document.getElementById("tenantBirthDate").val();
-            String address = document.getElementById("tenantAddress").val();
-            String identityNumber = document.getElementById("tenantID").val();
-            String idDay = document.getElementById("tenantIDDay").val();
-            String idMonth = document.getElementById("tenantIDMonth").val();
-            String idYear = document.getElementById("tenantIDYear").val();
-            String idPlace = document.getElementById("tenantIDPlace").val();
-            String phone = document.getElementById("tenantPhone").val();
+            String fullName = document.getElementById("tenantName").html();
+            String birthDateStr = document.getElementById("tenantBirthDate").html();
+            String address = document.getElementById("tenantAddress").html();
+            String identityNumber = document.getElementById("tenantID").html();
+            String idDay = document.getElementById("tenantIDDay").html();
+            String idMonth = document.getElementById("tenantIDMonth").html();
+            String idYear = document.getElementById("tenantIDYear").html();
+            String idPlace = document.getElementById("tenantIDPlace").html();
+            String phone = document.getElementById("tenantPhone").html();
 
             LocalDate birthDate = null;
             if (birthDateStr != null && !birthDateStr.isEmpty()) {

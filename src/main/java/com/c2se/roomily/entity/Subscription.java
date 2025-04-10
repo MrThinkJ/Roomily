@@ -25,4 +25,6 @@ public class Subscription {
     private int duration;
     @Column(name = "details")
     private String details;
+    @Column(name = "credits")
+    private Integer credits;
 }

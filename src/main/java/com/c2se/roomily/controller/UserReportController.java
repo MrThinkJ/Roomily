@@ -49,13 +49,13 @@ public class UserReportController extends BaseController {
         return ResponseEntity.ok(userReportService.markAllUserReportsAsRead(userId));
     }
 
-    @PostMapping("/{reportedUserId}")
+    @PostMapping
     public ResponseEntity<Boolean> reportUser(
-            @PathVariable String reportedUserId,
             @RequestBody CreateUserReportRequest createUserReportRequest) {
         String reporterId = this.getUserInfo().getId();
-        createUserReportRequest.setReporterId(reporterId);
-        return ResponseEntity.ok(userReportService.reportUser(reporterId, reportedUserId, createUserReportRequest));
+        return ResponseEntity.ok(userReportService.reportUser(reporterId,
+                                                              createUserReportRequest.getReportedUserId(),
+                                                              createUserReportRequest));
     }
 
     @GetMapping("/check/{reportedUserId}")

@@ -1,5 +1,6 @@
 package com.c2se.roomily.service.impl;
 
+import com.c2se.roomily.config.RabbitMQConfig;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.Tag;
 import com.c2se.roomily.entity.User;
@@ -15,20 +16,20 @@ import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.repository.RoomRepository;
+import com.c2se.roomily.security.CustomUserDetails;
 import com.c2se.roomily.service.*;
 import com.c2se.roomily.util.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,40 +39,14 @@ public class RoomServiceImpl implements RoomService {
     private final RoomRepository roomRepository;
     private final TagService tagService;
     private final UserService userService;
-    private final SubscriptionService subscriptionService;
     private final ContractGenerationService contractGenerationService;
+    private final RabbitTemplate rabbitTemplate;
+    private final RabbitMQConfig rabbitMQConfig;
     private final BigDecimal DEFAULT_MIN_PRICE = BigDecimal.ZERO;
     private final BigDecimal DEFAULT_MAX_PRICE = BigDecimal.valueOf(1_000_000_000);
     private final int DEFAULT_MIN_PEOPLE = 0;
     private final int DEFAULT_MAX_PEOPLE = 100;
     private final int DEFAULT_LIMIT = 20;
-
-    static RoomResponse getRoomResponse(Room room) {
-        return RoomResponse.builder()
-                .id(room.getId())
-                .title(room.getTitle())
-                .description(room.getDescription())
-                .address(room.getAddress())
-                .status(room.getStatus().name())
-                .price(room.getPrice())
-                .latitude(room.getLatitude())
-                .longitude(room.getLongitude())
-                .city(room.getCity())
-                .district(room.getDistrict())
-                .ward(room.getWard())
-                .electricPrice(room.getElectricityPrice())
-                .waterPrice(room.getWaterPrice())
-                .type(room.getType().name())
-                .nearbyAmenities(room.getNearbyAmenities())
-                .maxPeople(room.getMaxPeople())
-                .landlordId(room.getLandlord().getId())
-                .tags(room.getTags())
-                .deposit(room.getRentalDeposit().toString())
-                .createdAt(room.getCreatedAt())
-                .updatedAt(room.getUpdatedAt())
-                .squareMeters(room.getSquareMeters())
-                .build();
-    }
 
     @Override
     public Room getRoomEntityById(String roomId) {
@@ -83,6 +58,18 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public RoomResponse getRoomById(String roomId) {
         Room room = getRoomEntityById(roomId);
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+        if (userDetails.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_USER"))) {
+            Map<String, String> body = new HashMap<>();
+            body.put("user_id", userDetails.getId());
+            body.put("room_id", roomId);
+            body.put("interaction_weight", String.valueOf(AppConstants.INTERACTION_WEIGHT_MAP.get("VIEW")));
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,
+                                          RabbitMQConfig.EVENT_ROUTING_KEY,
+                                          body);
+        }
         return this.mapToRoomResponse(room);
     }
 
@@ -111,7 +98,6 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public List<RoomResponse> getRoomsByFilter(RoomFilterRequest request) {
-        List<String> subscribedLandlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
         FilterParameters filterParameters = normalizeRoomFilterRequest(request);
 
         List<RoomDao> rooms = roomRepository.findRoomsWithCursor(
@@ -123,30 +109,14 @@ public class RoomServiceImpl implements RoomService {
                 filterParameters.getMaxPrice(),
                 filterParameters.getMinPeople(),
                 filterParameters.getMaxPeople(),
-                subscribedLandlordIds.toArray(new String[0]),
                 filterParameters.isPivotSubscribed(),
                 filterParameters.getTimestamp(),
                 filterParameters.getPivotId(),
                 filterParameters.getLimit(),
                 filterParameters.getTagIds().toArray(new String[0])
         );
+        // TODO: Prioritize by recommendation score
         return rooms.stream().map(this::mapFromDaoToResponse).collect(Collectors.toList());
-    }
-
-    @Override
-    public List<RoomResponse> getSubscribedRoomsNearby(double latitude, double longitude,
-                                                       double radiusKm) {
-        List<String> landlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
-        List<Room> rooms = roomRepository.findRoomsByLandlordIdsWithinRadius(landlordIds, latitude, longitude,
-                                                                             radiusKm);
-        return rooms.stream().map(this::mapToRoomResponse).collect(Collectors.toList());
-    }
-
-    @Override
-    public List<RoomResponse> getSubscribedRoomsByLocation(String city, String district, String ward) {
-        List<String> landlordIds = subscriptionService.getLandlordsWithActiveSubscriptions();
-        List<Room> rooms = roomRepository.findRoomsByLandlordIdsAndLocation(landlordIds, city, district, ward);
-        return rooms.stream().map(this::mapToRoomResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -179,7 +149,12 @@ public class RoomServiceImpl implements RoomService {
                 .squareMeters(createRoomRequest.getSquareMeters())
                 .build();
         Room savedRoom = roomRepository.save(room);
-        contractGenerationService.generateDefaultContract(savedRoom);
+        contractGenerationService.generateRoomContract(savedRoom);
+        Map<String, String> body = new HashMap<>();
+        body.put("room_id", savedRoom.getId());
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,
+                                      RabbitMQConfig.ROOM_ROUTING_KEY,
+                                      body);
         return savedRoom.getId();
     }
 
@@ -206,6 +181,11 @@ public class RoomServiceImpl implements RoomService {
         room.setSquareMeters(updateRoomRequest.getSquareMeters());
         room.setRentalDeposit(BigDecimal.valueOf(Double.parseDouble(updateRoomRequest.getDeposit())));
         Room updatedRoom = roomRepository.save(room);
+        Map<String, String> body = new HashMap<>();
+        body.put("room_id", updatedRoom.getId());
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,
+                                      RabbitMQConfig.ROOM_ROUTING_KEY,
+                                      body);
         return mapToRoomResponse(updatedRoom);
     }
 
@@ -216,6 +196,11 @@ public class RoomServiceImpl implements RoomService {
         );
         room.setStatus(RoomStatus.DELETED);
         roomRepository.save(room);
+        Map<String, String> body = new HashMap<>();
+        body.put("room_id", roomId);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,
+                                      RabbitMQConfig.ROOM_ROUTING_KEY,
+                                      body);
     }
 
     @Override
@@ -335,7 +320,34 @@ public class RoomServiceImpl implements RoomService {
                 .createdAt(roomDao.getCreatedAt().toLocalDateTime())
                 .updatedAt(roomDao.getUpdatedAt().toLocalDateTime())
                 .squareMeters(roomDao.getSquareMeters())
-                .isSubscribed(roomDao.isSubscribed())
+
+                .build();
+    }
+
+    static RoomResponse getRoomResponse(Room room) {
+        return RoomResponse.builder()
+                .id(room.getId())
+                .title(room.getTitle())
+                .description(room.getDescription())
+                .address(room.getAddress())
+                .status(room.getStatus().name())
+                .price(room.getPrice())
+                .latitude(room.getLatitude())
+                .longitude(room.getLongitude())
+                .city(room.getCity())
+                .district(room.getDistrict())
+                .ward(room.getWard())
+                .electricPrice(room.getElectricityPrice())
+                .waterPrice(room.getWaterPrice())
+                .type(room.getType().name())
+                .nearbyAmenities(room.getNearbyAmenities())
+                .maxPeople(room.getMaxPeople())
+                .landlordId(room.getLandlord().getId())
+                .tags(room.getTags())
+                .deposit(room.getRentalDeposit().toString())
+                .createdAt(room.getCreatedAt())
+                .updatedAt(room.getUpdatedAt())
+                .squareMeters(room.getSquareMeters())
                 .build();
     }
 }

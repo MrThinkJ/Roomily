@@ -17,7 +17,11 @@ public interface ChatRoomService {
 
     void archiveAllChatRoomsByFindPartnerPostId(String findPartnerPostId);
 
-    ChatRoomResponse createGroupChatRoom(String managerId, Set<String> userIds, String chatRoomName, String roomId);
+    ChatRoomResponse createGroupChatRoom(String managerId,
+                                         Set<String> userIds,
+                                         String chatRoomName,
+                                         String roomId,
+                                         String findPartnerPostId);
 
     ChatRoomResponse getOrCreateDirectChatRoom(String userId1, String userId2, String findPartnerPostId);
 

@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 @Builder
 public class UpdateFindPartnerPostRequest {
-    private String content;
-    private String title;
+    private String description;
     private Integer maxPeople;
 }

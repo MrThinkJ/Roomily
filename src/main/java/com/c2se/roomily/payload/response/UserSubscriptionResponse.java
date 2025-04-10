@@ -17,4 +17,5 @@ public class UserSubscriptionResponse {
     private String userId;
     private String subscriptionId;
     private String subscriptionName;
+    private Integer remainingCredits;
 }

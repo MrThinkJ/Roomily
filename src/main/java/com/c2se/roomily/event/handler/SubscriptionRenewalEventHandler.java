@@ -3,7 +3,7 @@ package com.c2se.roomily.event.handler;
 import com.c2se.roomily.entity.Subscription;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.entity.UserSubscription;
-import com.c2se.roomily.event.SubscriptionRenewalEvent;
+import com.c2se.roomily.event.pojo.SubscriptionRenewalEvent;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.repository.UserRepository;
@@ -59,7 +59,6 @@ public class SubscriptionRenewalEventHandler {
                                                              .header("Subscription Renewed")
                                                              .body("Your subscription has been automatically renewed.")
                                                              .userId(user.getId())
-                                                             .type("SUBSCRIPTION")
                                                              .build());
             } else {
                 subscription.setAutoRenew(false);
@@ -68,7 +67,6 @@ public class SubscriptionRenewalEventHandler {
                                                              .header("Subscription Renewal Failed")
                                                              .body("Auto-renewal failed due to insufficient balance.")
                                                              .userId(user.getId())
-                                                             .type("SUBSCRIPTION")
                                                              .build());
             }
         } catch (Exception e) {

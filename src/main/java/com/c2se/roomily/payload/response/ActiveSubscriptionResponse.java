@@ -21,4 +21,5 @@ public class ActiveSubscriptionResponse {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime endDate;
     private String subscriptionId;
+    private Integer remainingCredits;
 }

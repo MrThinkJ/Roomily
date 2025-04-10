@@ -9,6 +9,5 @@ public class CreateNotificationRequest {
     private String header;
     private String body;
     private String userId;
-    private String type;
     private String extra;
 }

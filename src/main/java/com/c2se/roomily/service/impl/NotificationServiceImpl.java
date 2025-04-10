@@ -68,7 +68,6 @@ public class NotificationServiceImpl implements NotificationService {
                 .header(request.getHeader())
                 .body(request.getBody())
                 .isRead(false)
-                .type(NotificationType.valueOf(request.getType()))
                 .user(user)
                 .build();
         notificationRepository.save(notification);
@@ -85,7 +84,6 @@ public class NotificationServiceImpl implements NotificationService {
                 .header(notification.getHeader())
                 .body(notification.getBody())
                 .isRead(notification.getIsRead())
-                .type(notification.getType().name())
                 .createdAt(notification.getCreatedAt())
                 .userId(notification.getUser().getId())
                 .build();

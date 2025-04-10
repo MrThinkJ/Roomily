@@ -7,7 +7,6 @@ import lombok.Data;
 @Builder
 public class CreateUserReportRequest {
     private String reportedUserId;
-    private String reporterId;
     private String type;
     private String content;
 }

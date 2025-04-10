@@ -1,9 +1,7 @@
 package com.c2se.roomily.service.impl;
 
-import com.c2se.roomily.entity.RentedRoom;
-import com.c2se.roomily.entity.Room;
+import com.c2se.roomily.entity.*;
 import com.c2se.roomily.entity.Transaction;
-import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.*;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
@@ -13,11 +11,12 @@ import com.c2se.roomily.payload.request.CreatePaymentLinkRequest;
 import com.c2se.roomily.payload.request.CreateRentedRoomActivityRequest;
 import com.c2se.roomily.payload.response.CheckoutResponse;
 import com.c2se.roomily.payload.response.PaymentLinkResponse;
+import com.c2se.roomily.repository.CheckoutInfoRepository;
 import com.c2se.roomily.repository.TransactionRepository;
 import com.c2se.roomily.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,33 +25,36 @@ import vn.payos.PayOS;
 import vn.payos.type.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class PaymentProcessingServiceImpl implements PaymentProcessingService {
-    PayOS payOS;
-    TransactionRepository transactionRepository;
-    UserService userService;
-    NotificationService notificationService;
-    RentedRoomService rentedRoomService;
-    RentedRoomActivityService rentedRoomActivityService;
-    RoomService roomService;
+    private final PayOS payOS;
+    private final TransactionRepository transactionRepository;
+    private final UserService userService;
+    private final NotificationService notificationService;
+    private final CheckoutInfoRepository checkoutInfoRepository;
+    private final RentedRoomService rentedRoomService;
+    private final RentedRoomActivityService rentedRoomActivityService;
+    private final BillLogService billLogService;
+    private final RoomService roomService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest) {
-        log.info("Creating payment link for amount: {}", paymentLinkRequest.getPrice());
+        log.info("Creating payment link for amount: {}", paymentLinkRequest.getAmount());
         try {
             final String productName = paymentLinkRequest.getProductName();
             final String description = paymentLinkRequest.getDescription();
             final boolean isInAppWallet = paymentLinkRequest.isInAppWallet();
             final String returnUrl = "/success";
             final String cancelUrl = "/cancel";
-            final int price = paymentLinkRequest.getPrice();
+            final int price = paymentLinkRequest.getAmount();
 
             String currentTimeString = String.valueOf(new Date().getTime());
             long orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
@@ -88,6 +90,12 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
+    public CheckoutResponse getPaymentLinkCheckoutData(String checkoutId) {
+        return checkoutInfoRepository.findById(checkoutId)
+                .orElseThrow(() -> new ResourceNotFoundException("CheckoutInfo", "id", checkoutId));
+    }
+
+    @Override
     public PaymentLinkResponse cancelPaymentLink(long paymentLinkId) {
         try {
             PaymentLinkData data = payOS.cancelPaymentLink(paymentLinkId, null);
@@ -97,7 +105,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             transactionRepository.save(transaction);
             CreateNotificationRequest notification = CreateNotificationRequest.builder()
                     .header("Hủy giao dịch")
-                    .body("Thanh toán của bạn đã bị hủy.")
+                    .body("Giao dịch của bạn đã bị hủy.")
                     .userId(transaction.getUser().getId())
                     .build();
             notificationService.sendNotification(notification);
@@ -189,21 +197,30 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     @Override
     public void mockTopUpToRoomWallet(String rentedRoomId, double amount) {
         RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
+        Room room = rentedRoom.getRoom();
+
+        // Process the payment
         BigDecimal currentBalance = rentedRoom.getRentedRoomWallet() != null ?
                 rentedRoom.getRentedRoomWallet() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBalance.add(BigDecimal.valueOf(amount));
         rentedRoom.setRentedRoomWallet(newBalance);
-        if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID
-                && newBalance.compareTo(rentedRoom.getRentalDeposit()) >= 0) {
-            rentedRoom.setStatus(RentedRoomStatus.IN_USE);
-            roomService.updateRoomStatus(rentedRoom.getRoom().getId(), RoomStatus.RENTED.name());
-        } else if (rentedRoom.getStatus() == RentedRoomStatus.DEBT && newBalance.compareTo(BigDecimal.ZERO) >= 0) {
-            rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+
+        // Check if the deposit needs to be paid
+        if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID) {
+            handleDepositPaid(rentedRoom, room);
         }
-        rentedRoomService.saveRentedRoom(rentedRoom);
+        // Check if the debt needs to be paid
+        else if (rentedRoom.getStatus() == RentedRoomStatus.DEBT
+                || rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING) {
+            handleDebtRentedRoomPaid(rentedRoom);
+        } else{
+            rentedRoomService.saveRentedRoom(rentedRoom);
+        }
     }
 
     private CheckoutResponse createPaymentLinkForInAppWallet(CheckoutResponseData data, User user) {
+        CheckoutResponse checkoutResponse = buildCheckoutResponse(data);
+        CheckoutResponse savedCheckoutResponse = checkoutInfoRepository.save(checkoutResponse);
         Transaction transaction = Transaction.builder()
                 .amount(BigDecimal.valueOf(data.getAmount()))
                 .status(TransactionStatus.PENDING)
@@ -211,24 +228,19 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 .user(user)
                 .paymentId(data.getPaymentLinkId())
                 .updatedAt(LocalDateTime.now())
+                .checkoutResponseId(savedCheckoutResponse.getId())
                 .build();
         transactionRepository.save(transaction);
         log.info("Successfully created payment link to top up in-app wallet for user: {}", user.getUsername());
-        return CheckoutResponse.builder()
-                .accountNumber(data.getAccountNumber())
-                .accountName(data.getAccountName())
-                .amount(data.getAmount())
-                .description(data.getDescription())
-                .checkoutUrl(data.getCheckoutUrl())
-                .qrCode(data.getQrCode())
-                .orderCode(data.getOrderCode())
-                .status(data.getStatus())
-                .build();
+        return savedCheckoutResponse;
     }
 
     private CheckoutResponse createPaymentLinkForRentedRoomWallet(CheckoutResponseData data,
                                                                   User user,
                                                                   String rentedRoomId) {
+        // Build the checkout response
+        CheckoutResponse checkoutResponse = buildCheckoutResponse(data);
+        CheckoutResponse savedCheckoutResponse = checkoutInfoRepository.save(checkoutResponse);
         RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
         Transaction transaction = Transaction.builder()
                 .amount(BigDecimal.valueOf(data.getAmount()))
@@ -238,19 +250,11 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 .paymentId(data.getPaymentLinkId())
                 .metadata(rentedRoom.getId())
                 .updatedAt(LocalDateTime.now())
+                .checkoutResponseId(savedCheckoutResponse.getId())
                 .build();
         transactionRepository.save(transaction);
         log.info("Successfully created payment link to top up rented room wallet for user: {}", user.getUsername());
-        return CheckoutResponse.builder()
-                .accountNumber(data.getAccountNumber())
-                .accountName(data.getAccountName())
-                .amount(data.getAmount())
-                .description(data.getDescription())
-                .checkoutUrl(data.getCheckoutUrl())
-                .qrCode(data.getQrCode())
-                .orderCode(data.getOrderCode())
-                .status(data.getStatus())
-                .build();
+        return savedCheckoutResponse;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -280,58 +284,25 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         String rentedRoomId = transaction.getMetadata();
         RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
         Room room = rentedRoom.getRoom();
+
         // Process the payment
         BigDecimal currentBalance = rentedRoom.getRentedRoomWallet() != null ?
                 rentedRoom.getRentedRoomWallet() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBalance.add(BigDecimal.valueOf(data.getAmount()));
         rentedRoom.setRentedRoomWallet(newBalance);
+
         // Check if the deposit needs to be paid
-        if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID
-                && newBalance.compareTo(room.getRentalDeposit()) >= 0) {
-            roomService.updateRoomStatus(rentedRoom.getRoom().getId(), RoomStatus.RENTED.name());
-            rentedRoom.setStatus(RentedRoomStatus.IN_USE);
-            rentedRoom.setRentedRoomWallet(newBalance.subtract(rentedRoom.getRentalDeposit()));
-            rentedRoom.setRentalDeposit(room.getRentalDeposit());
-            rentedRoomService.deleteRentedRoomNotPaidDepositByRoomId(rentedRoom.getRoom().getId());
-            CreateRentedRoomActivityRequest depositPaidActivity = CreateRentedRoomActivityRequest.builder()
-                    .rentedRoomId(rentedRoomId)
-                    .message("Đã thanh toán tiền đặt cọc.")
-                    .build();
-            CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
-                    .header("Phòng đã cọc đủ tiền")
-                    .body("Phòng " + rentedRoom.getRoom().getId() + " đã được cọc đủ tiền.")
-                    .userId(rentedRoom.getLandlord().getId())
-                    .build();
-            rentedRoomActivityService.createRentedRoomActivity(depositPaidActivity);
-            notificationService.sendNotification(landlordNotification);
+        if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID) {
+            handleDepositPaid(rentedRoom, room);
         }
         // Check if the debt needs to be paid
-        else if ((rentedRoom.getStatus() == RentedRoomStatus.DEBT ||
-                rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING)
-                && newBalance.compareTo(
-                rentedRoom.getWalletDebt()) >= 0) {
-            // Process the debt payment
-            // If the wallet balance is enough to pay the debt (already fill bill), deduct the debt from the wallet
-            if (rentedRoom.getStatus() == RentedRoomStatus.DEBT){
-                rentedRoom.setStatus(RentedRoomStatus.IN_USE);
-                rentedRoom.setDebtDate(null);
-                CreateRentedRoomActivityRequest fullPaymentActivity = CreateRentedRoomActivityRequest.builder()
-                        .rentedRoomId(rentedRoomId)
-                        .message("Đã thanh toán đầy đủ tiền thuê cho tháng này.")
-                        .build();
-                rentedRoomActivityService.createRentedRoomActivity(fullPaymentActivity);
-                CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
-                        .header("Nhận thanh toán tiền thuê")
-                        .body("Phòng " + rentedRoom.getRoom().getId() + " đã được thanh toán đầy đủ tiền thuê.")
-                        .userId(rentedRoom.getLandlord().getId())
-                        .build();
-                notificationService.sendNotification(landlordNotification);
-            }
-            // If the wallet balance is enough to pay the debt (bill not filled), deduct the debt from the wallet
-            rentedRoom.setRentedRoomWallet(newBalance.subtract(rentedRoom.getWalletDebt()));
-            rentedRoom.setWalletDebt(BigDecimal.ZERO);
+        else if (rentedRoom.getStatus() == RentedRoomStatus.DEBT
+                || rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING) {
+            handleDebtRentedRoomPaid(rentedRoom);
+        } else{
+            rentedRoomService.saveRentedRoom(rentedRoom);
         }
-        rentedRoomService.saveRentedRoom(rentedRoom);
+
         // Send notification to tenant and rented room
         CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
                 .rentedRoomId(rentedRoomId)
@@ -347,6 +318,115 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         notificationService.sendNotification(tenantNotification);
         log.info("Successfully topped up rentedRoomWallet for room: {}, tenant: {}, amount: {}",
                  rentedRoom.getRoom().getId(), transaction.getUser().getUsername(), data.getAmount());
+    }
+
+    private void handleDepositPaid(RentedRoom rentedRoom, Room room){
+        if (rentedRoom.getRentedRoomWallet().compareTo(room.getRentalDeposit()) < 0)
+            return;
+        roomService.updateRoomStatus(rentedRoom.getRoom().getId(), RoomStatus.RENTED.name());
+        rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+        rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getRentalDeposit()));
+        rentedRoom.setRentalDeposit(room.getRentalDeposit());
+        rentedRoomService.deleteRentedRoomNotPaidDepositByRoomId(rentedRoom.getRoom().getId());
+        CreateRentedRoomActivityRequest depositPaidActivity = CreateRentedRoomActivityRequest.builder()
+                .rentedRoomId(rentedRoom.getId())
+                .message("Đã thanh toán tiền đặt cọc.")
+                .build();
+        CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
+                .header("Phòng đã cọc đủ tiền")
+                .body("Phòng " + rentedRoom.getRoom().getId() + " đã được cọc đủ tiền.")
+                .userId(rentedRoom.getLandlord().getId())
+                .build();
+        rentedRoomActivityService.createRentedRoomActivity(depositPaidActivity);
+        notificationService.sendNotification(landlordNotification);
+    }
+
+    private void handleDebtRentedRoomPaid(RentedRoom rentedRoom) {
+        // If not in debt or bill missing state, return
+        if (rentedRoom.getStatus() != RentedRoomStatus.DEBT && 
+            rentedRoom.getStatus() != RentedRoomStatus.BILL_MISSING) {
+            return;
+        }
+        // If the wallet balance is enough to pay the debt (already fill bill), deduct the debt from the wallet
+        if (rentedRoom.getStatus() == RentedRoomStatus.DEBT) {
+            // Get the active bill log for this rented room
+            BillLog activeBillLog = billLogService.getActiveBillLogByRentedRoomId(rentedRoom.getId());
+            if (activeBillLog == null) {
+                log.error("No active bill log found for rented room: {}", rentedRoom.getId());
+                return;
+            }
+
+            // Update the rentedRoom status and clear debt
+            rentedRoom.setStatus(RentedRoomStatus.IN_USE);
+            rentedRoom.setDebtDate(null);
+            rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getWalletDebt()));
+            rentedRoom.setWalletDebt(BigDecimal.ZERO);
+
+            // Mark the bill as paid based on whether it's late or not
+            LocalDate today = LocalDate.now();
+            if (activeBillLog.getBillStatus() == BillStatus.PENDING) {
+                activeBillLog.setBillStatus(BillStatus.PAID);
+            } else if (activeBillLog.getBillStatus() == BillStatus.UNPAID) {
+                if (activeBillLog.getLateDate() != null && today.isAfter(activeBillLog.getLateDate())) {
+                    activeBillLog.setBillStatus(BillStatus.LATE_PAID);
+                } else {
+                    activeBillLog.setBillStatus(BillStatus.PAID);
+                }
+            } else if (activeBillLog.getBillStatus() == BillStatus.LATE) {
+                activeBillLog.setBillStatus(BillStatus.LATE_PAID);
+            }
+            
+            billLogService.save(activeBillLog);
+            log.info("Successfully paid bill for rented room: {}", rentedRoom.getId());
+
+            // Create activity and notification
+            String paymentMessage = activeBillLog.getBillStatus() == BillStatus.LATE_PAID 
+                ? "Đã thanh toán muộn tiền thuê và điện nước cho tháng này."
+                : "Đã thanh toán đầy đủ tiền thuê và điện nước cho tháng này.";
+                
+            CreateRentedRoomActivityRequest fullPaymentActivity = CreateRentedRoomActivityRequest.builder()
+                    .rentedRoomId(rentedRoom.getId())
+                    .message(paymentMessage)
+                    .build();
+            rentedRoomActivityService.createRentedRoomActivity(fullPaymentActivity);
+
+            CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
+                    .header("Nhận thanh toán tiền thuê và điện nước")
+                    .body("Phòng " + rentedRoom.getRoom().getId() + " " + 
+                          (activeBillLog.getBillStatus() == BillStatus.LATE_PAID 
+                              ? "đã được thanh toán muộn tiền thuê và điện nước."
+                              : "đã được thanh toán đầy đủ tiền thuê và điện nước."))
+                    .userId(rentedRoom.getLandlord().getId())
+                    .build();
+            notificationService.sendNotification(landlordNotification);
+        } else if (rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING){
+            // For BILL_MISSING status, the bill log still needs to be filled
+            // Just deduct the rental cost from the wallet
+            rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getWalletDebt()));
+            rentedRoom.setWalletDebt(BigDecimal.ZERO);
+
+            // Get the active bill log and update its status if already created
+            BillLog activeBillLog = billLogService.getActiveBillLogByRentedRoomId(rentedRoom.getId());
+
+            if (activeBillLog != null && activeBillLog.getBillStatus() == BillStatus.MISSING) {
+                // The rental cost is already paid but still waiting for bill information
+                // No status change needed as the bill is still missing
+                CreateRentedRoomActivityRequest rentalPaidActivity = CreateRentedRoomActivityRequest.builder()
+                        .rentedRoomId(rentedRoom.getId())
+                        .message("Đã thanh toán tiền thuê phòng cho tháng này, vẫn chờ thông tin hóa đơn.")
+                        .build();
+                rentedRoomActivityService.createRentedRoomActivity(rentalPaidActivity);
+
+                CreateNotificationRequest landlordNotification = CreateNotificationRequest.builder()
+                        .header("Nhận thanh toán tiền thuê phòng nhưng chưa có hóa đơn")
+                        .body("Phòng " + rentedRoom.getRoom().getId() + " đã được thanh toán tiền thuê phòng nhưng chưa có hóa đơn.")
+                        .userId(rentedRoom.getLandlord().getId())
+                        .build();
+                notificationService.sendNotification(landlordNotification);
+            }
+        }
+        log.info("Successfully handled debt payment for rented room: {}", rentedRoom.getId());
+        rentedRoomService.saveRentedRoom(rentedRoom);
     }
 
     private PaymentLinkResponse mapToPaymentLinkDto(PaymentLinkData data) {
@@ -374,6 +454,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 .checkoutUrl(data.getCheckoutUrl())
                 .qrCode(data.getQrCode())
                 .orderCode(data.getOrderCode())
+                .paymentLinkId(data.getPaymentLinkId())
                 .status(data.getStatus())
                 .build();
     }

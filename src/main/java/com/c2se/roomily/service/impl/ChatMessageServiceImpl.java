@@ -50,6 +50,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .message(chatMessageToAdd.getContent())
                 .chatRoom(chatRoom)
                 .subId(chatRoom.getNextSubId() + 1)
+                .roleName(sender.getRoles().stream().toList().get(0).getName())
                 .build();
         if (chatMessageToAdd.getImage() != null) {
             String fileName = chatRoomId + "_" + UUID.randomUUID();
@@ -101,6 +102,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .imageUrl(chatMessage.getImageUrl())
                 .chatRoomId(chatMessage.getChatRoom().getId())
                 .subId(chatMessage.getSubId())
+                .metadata(chatMessage.getMetadata())
                 .build();
     }
 }

@@ -29,6 +29,12 @@ public interface RentedRoomRepository extends JpaRepository<RentedRoom, String> 
             """)
     List<RentedRoom> findActiveByCoTenantId(@Param("coTenantId") String coTenantId,
                                             @Param("status") List<RentedRoomStatus> status);
+    @Query("""
+            SELECT rr FROM RentedRoom rr
+            WHERE rr.user.id = :userId
+            AND rr.status IN :status
+            """)
+    List<RentedRoom> findActiveByLandlordId(String landlordId, @Param("status") List<RentedRoomStatus> status);
 
     List<RentedRoom> findByUserId(String userId);
 
@@ -57,4 +63,11 @@ public interface RentedRoomRepository extends JpaRepository<RentedRoom, String> 
     @Transactional
     @Query("DELETE FROM RentedRoom rr WHERE rr.room.id = :roomId AND rr.status = :status")
     void deleteByRoomIdAndStatus(String roomId, RentedRoomStatus status);
+    
+    int countByUserId(String userId);
+    
+    int countByUserIdAndStatus(String userId, RentedRoomStatus status);
+    int countByUserIdAndStatusNotIn(String userId, List<RentedRoomStatus> status);
+    
+    int countByLandlordId(String landlordId);
 } 

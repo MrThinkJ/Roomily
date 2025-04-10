@@ -27,6 +27,8 @@ public class UserSubscription {
     private LocalDateTime endDate;
     @Column(name = "auto_renew")
     private boolean autoRenew;
+    @Column(name = "remaining_credits")
+    private Integer remainingCredits;
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;

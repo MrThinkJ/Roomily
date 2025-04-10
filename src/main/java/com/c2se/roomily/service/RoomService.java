@@ -22,10 +22,6 @@ public interface RoomService {
 
     List<RoomResponse> getRoomsByFilter(RoomFilterRequest filterRequest);
 
-    List<RoomResponse> getSubscribedRoomsNearby(double latitude, double longitude, double radiusKm);
-
-    List<RoomResponse> getSubscribedRoomsByLocation(String city, String district, String ward);
-
     String createRoom(CreateRoomRequest createRoomRequest, String landlordId);
 
     RoomResponse updateRoom(String roomId, UpdateRoomRequest updateRoomRequest);

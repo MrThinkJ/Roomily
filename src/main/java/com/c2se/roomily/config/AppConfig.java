@@ -3,6 +3,7 @@ package com.c2se.roomily.config;
 import com.c2se.roomily.entity.Role;
 import com.c2se.roomily.entity.Tag;
 import com.c2se.roomily.entity.User;
+import com.c2se.roomily.enums.TagCategory;
 import com.c2se.roomily.enums.UserStatus;
 import com.c2se.roomily.repository.RoleRepository;
 import com.c2se.roomily.repository.TagRepository;
@@ -27,11 +28,11 @@ public class AppConfig {
                                     "Balcony",
                                     "Bed",
                                     "Fridge",
-                                    "Internet",
+                                    "WIFI_INCLUDED",
                                     "Kitchen",
                                     "Laundry",
                                     "Microwave",
-                                    "Parking",
+                                    "PARKING_INCLUDED",
                                     "TV",
                                     "Water Heater");
         return args -> {
@@ -39,6 +40,7 @@ public class AppConfig {
                 if (tagRepository.findByName(tag) == null) {
                     tagRepository.save(Tag.builder()
                                                .name(tag)
+                                               .category(TagCategory.IN_ROOM_FEATURE)
                                                .build());
                     log.info("Tag {} has been created as default", tag);
                 }

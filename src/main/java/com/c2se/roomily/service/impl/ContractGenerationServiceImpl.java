@@ -4,6 +4,7 @@ import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.enums.ErrorCode;
 import com.c2se.roomily.exception.APIException;
+import com.c2se.roomily.payload.request.LandlordFillContractRequest;
 import com.c2se.roomily.service.ContractGenerationService;
 import com.c2se.roomily.service.ContractStorageService;
 import com.c2se.roomily.util.AppConstants;
@@ -28,8 +29,9 @@ public class ContractGenerationServiceImpl implements ContractGenerationService 
     @Value("${app.resource.static-location}")
     private String staticLocation;
     private final ContractStorageService contractStorageService;
+
     @Override
-    public Document generateDefaultContract(Room room) {
+    public Document generateRoomContract(Room room) {
         if (room == null) {
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room not found");
         }

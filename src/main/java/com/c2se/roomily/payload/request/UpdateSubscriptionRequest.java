@@ -10,4 +10,5 @@ public class UpdateSubscriptionRequest {
     private String name;
     private String description;
     private Integer duration;
+    private Integer includedCredits;
 }

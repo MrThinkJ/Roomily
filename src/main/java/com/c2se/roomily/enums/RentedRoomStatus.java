@@ -6,5 +6,6 @@ public enum RentedRoomStatus {
     BILL_MISSING,
     IN_USE,
     DEBT,
+    END,
     CANCELLED
 }

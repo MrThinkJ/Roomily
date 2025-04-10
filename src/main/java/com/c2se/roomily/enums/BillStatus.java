@@ -8,5 +8,8 @@ public enum BillStatus {
     RE_ENTER,
     PENDING,
     PAID,
-    CANCELLED
+    CANCELLED,
+    UNPAID,
+    LATE,
+    LATE_PAID
 }

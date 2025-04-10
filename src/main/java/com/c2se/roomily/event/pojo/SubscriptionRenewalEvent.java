@@ -1,4 +1,4 @@
-package com.c2se.roomily.event;
+package com.c2se.roomily.event.pojo;
 
 import lombok.Builder;
 import lombok.Data;

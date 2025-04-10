@@ -1,6 +1,7 @@
 package com.c2se.roomily.util;
 
 import java.util.List;
+import java.util.Map;
 
 public class AppConstants {
     public static final String DEFAULT_PAGE_NUMBER = "0";
@@ -8,6 +9,7 @@ public class AppConstants {
     public static final String DEFAULT_SORT_BY = "id";
     public static final String DEFAULT_SORT_DIR = "asc";
     public static final Integer VALID_REPORT_THRESHOLD = 10;
+    public static final Integer LATE_DATE_THRESHOLD = 3;
     public static final Integer DEBT_DATE_THRESHOLD = 7;
     public static final Double MIN_WEIGHT = 0.7;
     public static final String CONTRACT_TEMPLATE_PATH = "/contract.html";
@@ -31,5 +33,10 @@ public class AppConstants {
             "- Bên nào vi phạm điều khoản chung thì phải chịu trách nhiệm trước pháp luật.",
             "- Hợp đồng được lập thành 02 bản có giá trị pháp lý như nhau, mỗi bên giữ một bản."
     );
-
+    public static final Map<String, Double> INTERACTION_WEIGHT_MAP = Map.of(
+            "VIEW", 0.4,
+            "FAVOR", 0.5,
+            "CHAT", 0.7,
+            "RENT", 1.0
+    );
 }

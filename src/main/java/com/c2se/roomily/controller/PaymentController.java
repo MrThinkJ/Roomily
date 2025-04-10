@@ -28,6 +28,11 @@ public class PaymentController {
         return ResponseEntity.ok(paymentProcessingService.getPaymentLinkData(id));
     }
 
+    @GetMapping("/checkout/{checkoutId}")
+    public ResponseEntity<CheckoutResponse> getPaymentLinkCheckoutData(@PathVariable String checkoutId) {
+        return ResponseEntity.ok(paymentProcessingService.getPaymentLinkCheckoutData(checkoutId));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<PaymentLinkResponse> cancelPaymentLink(@PathVariable Long id) {
         return ResponseEntity.ok(paymentProcessingService.cancelPaymentLink(id));

@@ -17,5 +17,6 @@ public class ChatMessageResponse {
     private String imageUrl;
     private String senderId;
     private String chatRoomId;
+    private String metadata;
     private Integer subId;
 }

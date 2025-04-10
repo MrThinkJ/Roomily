@@ -7,14 +7,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public interface PaymentProcessingService {
     CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest);
-
     PaymentLinkResponse getPaymentLinkData(long paymentLinkId);
-
+    CheckoutResponse getPaymentLinkCheckoutData(String checkoutId);
     PaymentLinkResponse cancelPaymentLink(long paymentLinkId);
-
     ObjectNode confirmWebhook(String webhookUrl);
-
     void payosTransferHandler(ObjectNode body);
-
     void mockTopUpToRoomWallet(String rentedRoomId, double amount);
 }

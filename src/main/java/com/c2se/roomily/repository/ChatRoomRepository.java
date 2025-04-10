@@ -49,4 +49,14 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
 
     Optional<ChatRoom> findByRentedRoomId(String rentedRoomId);
 
+    @Query(value = "SELECT COUNT(DISTINCT chat_room_id) FROM chat_rooms cr " +
+            "WHERE cr.last_message_sender = :landlordId", nativeQuery = true)
+    long countChatRoomsRespondedByLandlord(String landlordId);
+
+    @Query(value = "SELECT COUNT(DISTINCT chat_room_id) FROM chat_rooms cr WHERE cr.manager_id = :landlordId "+
+            "AND cr.status IN ('ACTIVE', 'ARCHIVED') " +
+            "AND cr.type = 'GROUP'", nativeQuery = true)
+    long countTotalChatRoomsByLandlord(String landlordId);
+
+    List<ChatRoom> findByManagerId(String managerId);
 }

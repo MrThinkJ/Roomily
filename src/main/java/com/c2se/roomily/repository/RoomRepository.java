@@ -145,11 +145,7 @@ public interface RoomRepository extends JpaRepository<Room, String> {
                     CAST(r.updated_at AS timestamp) as updatedAt,
                     r.latitude,
                     r.longitude,
-                    r.landlord_id as landlordId,
-                    CASE 
-                        WHEN :subscribedLandlordIds IS NULL THEN false
-                        ELSE (r.landlord_id = ANY(:subscribedLandlordIds)) 
-                    END as is_subscribed
+                    r.landlord_id as landlordId
                 FROM rooms r
                 WHERE (r.room_status = 'AVAILABLE' OR r.room_status = 'FIND_PARTNER_ONLY')
                 AND (:type IS NULL OR r.room_type = :type)
@@ -173,12 +169,9 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             FROM filtered_rooms fr
             WHERE
             (
-                fr.is_subscribed = :pivotSubscribed
-                AND (fr.updatedAt, fr.id) < (:timestamp, :pivotId)
+                (fr.updatedAt, fr.id) < (:timestamp, :pivotId)
             )
-            OR fr.is_subscribed < :pivotSubscribed
             ORDER BY
-                fr.is_subscribed DESC,
                 fr.updatedAt DESC,
                 fr.id DESC
             LIMIT :limit
@@ -193,7 +186,6 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             @Param("maxPrice") BigDecimal maxPrice,
             @Param("minPeople") Integer minPeople,
             @Param("maxPeople") Integer maxPeople,
-            @Param("subscribedLandlordIds") String[] subscribedLandlordIds,
             @Param("pivotSubscribed") boolean pivotSubscribed,
             @Param("timestamp") LocalDateTime timestamp,
             @Param("pivotId") String pivotId,

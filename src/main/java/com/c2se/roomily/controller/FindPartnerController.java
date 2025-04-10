@@ -20,13 +20,14 @@ import java.util.List;
 public class FindPartnerController extends BaseController {
     private final FindPartnerService findPartnerService;
 
-    @GetMapping("/active/{roomId}")
+    @GetMapping("/active/room/{roomId}")
     public ResponseEntity<List<FindPartnerPostResponse>> getActiveFindPartnerPosts(@PathVariable String roomId) {
         return ResponseEntity.ok(findPartnerService.getActiveFindPartnerPostsByRoomId(roomId));
     }
 
-    @GetMapping("/active/{userId}")
-    public ResponseEntity<List<FindPartnerPostResponse>> getActiveFindPartnerPostsByUserId(@PathVariable String userId) {
+    @GetMapping("/active/user")
+    public ResponseEntity<List<FindPartnerPostResponse>> getActiveFindPartnerPostsByUserId() {
+        String userId = this.getUserInfo().getId();
         return ResponseEntity.ok(findPartnerService.getActiveFindPartnerPostsByUserId(userId));
     }
 
@@ -111,8 +112,8 @@ public class FindPartnerController extends BaseController {
     }
 
     @GetMapping("/{findPartnerPostId}")
-    public ResponseEntity<FindPartnerPost> getFindPartnerPost(@PathVariable String findPartnerPostId) {
-        FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
+    public ResponseEntity<FindPartnerPostResponse> getFindPartnerPost(@PathVariable String findPartnerPostId) {
+        FindPartnerPostResponse findPartnerPost = findPartnerService.getFindPartnerPostResponse(findPartnerPostId);
         return ResponseEntity.ok(findPartnerPost);
     }
 }

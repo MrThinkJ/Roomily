@@ -28,6 +28,7 @@ public class Transaction {
     private String paymentId;
     private BigDecimal amount;
     private String metadata;
+    private String checkoutResponseId;
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_status", nullable = false)
     private TransactionStatus status;

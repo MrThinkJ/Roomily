@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -24,4 +25,7 @@ public class RentedRoomResponse {
     private String roomId;
     private String userId;
     private String landlordId;
+    private String rentedRoomWallet;
+    private String rentalDeposit;
+    private String walletDebt;
 }

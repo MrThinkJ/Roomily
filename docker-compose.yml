@@ -49,6 +49,25 @@ services:
       - /etc/timezone:/etc/timezone:ro
     networks:
       - pi_shared_net
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    hostname: rabbitmq
+    restart: always
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - RABBITMQ_DEFAULT_USER=roomily
+      - RABBITMQ_DEFAULT_PASS=roomily
+      - VIRTUAL_HOST=mb.roomily.tech
+      - VIRTUAL_PORT=5672
+      - LETSENCRYPT_HOST=mb.roomily.tech
+      - LETSENCRYPT_EMAIL=blog@storage.roomily.tech
+    volumes:
+      - /var/lib/rabbitmq/data:/var/lib/rabbitmq/data
+    networks:
+      - pi_shared_net
 networks:
   pi_shared_net:
     external: true

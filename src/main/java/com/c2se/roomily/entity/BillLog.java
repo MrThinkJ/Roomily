@@ -41,6 +41,7 @@ public class BillLog {
     private String waterImage;
     private String electricityImage;
     private String landlordComment;
+    private LocalDate lateDate;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

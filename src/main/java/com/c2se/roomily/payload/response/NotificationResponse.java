@@ -13,7 +13,6 @@ public class NotificationResponse {
     private String header;
     private String body;
     private Boolean isRead;
-    private String type;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
     private String userId;

@@ -26,8 +26,6 @@ public class Notification {
     private String extra;
     @Column(name = "is_read")
     private Boolean isRead;
-    @Enumerated(EnumType.STRING)
-    private NotificationType type;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

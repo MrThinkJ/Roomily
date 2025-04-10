@@ -9,6 +9,8 @@ import com.c2se.roomily.payload.response.BillLogResponse;
 import java.util.List;
 
 public interface BillLogService {
+    void save(BillLog billLog);
+
     BillLog getBillLogEntityById(String billLogId);
 
     BillLogResponse getBillLogById(String billLogId);
@@ -17,13 +19,15 @@ public interface BillLogService {
 
     List<BillLogResponse> getBillLogsByRentedRoomId(String rentedRoomId);
 
-    List<BillLogResponse> getActiveBillLogByRoomId(String roomId);
+    BillLogResponse getActiveBillLogByRoomId(String roomId);
 
-    List<BillLogResponse> getActiveBillLogByRentedRoomId(String rentedRoomId);
+    BillLog getActiveBillLogByRentedRoomId(String rentedRoomId);
+
+    BillLogResponse getActiveBillLogResponseByRentedRoomId(String rentedRoomId);
 
     void checkBillLog(String billLogId, CheckBillLogRequest checkBillLogRequest);
 
-    void processBillLog(String billLogId);
+    void processBillLog(BillLog billLogId);
 
     void createBillLog(CreateBillLogRequest createBillLogRequest);
 

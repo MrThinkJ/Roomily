@@ -78,7 +78,7 @@ public class BanServiceImpl implements BanService {
 
     @Override
     public List<BanHistoryResponse> getAllActiveBans() {
-        List<BanHistory> activeBans = banHistoryRepository.findByExpiresAtBefore(LocalDateTime.now());
+        List<BanHistory> activeBans = banHistoryRepository.findByExpiresAtAfter(LocalDateTime.now());
         return activeBans.stream()
                 .map(this::mapToBanHistoryResponse)
                 .collect(Collectors.toList());
@@ -88,6 +88,8 @@ public class BanServiceImpl implements BanService {
         return BanHistoryResponse.builder()
                 .id(banHistory.getId())
                 .userId(banHistory.getUser().getId())
+                .username(banHistory.getUser().getUsername())
+                .role(banHistory.getUser().getRoles().stream().toList().get(0).getName())
                 .reason(banHistory.getReason())
                 .bannedAt(banHistory.getBannedAt())
                 .expiresAt(banHistory.getExpiresAt() != null ?

@@ -1,6 +1,6 @@
 package com.c2se.roomily.service.impl;
 
-import com.c2se.roomily.event.AppEvent;
+import com.c2se.roomily.event.pojo.AppEvent;
 import com.c2se.roomily.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;

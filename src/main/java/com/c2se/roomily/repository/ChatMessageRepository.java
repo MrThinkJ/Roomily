@@ -5,7 +5,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, String> {
@@ -15,4 +18,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, String
 
     @Query(value = "SELECT * FROM chat_messages WHERE chat_room_id = ?1 ORDER BY created_at DESC LIMIT ?2", nativeQuery = true)
     List<ChatMessage> findLastedByRoomId(String roomId, int prev);
+
+    @Query(value = "SELECT cm FROM ChatMessage cm JOIN ChatRoom cr ON cm.chatRoom.id = cr.id " +
+            "WHERE cr.id = :chatRoomId and cm.createdAt > :createdAt ORDER BY cm.createdAt DESC")
+    List<ChatMessage> findByChatRoomId(String chatRoomId, LocalDateTime createdAt);
 } 

@@ -39,20 +39,6 @@ public class RoomController extends BaseController {
         return ResponseEntity.ok(roomService.getAveragePriceAroundRoom(roomId, radius).doubleValue());
     }
 
-    @GetMapping("/subscribed/nearby")
-    public ResponseEntity<List<RoomResponse>> getSubscribedRoomsNearby(@RequestParam double latitude,
-                                                                       @RequestParam double longitude,
-                                                                       @RequestParam double radiusKm) {
-        return ResponseEntity.ok(roomService.getSubscribedRoomsNearby(latitude, longitude, radiusKm));
-    }
-
-    @GetMapping("/subscribed/location")
-    public ResponseEntity<List<RoomResponse>> getSubscribedRoomsByLocation(@RequestParam String city,
-                                                                           @RequestParam String district,
-                                                                           @RequestParam String ward) {
-        return ResponseEntity.ok(roomService.getSubscribedRoomsByLocation(city, district, ward));
-    }
-
     @PostMapping
     public ResponseEntity<String> createRoom(@RequestBody CreateRoomRequest createRoomRequest) {
         String landlordId = this.getUserInfo().getId();

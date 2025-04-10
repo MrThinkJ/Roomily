@@ -14,5 +14,5 @@ public class CreatePaymentLinkRequest {
 //    @Min(value = 0, message = "Price must be a positive number")
     private boolean isInAppWallet;
     private String rentedRoomId;
-    private int price;
+    private int amount;
 }

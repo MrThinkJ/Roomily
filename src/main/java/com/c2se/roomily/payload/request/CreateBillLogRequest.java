@@ -16,4 +16,5 @@ public class CreateBillLogRequest {
     private LocalDate toDate;
     private BigDecimal rentalCost;
     private String rentedRoomId;
+    private LocalDate lateDate;
 }

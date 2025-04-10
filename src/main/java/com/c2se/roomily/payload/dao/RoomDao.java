@@ -34,5 +34,4 @@ public class RoomDao {
     private Double latitude;
     private Double longitude;
     private String landlordId;
-    private boolean isSubscribed;
 }

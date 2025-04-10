@@ -50,7 +50,7 @@ public class Room {
     @Column(name = "room_type")
     @Enumerated(EnumType.STRING)
     private RoomType type;
-    @Column(name = "nearby_amenities")
+    @Column(name = "nearby_amenities", columnDefinition = "TEXT")
     private String nearbyAmenities;
     private Integer maxPeople;
     private BigDecimal rentalDeposit;
