@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/transactions")
@@ -27,6 +29,11 @@ public class TransactionController {
     @GetMapping("/{id}")
     public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable String id) {
         return ResponseEntity.ok(transactionService.getTransactionById(id));
+    }
+
+    @GetMapping("/topup/{rentedRoomId}")
+    public ResponseEntity<List<TransactionResponse>> getTransactionTopUpToRentedRoomWallet(@PathVariable String rentedRoomId) {
+        return ResponseEntity.ok(transactionService.getTransactionTopUpToRentedRoomWallet(rentedRoomId));
     }
 
     @DeleteMapping("/{id}")

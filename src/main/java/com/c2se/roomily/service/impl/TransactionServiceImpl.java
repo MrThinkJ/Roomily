@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +43,13 @@ public class TransactionServiceImpl implements TransactionService {
         return mapToResponse(transactionRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Transaction", "id", id)
         ));
+    }
+
+    @Override
+    public List<TransactionResponse> getTransactionTopUpToRentedRoomWallet(String rentedRoomId) {
+        List<Transaction> transactions = transactionRepository.findByMetadataAndType(
+                rentedRoomId, TransactionType.RENT_PAYMENT);
+        return transactions.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     @Override

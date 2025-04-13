@@ -14,13 +14,14 @@ import java.util.Map;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/payments")
-public class PaymentController {
+public class PaymentController extends BaseController{
     PaymentProcessingService paymentProcessingService;
 
     @PostMapping("/create")
     public ResponseEntity<CheckoutResponse> createPaymentLink(@RequestBody CreatePaymentLinkRequest
                                                                       createPaymentLinkRequest) {
-        return ResponseEntity.ok(paymentProcessingService.createPaymentLink(createPaymentLinkRequest));
+        String userId = this.getUserInfo().getId();
+        return ResponseEntity.ok(paymentProcessingService.createPaymentLink(createPaymentLinkRequest, userId));
     }
 
     @GetMapping("/{id}")

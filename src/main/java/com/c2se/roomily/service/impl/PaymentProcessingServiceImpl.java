@@ -13,12 +13,14 @@ import com.c2se.roomily.payload.response.CheckoutResponse;
 import com.c2se.roomily.payload.response.PaymentLinkResponse;
 import com.c2se.roomily.repository.CheckoutInfoRepository;
 import com.c2se.roomily.repository.TransactionRepository;
+import com.c2se.roomily.security.CustomUserDetails;
 import com.c2se.roomily.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.payos.PayOS;
@@ -46,7 +48,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest) {
+    public CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest, String userId) {
         log.info("Creating payment link for amount: {}", paymentLinkRequest.getAmount());
         try {
             final String productName = paymentLinkRequest.getProductName();
@@ -65,7 +67,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                     .item(item).returnUrl(returnUrl).cancelUrl(cancelUrl).build();
 
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-            User user = userService.getCurrentUser();
+            User user = userService.getUserEntity(userId);
             if (isInAppWallet) {
                 return createPaymentLinkForInAppWallet(data, user);
             } else {
@@ -196,6 +198,9 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
 
     @Override
     public void mockTopUpToRoomWallet(String rentedRoomId, double amount) {
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = userDetails.getId();
+        User user = userService.getUserEntity(userId);
         RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
         Room room = rentedRoom.getRoom();
 
@@ -216,6 +221,17 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } else{
             rentedRoomService.saveRentedRoom(rentedRoom);
         }
+        Transaction transaction = Transaction.builder()
+                .amount(BigDecimal.valueOf(amount))
+                .status(TransactionStatus.COMPLETED)
+                .type(TransactionType.RENT_PAYMENT)
+                .user(user)
+                .paymentId(null)
+                .metadata(rentedRoom.getId())
+                .updatedAt(LocalDateTime.now())
+                .checkoutResponseId(null)
+                .build();
+        transactionRepository.save(transaction);
     }
 
     private CheckoutResponse createPaymentLinkForInAppWallet(CheckoutResponseData data, User user) {
@@ -347,6 +363,12 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             rentedRoom.getStatus() != RentedRoomStatus.BILL_MISSING) {
             return;
         }
+        // If the wallet balance is not enough to pay the debt, return
+        if (rentedRoom.getRentedRoomWallet().compareTo(rentedRoom.getWalletDebt()) < 0) {
+            log.error("Not enough wallet balance to pay the debt for rented room: {}", rentedRoom.getId());
+            rentedRoomService.saveRentedRoom(rentedRoom);
+            return;
+        }
         // If the wallet balance is enough to pay the debt (already fill bill), deduct the debt from the wallet
         if (rentedRoom.getStatus() == RentedRoomStatus.DEBT) {
             // Get the active bill log for this rented room
@@ -399,7 +421,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                     .userId(rentedRoom.getLandlord().getId())
                     .build();
             notificationService.sendNotification(landlordNotification);
-        } else if (rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING){
+        } else {
             // For BILL_MISSING status, the bill log still needs to be filled
             // Just deduct the rental cost from the wallet
             rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getWalletDebt()));

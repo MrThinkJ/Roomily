@@ -20,7 +20,6 @@ public class LandlordStatistics {
     @Id
     @Column(name = "landlord_id")
     private String landlordId;
-    
     private Double responseRate;
     private Long totalChatRooms;
     private Long respondedChatRooms;

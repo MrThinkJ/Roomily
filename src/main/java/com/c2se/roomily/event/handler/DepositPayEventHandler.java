@@ -7,15 +7,13 @@ import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.ChatRoomStatus;
 import com.c2se.roomily.enums.RentedRoomStatus;
 import com.c2se.roomily.event.pojo.DepositPayEvent;
+import com.c2se.roomily.event.pojo.SendPaymentLinkEvent;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.request.CreatePaymentLinkRequest;
 import com.c2se.roomily.payload.response.CheckoutResponse;
 import com.c2se.roomily.repository.RentedRoomRepository;
-import com.c2se.roomily.service.ChatMessageService;
-import com.c2se.roomily.service.ChatRoomService;
-import com.c2se.roomily.service.NotificationService;
-import com.c2se.roomily.service.PaymentProcessingService;
+import com.c2se.roomily.service.*;
 import com.c2se.roomily.util.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +42,7 @@ public class DepositPayEventHandler {
     private final NotificationService notificationService;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final TaskScheduler taskScheduler;
+    private final EventService eventService;
     @EventListener
     @Async
     @Transactional
@@ -52,7 +51,12 @@ public class DepositPayEventHandler {
         ChatRoom chatRoom = event.getChatRoom();
         String requesterId = event.getRequesterId();
         String taskId = "deposit-pay-" + rentedRoom.getId();
-        sendDepositPaymentLink(rentedRoom, chatRoom, requesterId);
+        sendSystemMessage(rentedRoom, chatRoom, requesterId);
+        eventService.publishEvent(SendPaymentLinkEvent.builder(this)
+                                          .rentedRoomId(rentedRoom.getId())
+                                          .chatRoomId(chatRoom.getId())
+                                          .requesterId(requesterId)
+                                          .build());
         log.info("Processing deposit pay event for rented room ID: {}", rentedRoom.getId());
         publishTask(rentedRoom.getId());
     }
@@ -86,27 +90,18 @@ public class DepositPayEventHandler {
         }
     }
 
-    private void sendDepositPaymentLink(RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId) {
-        CreatePaymentLinkRequest createPaymentLinkRequest = CreatePaymentLinkRequest.builder()
-                .amount(rentedRoom.getRoom().getRentalDeposit().intValue())
-                .description("deposit")
-                .productName("deposit")
-                .isInAppWallet(true)
-                .rentedRoomId(rentedRoom.getId())
-                .build();
-        CheckoutResponse checkoutResponse = paymentProcessingService.createPaymentLink(createPaymentLinkRequest);
+    private void sendSystemMessage(RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId){
         ChatMessage chatMessage = ChatMessage.builder()
                 .message("Yêu cầu thuê phòng đã được chấp nhận, vui lòng thanh toán tiền cọc trong 12 giờ, " +
                                  "để hoàn tất quá trình thuê phòng, chậm chân là mất ngay nhé")
                 .chatRoom(chatRoom)
                 .subId(chatRoom.getNextSubId() + 1)
-                .metadata(checkoutResponse.getId())
                 .build();
         chatMessageService.saveSystemMessage(chatMessage, chatRoom);
         chatRoom.setStatus(ChatRoomStatus.COMPLETED);
         chatRoom.setLastMessage(chatMessage.getMessage());
         chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
-        chatRoom.setNextSubId(chatRoom.getNextSubId() + 2);
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
         chatRoom.setRentedRoomId(rentedRoom.getId());
         chatRoomService.saveChatRoom(chatRoom);
         simpMessagingTemplate.convertAndSendToUser(requesterId, "/queue/chat-room",

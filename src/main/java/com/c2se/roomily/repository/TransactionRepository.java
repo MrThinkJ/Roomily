@@ -9,6 +9,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, String> {
     @NotNull
@@ -19,6 +21,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
     Page<Transaction> findByStatus(TransactionStatus status, Pageable pageable);
 
     Page<Transaction> findByTypeAndStatus(TransactionType type, TransactionStatus status, Pageable pageable);
+
+    List<Transaction> findByMetadataAndType(String metadata, TransactionType type);
 
     Transaction findByPaymentId(String paymentId);
 } 

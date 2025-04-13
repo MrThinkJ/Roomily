@@ -65,7 +65,7 @@ public class ContractGenerationServiceImpl implements ContractGenerationService 
         try {
             byte[] roomContract = contractStorageService.getRoomContract(rentedRoom.getRoom().getId());
             if (roomContract == null) {
-                throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room contract not found");
+                generateRoomContract(rentedRoom.getRoom());
             }
             Document document = Jsoup.parse(new String(roomContract));
             contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());

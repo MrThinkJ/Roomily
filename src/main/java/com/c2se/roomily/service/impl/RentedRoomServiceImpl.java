@@ -111,6 +111,9 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .requesterId(userId)
                 .recipientId(room.getLandlord().getId())
                 .status(RequestStatus.PENDING)
+                .roomId(room.getId())
+                .findPartnerPostId(createRentedRoomRequest.getFindPartnerPostId())
+                .chatRoomId(chatRoom.getId())
                 .build();
         RentalRequest savedRequest = requestCacheService.saveRequest(rentalRequest);
         chatRoom.setRequestId(savedRequest.getId());
@@ -166,7 +169,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the recipient");
 
         User user = userService.getUserEntity(rentalRequest.getRequesterId());
-        Room room = roomService.getRoomEntityById(chatRoom.getRoomId());
+        Room room = roomService.getRoomEntityById(rentalRequest.getRoomId());
 
         if (room.getStatus() != RoomStatus.AVAILABLE)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "This room is not available");
@@ -185,7 +188,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                 .walletDebt(BigDecimal.ZERO)
                 .build();
 
-        String findPartnerPostId = chatRoom.getFindPartnerPostId();
+        String findPartnerPostId = rentalRequest.getFindPartnerPostId();
         // If this is a rented group, remove the find partner post and update the rented group
         if (findPartnerPostId != null) {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
@@ -199,7 +202,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         RentedRoom savedRentedRoom = rentedRoomRepository.save(rentedRoom);
         contractGenerationService.generateRentContract(savedRentedRoom);
 
-        handleRentalDepositPayment(savedRentedRoom, chatRoom, rentalRequest.getRequesterId());
+        handleRentalDepositPayment(savedRentedRoom, chatRoom, user.getId());
         requestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
@@ -210,8 +213,8 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         RentalRequest rentalRequest = requestCacheService.getRequest(chatRoom.getRequestId()).orElse(null);
         if (rentalRequest == null)
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
-        String findPartnerPostId = chatRoom.getFindPartnerPostId();
-        Room room = roomService.getRoomEntityById(chatRoom.getRoomId());
+        String findPartnerPostId = rentalRequest.getFindPartnerPostId();
+        Room room = roomService.getRoomEntityById(rentalRequest.getRoomId());
         if (!landlordId.equals(room.getLandlord().getId()))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the landlord");
         chatRoomService.updateChatRoomStatus(chatRoom.getId(), ChatRoomStatus.CANCELED);
@@ -451,7 +454,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     public void mockPublishRoomExpireEvent(String rentedRoomId) {
         RentedRoom rentedRoom = rentedRoomRepository.findById(rentedRoomId)
                 .orElseThrow(() -> new ResourceNotFoundException("RentedRoom", "id", rentedRoomId));
-        eventService.publishEvent(RoomExpireEvent.builder()
+        eventService.publishEvent(RoomExpireEvent.builder(this)
                                           .rentedRoomId(rentedRoom.getId())
                                           .roomId(rentedRoom.getRoom().getId())
                                           .landlordId(rentedRoom.getLandlord().getId())
@@ -463,7 +466,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     public void mockPublishDebtDateExpireEvent(String rentedRoomId) {
         RentedRoom rentedRoom = rentedRoomRepository.findById(rentedRoomId)
                 .orElseThrow(() -> new ResourceNotFoundException("RentedRoom", "id", rentedRoomId));
-        eventService.publishEvent(DebtDateExpireEvent.builder()
+        eventService.publishEvent(DebtDateExpireEvent.builder(this)
                                           .rentedRoomId(rentedRoom.getId())
                                           .roomId(rentedRoom.getRoom().getId())
                                           .landlordId(rentedRoom.getLandlord().getId())
@@ -480,7 +483,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Transactional(rollbackFor = Exception.class)
     public void scheduleEndDate() {
         List<RentedRoom> rooms = rentedRoomRepository.findByEndDate(LocalDate.now());
-        rooms.forEach(rentedRoom -> eventService.publishEvent(RoomExpireEvent.builder()
+        rooms.forEach(rentedRoom -> eventService.publishEvent(RoomExpireEvent.builder(this)
                                                                       .rentedRoomId(rentedRoom.getId())
                                                                       .roomId(rentedRoom.getRoom().getId())
                                                                       .landlordId(rentedRoom.getLandlord().getId())
@@ -492,7 +495,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Transactional(rollbackFor = Exception.class)
     public void scheduleDebtDate() {
         List<RentedRoom> rooms = rentedRoomRepository.findByDebtDate(LocalDate.now());
-        rooms.forEach(rentedRoom -> eventService.publishEvent(DebtDateExpireEvent.builder()
+        rooms.forEach(rentedRoom -> eventService.publishEvent(DebtDateExpireEvent.builder(this)
                                                                       .rentedRoomId(rentedRoom.getId())
                                                                       .roomId(rentedRoom.getRoom().getId())
                                                                       .landlordId(rentedRoom.getLandlord().getId())
@@ -502,7 +505,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
 
     private void handleRentalDepositPayment(RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId) {
         if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID) {
-            eventService.publishEvent(DepositPayEvent.builder()
+            eventService.publishEvent(DepositPayEvent.builder(this)
                                               .rentedRoom(rentedRoom)
                                               .chatRoom(chatRoom)
                                               .requesterId(requesterId)

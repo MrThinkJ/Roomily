@@ -3,11 +3,15 @@ package com.c2se.roomily.service;
 import com.c2se.roomily.payload.response.TransactionPageResponse;
 import com.c2se.roomily.payload.response.TransactionResponse;
 
+import java.util.List;
+
 public interface TransactionService {
     TransactionPageResponse getAllTransactions(int page, int size,
                                                String sortBy, String sortDir);
 
     TransactionResponse getTransactionById(String id);
+
+    List<TransactionResponse> getTransactionTopUpToRentedRoomWallet(String rentedRoomId);
 
     void deleteTransaction(String id);
 

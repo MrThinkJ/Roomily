@@ -16,7 +16,9 @@ public class RentalRequest {
     private String id;
     private String requesterId;
     private String recipientId;
+    private String roomId;
     private String findPartnerPostId;
+    private String chatRoomId;
     private RequestStatus status;
     private String expiresAt;
 }

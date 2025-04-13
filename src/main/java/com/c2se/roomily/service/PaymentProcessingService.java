@@ -6,7 +6,7 @@ import com.c2se.roomily.payload.response.PaymentLinkResponse;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public interface PaymentProcessingService {
-    CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest);
+    CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest, String userId);
     PaymentLinkResponse getPaymentLinkData(long paymentLinkId);
     CheckoutResponse getPaymentLinkCheckoutData(String checkoutId);
     PaymentLinkResponse cancelPaymentLink(long paymentLinkId);

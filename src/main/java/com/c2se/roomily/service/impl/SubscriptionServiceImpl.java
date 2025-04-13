@@ -332,7 +332,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .findByEndDateBetweenAndAutoRenewIsTrue(startOfDay, endOfDay);
 
         todayRenewals.forEach(subscription ->
-                                      eventService.publishEvent(SubscriptionRenewalEvent.builder()
+                                      eventService.publishEvent(SubscriptionRenewalEvent.builder(this)
                                                                         .renewalTime(subscription.getEndDate())
                                                                         .subscriptionId(subscription.getId())
                                                                         .build())
