@@ -15,10 +15,16 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
     public static final String EXCHANGE_NAME = "roomily-exchange";
+    public static final String ADS_EXCHANGE_NAME = "ads-exchange";
     public static final String ROOM_QUEUE = "room-queue";
     public static final String EVENT_QUEUE = "event-queue";
+    public static final String AD_CLICK_QUEUE = "ad-click-queue";
     public static final String ROOM_ROUTING_KEY = "room-key";
     public static final String EVENT_ROUTING_KEY = "event-key";
+    public static final String AD_CLICK_ROUTING_KEY = "ad-click-key";
+    public static final String AD_CONVERSION_QUEUE = "ad-conversion-queue";
+    public static final String AD_CONVERSION_ROUTING_KEY = "ad-conversion-key";
+    
     @Value("${rabbitmq.username}")
     private String username;
     @Value("${rabbitmq.password}")
@@ -47,10 +53,25 @@ public class RabbitMQConfig {
     Queue eventQueue() {
         return new Queue(EVENT_QUEUE, false);
     }
+    
+    @Bean
+    Queue adClickQueue() {
+        return new Queue(AD_CLICK_QUEUE, false);
+    }
+
+    @Bean
+    Queue adConversionQueue() {
+        return new Queue(AD_CONVERSION_QUEUE, false);
+    }
 
     @Bean
     TopicExchange exchange() {
         return new TopicExchange(EXCHANGE_NAME);
+    }
+    
+    @Bean
+    TopicExchange adsExchange() {
+        return new TopicExchange(ADS_EXCHANGE_NAME);
     }
 
     @Bean
@@ -61,6 +82,16 @@ public class RabbitMQConfig {
     @Bean
     Binding binding2(Queue eventQueue, TopicExchange exchange) {
         return BindingBuilder.bind(eventQueue).to(exchange).with(EVENT_ROUTING_KEY);
+    }
+    
+    @Bean
+    Binding adClickBinding(Queue adClickQueue, TopicExchange adsExchange) {
+        return BindingBuilder.bind(adClickQueue).to(adsExchange).with(AD_CLICK_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding adConversionBinding(Queue adConversionQueue, TopicExchange adsExchange) {
+        return BindingBuilder.bind(adConversionQueue).to(adsExchange).with(AD_CONVERSION_ROUTING_KEY);
     }
 
     @Bean

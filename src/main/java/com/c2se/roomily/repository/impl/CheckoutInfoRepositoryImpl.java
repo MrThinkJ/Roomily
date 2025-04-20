@@ -15,7 +15,7 @@ import java.util.UUID;
 @Repository
 @RequiredArgsConstructor
 public class CheckoutInfoRepositoryImpl implements CheckoutInfoRepository{
-    private static final int REQUEST_TTL = 60*24;
+    private static final int REQUEST_TTL = 60*12;
     private static final String REQUEST_KEY_PREFIX = "checkout:";
     private final RedisTemplate<String, Object> redisTemplate;
 

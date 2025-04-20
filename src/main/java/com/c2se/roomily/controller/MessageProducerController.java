@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageProducerController {
     private final MessageProducerService messageProducerService;
 
-    @PostMapping
-    public void sendMessage(@RequestBody String message) {
-        messageProducerService.sendMessage(message);
-    }
+//    @PostMapping
+//    public void sendMessage(@RequestBody String message) {
+//        messageProducerService.sendMessage(message);
+//    }
 }

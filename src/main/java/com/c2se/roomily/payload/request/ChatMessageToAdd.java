@@ -11,4 +11,6 @@ public class ChatMessageToAdd {
     private String senderId;
     private String chatRoomId;
     private MultipartFile image;
+    private Boolean isAdConversion;
+    private String adClickId;
 }

@@ -133,7 +133,10 @@ public class BanServiceImpl implements BanService {
     
     private void scheduleUnban(String banId, String userId, LocalDateTime expiryTime) {
         Runnable unbanTask = () -> processUnban(banId, userId);
-        taskScheduler.schedule(unbanTask, expiryTime.atZone(ZoneId.systemDefault()).toInstant());
+        taskScheduler.schedule(unbanTask, expiryTime.atZone(ZoneId.of("Asia/Saigon")).toInstant());
+        log.info("ZoneId: {}", ZoneId.systemDefault());
+        log.info("expiryTime.atZone(ZoneId.systemDefault()).toInstant(): " + expiryTime.atZone(ZoneId.systemDefault()).toInstant());
+        log.info("Scheduled unban for user ID: {} at {}", userId, expiryTime);
     }
     
     @Transactional(rollbackFor = Exception.class)

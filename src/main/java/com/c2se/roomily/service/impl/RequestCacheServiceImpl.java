@@ -35,14 +35,16 @@ public class RequestCacheServiceImpl implements RequestCacheService {
         
         // Add to requester index
         if (request.getRequesterId() != null) {
-            redisTemplate.opsForSet().add(REQUESTER_INDEX_PREFIX + request.getRequesterId(), requestId);
+            redisTemplate.opsForSet().add(REQUESTER_INDEX_PREFIX + request.getRequesterId(),
+                                            requestId);
             redisTemplate.expire(REQUESTER_INDEX_PREFIX + request.getRequesterId(), REQUEST_TTL, TimeUnit.MINUTES);
         }
         
         // Add to recipient index
         if (request.getRecipientId() != null) {
-            redisTemplate.opsForSet().add(RECIPIENT_INDEX_PREFIX + request.getRecipientId(), requestId);
-            redisTemplate.expire(RECIPIENT_INDEX_PREFIX + request.getRecipientId(), REQUEST_TTL, TimeUnit.MINUTES);
+            redisTemplate.opsForSet().add(RECIPIENT_INDEX_PREFIX + request.getRecipientId(),
+                                            requestId);
+            redisTemplate.expire(REQUESTER_INDEX_PREFIX + request.getRecipientId(), REQUEST_TTL, TimeUnit.MINUTES);
         }
         
         return request;
@@ -50,8 +52,7 @@ public class RequestCacheServiceImpl implements RequestCacheService {
 
     @Override
     public Optional<RentalRequest> getRequest(String requestId) {
-        Object value = redisTemplate.opsForValue()
-                .get(REQUEST_KEY_PREFIX + requestId);
+        Object value = redisTemplate.opsForValue().get(REQUEST_KEY_PREFIX + requestId);
         if (value == null) {
             return Optional.empty();
         }
@@ -68,11 +69,11 @@ public class RequestCacheServiceImpl implements RequestCacheService {
             
             // Remove from indices
             if (request.getRequesterId() != null) {
-                redisTemplate.opsForSet().remove(REQUESTER_INDEX_PREFIX + request.getRequesterId(), requestId);
+                redisTemplate.delete(REQUESTER_INDEX_PREFIX + request.getRequesterId());
             }
             
             if (request.getRecipientId() != null) {
-                redisTemplate.opsForSet().remove(RECIPIENT_INDEX_PREFIX + request.getRecipientId(), requestId);
+                redisTemplate.delete(RECIPIENT_INDEX_PREFIX + request.getRecipientId());
             }
         }
         

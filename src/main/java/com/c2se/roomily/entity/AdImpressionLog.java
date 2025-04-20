@@ -7,24 +7,22 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "subscriptions")
+@Table(name = "ad_impression_logs")
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class Subscription {
+public class AdImpressionLog {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "subscription_id")
+    @Column(name = "ad_impression_log_id")
     private String id;
-    private BigDecimal price;
-    private String name;
-    private String description;
-    private int duration;
-    @Column(name = "details")
-    private String details;
-    @Column(name = "credits")
-    private Integer credits;
+    private String campaignId;
+    private String promotedRoomId;
+    private String userId;
+    private LocalDateTime timestamp;
+    private Boolean isProcessed = false;
 }

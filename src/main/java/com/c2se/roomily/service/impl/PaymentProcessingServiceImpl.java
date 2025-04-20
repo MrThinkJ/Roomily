@@ -341,7 +341,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             return;
         roomService.updateRoomStatus(rentedRoom.getRoom().getId(), RoomStatus.RENTED.name());
         rentedRoom.setStatus(RentedRoomStatus.IN_USE);
-        rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getRentalDeposit()));
+        rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(room.getRentalDeposit()));
         rentedRoom.setRentalDeposit(room.getRentalDeposit());
         rentedRoomService.deleteRentedRoomNotPaidDepositByRoomId(rentedRoom.getRoom().getId());
         CreateRentedRoomActivityRequest depositPaidActivity = CreateRentedRoomActivityRequest.builder()

@@ -1,21 +1,23 @@
 package com.c2se.roomily.service.impl;
 
+import com.c2se.roomily.config.RabbitMQConfig;
 import com.c2se.roomily.config.StorageConfig;
+import com.c2se.roomily.entity.AdClickLog;
 import com.c2se.roomily.entity.ChatMessage;
 import com.c2se.roomily.entity.ChatRoom;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.ErrorCode;
+import com.c2se.roomily.event.pojo.AdConversionRecordEvent;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.ChatMessageToAdd;
 import com.c2se.roomily.payload.response.ChatMessageResponse;
 import com.c2se.roomily.repository.ChatMessageRepository;
 import com.c2se.roomily.repository.ChatRoomRepository;
-import com.c2se.roomily.service.ChatMessageService;
-import com.c2se.roomily.service.ChatRoomService;
-import com.c2se.roomily.service.StorageService;
-import com.c2se.roomily.service.UserService;
+import com.c2se.roomily.service.*;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -25,15 +27,17 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ChatMessageServiceImpl implements ChatMessageService {
-    ChatMessageRepository chatMessageRepository;
-    UserService userService;
-    ChatRoomRepository chatRoomRepository;
-    ChatRoomService chatRoomService;
-    StorageService storageService;
-    StorageConfig storageConfig;
-    SimpMessagingTemplate messagingTemplate;
+    private final UserService userService;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatRoomService chatRoomService;
+    private final StorageService storageService;
+    private final StorageConfig storageConfig;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final RabbitTemplate rabbitTemplate;
+    private final AdsService adsService;
 
     @Override
     public ChatMessageResponse saveChatMessage(ChatMessageToAdd chatMessageToAdd) {
@@ -44,6 +48,19 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatRoom chatRoom = chatRoomRepository.findByIdLocked(chatRoomId).orElseThrow(
                 () -> new ResourceNotFoundException("Chat room", "id", chatRoomId)
         );
+        String campaignId = null;
+        if (chatMessageToAdd.getIsAdConversion()){
+            AdClickLog adClickLog = adsService.getAdClickLogById(chatMessageToAdd.getAdClickId());
+            if (adClickLog == null) {
+                throw new ResourceNotFoundException("Ad click log", "id", chatMessageToAdd.getAdClickId());
+            }
+            campaignId = adClickLog.getCampaignId();
+            rabbitTemplate.convertAndSend(RabbitMQConfig.AD_CLICK_ROUTING_KEY,
+                                          RabbitMQConfig.ADS_EXCHANGE_NAME,
+                                          AdConversionRecordEvent.builder()
+                                                  .adClickId(chatMessageToAdd.getAdClickId())
+                                                  .build());
+        }
         ChatMessage chatMessage = ChatMessage.builder()
                 .sender(sender)
                 .imageUrl(null)
@@ -51,12 +68,17 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .chatRoom(chatRoom)
                 .subId(chatRoom.getNextSubId() + 1)
                 .roleName(sender.getRoles().stream().toList().get(0).getName())
+                .adClickId(chatMessageToAdd.getAdClickId())
+                .isRead(false)
+                .adCampaignId(campaignId)
+                .adClickId(chatMessageToAdd.getAdClickId())
+                .isAdConversion(chatMessageToAdd.getIsAdConversion())
                 .build();
         if (chatMessageToAdd.getImage() != null) {
             String fileName = chatRoomId + "_" + UUID.randomUUID();
             try {
                 storageService.putObject(chatMessageToAdd.getImage(), storageConfig.getBucketStore(), fileName);
-                chatMessage.setImageUrl(storageService.generatePresignedUrl(storageConfig.getBucketStore(), fileName));
+                chatMessage.setImageUrl(fileName);
             } catch (Exception e) {
                 throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
                                        "Error while saving image");
@@ -93,13 +115,21 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     private ChatMessageResponse mapToResponse(ChatMessage chatMessage) {
+        String url;
+        try{
+            url = chatMessage.getImageUrl() == null ? null :
+                    storageService.generatePresignedUrl(storageConfig.getBucketStore(), chatMessage.getImageUrl());
+        } catch (Exception e) {
+            throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.FLEXIBLE_ERROR,
+                                   "Error while generating presigned url");
+        }
         return ChatMessageResponse.builder()
                 .id(chatMessage.getId())
                 .senderId(chatMessage.getSender() == null ? null : chatMessage.getSender().getId())
                 .message(chatMessage.getMessage())
                 .createdAt(chatMessage.getCreatedAt())
                 .isRead(chatMessage.isRead())
-                .imageUrl(chatMessage.getImageUrl())
+                .imageUrl(url)
                 .chatRoomId(chatMessage.getChatRoom().getId())
                 .subId(chatMessage.getSubId())
                 .metadata(chatMessage.getMetadata())

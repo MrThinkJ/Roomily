@@ -295,7 +295,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         // Remove this user from group chat room if exist
         ChatRoom chatRoom = chatRoomService.getChatRoomByRentedRoomId(rentedRoomId);
         if (chatRoom != null) {
-            chatRoomService.removeUserFromGroupChatRoom(rentedRoom.getUser().getId(), chatRoom.getId(), userId);
+            chatRoomService.removeUserFromGroupChatRoom(chatRoom.getManagerId(), chatRoom.getId(), userId);
         }
     }
 

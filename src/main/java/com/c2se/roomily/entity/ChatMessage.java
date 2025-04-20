@@ -32,6 +32,9 @@ public class ChatMessage {
     @Column(name = "image_url")
     private String imageUrl;
     private String roleName;
+    private boolean isAdConversion = false;
+    private String adClickId;
+    private String adCampaignId;
     @ManyToOne
     @JoinColumn(name = "sender_id")
     private User sender;

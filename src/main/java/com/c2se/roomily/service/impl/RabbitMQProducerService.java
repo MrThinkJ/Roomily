@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 public class RabbitMQProducerService implements MessageProducerService {
     private final RabbitTemplate rabbitTemplate;
     @Override
-    public void sendMessage(String message) {
-//        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY, message);
+    public void sendMessage(String message, String exchangeName, String routingKey) {
+        rabbitTemplate.convertAndSend(exchangeName, routingKey, message);
         log.info("Message sent: " + message);
     }
 }

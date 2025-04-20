@@ -108,6 +108,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .updatedAt(transaction.getUpdatedAt())
                 .userId(transaction.getUser().getId())
                 .userName(transaction.getUser().getUsername())
+                .checkoutResponseId(transaction.getCheckoutResponseId())
                 .build();
     }
 

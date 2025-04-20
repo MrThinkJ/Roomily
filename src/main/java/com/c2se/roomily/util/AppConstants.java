@@ -1,5 +1,6 @@
 package com.c2se.roomily.util;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ public class AppConstants {
     public static final Integer DEBT_DATE_THRESHOLD = 7;
     public static final Double MIN_WEIGHT = 0.7;
     public static final String CONTRACT_TEMPLATE_PATH = "/contract.html";
-    public static final Integer DEPOSIT_PAYMENT_TIMEOUT = 24*60;
+    public static final Integer DEPOSIT_PAYMENT_TIMEOUT = 12*60;
     public static final Integer DEFAULT_BAN_DURATION = 365;
     public static final List<String> DEFAULT_RESPONSIBILITIES_A = List.of(
             "- Tạo mọi điều kiện thuận lợi để bên B thực hiện theo hợp đồng.",
@@ -39,4 +40,7 @@ public class AppConstants {
             "CHAT", 0.7,
             "RENT", 1.0
     );
+
+    public static final BigDecimal MINIMUM_BID_PRICE = BigDecimal.valueOf(50);
+    public static final BigDecimal MAXIMUM_BID_PRICE = BigDecimal.valueOf(1000000);
 }

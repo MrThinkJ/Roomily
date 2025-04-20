@@ -19,4 +19,5 @@ public class TransactionResponse {
     private LocalDateTime updatedAt;
     private String userId;
     private String userName;
+    private String checkoutResponseId;
 }
