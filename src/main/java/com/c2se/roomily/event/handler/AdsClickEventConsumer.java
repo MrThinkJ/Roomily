@@ -5,10 +5,9 @@ import com.c2se.roomily.entity.AdCampaign;
 import com.c2se.roomily.entity.CampaignStatistic;
 import com.c2se.roomily.entity.PromotedRoom;
 import com.c2se.roomily.enums.AdCampaignStatus;
-import com.c2se.roomily.enums.PromotedRoomStatus;
 import com.c2se.roomily.event.pojo.AdClickEvent;
 import com.c2se.roomily.exception.ResourceNotFoundException;
-import com.c2se.roomily.repository.AdCampaignRepository;
+import com.c2se.roomily.repository.AdsCampaignRepository;
 import com.c2se.roomily.repository.CampaignStatisticRepository;
 import com.c2se.roomily.repository.PromotedRoomRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,20 +16,15 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class AdClickEventConsumer {
-    private final AdCampaignRepository adCampaignRepository;
+public class AdsClickEventConsumer {
+    private final AdsCampaignRepository adsCampaignRepository;
     private final PromotedRoomRepository promotedRoomRepository;
     private final CampaignStatisticRepository campaignStatisticRepository;
 
-    @RabbitListener(queues = RabbitMQConfig.AD_CLICK_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.ADS_CLICK_QUEUE)
     @Transactional
     public void processAdClickEvent(AdClickEvent event) {
         log.info("Processing ad click event: {}", event);
@@ -47,6 +41,8 @@ public class AdClickEventConsumer {
                                                                     "Campaign Id",
                                                                     campaign.getId()));
             statistic.setClicks(statistic.getClicks() + 1);
+            promotedRoom.setClickCount(promotedRoom.getClickCount() + 1);
+            promotedRoomRepository.save(promotedRoom);
             log.info("Successfully processed click for campaign {}, room {}", 
                     campaign.getId(), promotedRoom.getRoom().getId());
         } catch (Exception e) {

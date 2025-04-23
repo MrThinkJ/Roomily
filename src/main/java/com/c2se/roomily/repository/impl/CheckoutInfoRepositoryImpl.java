@@ -20,8 +20,7 @@ public class CheckoutInfoRepositoryImpl implements CheckoutInfoRepository{
     private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
-    public CheckoutResponse save(CheckoutResponse checkoutResponse) {
-        String checkoutId = UtilFunction.hash(UUID.randomUUID().toString());
+    public CheckoutResponse save(String checkoutId, CheckoutResponse checkoutResponse) {
         checkoutResponse.setId(checkoutId);
         checkoutResponse.setExpiresAt(LocalDateTime.now().plusMinutes(REQUEST_TTL).toString());
         redisTemplate.opsForValue().set(

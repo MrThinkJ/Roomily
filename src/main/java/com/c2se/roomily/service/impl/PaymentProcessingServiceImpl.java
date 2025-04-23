@@ -5,6 +5,7 @@ import com.c2se.roomily.entity.Transaction;
 import com.c2se.roomily.enums.*;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.internal.CreateRentDepositPaymentLinkRequest;
 import com.c2se.roomily.payload.internal.PayOsTransactionDto;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.request.CreatePaymentLinkRequest;
@@ -15,11 +16,13 @@ import com.c2se.roomily.repository.CheckoutInfoRepository;
 import com.c2se.roomily.repository.TransactionRepository;
 import com.c2se.roomily.security.CustomUserDetails;
 import com.c2se.roomily.service.*;
+import com.c2se.roomily.util.UtilFunction;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +42,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     private final PayOS payOS;
+    private final ChatMessageService chatMessageService;
+    private final ChatRoomService chatRoomService;
     private final TransactionRepository transactionRepository;
     private final UserService userService;
     private final NotificationService notificationService;
@@ -45,12 +52,50 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     private final RentedRoomActivityService rentedRoomActivityService;
     private final BillLogService billLogService;
     private final RoomService roomService;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    @Override
+    public void createPaymentLink(CreateRentDepositPaymentLinkRequest createRentDepositPaymentLinkRequest, String userId) {
+        log.info("Creating payment link for amount: {}", createRentDepositPaymentLinkRequest.getAmount());
+        try {
+            final String productName = createRentDepositPaymentLinkRequest.getProductName();
+            final String description = createRentDepositPaymentLinkRequest.getDescription();
+            final String returnUrl = "/success";
+            final String cancelUrl = "/cancel";
+            final int price = createRentDepositPaymentLinkRequest.getAmount();
+
+            String currentTimeString = String.valueOf(new Date().getTime());
+            long orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
+
+            ItemData item = ItemData.builder().name(productName).price(price).quantity(1).build();
+
+            PaymentData paymentData = PaymentData.builder().orderCode(orderCode).description(description).amount(price)
+                    .item(item).returnUrl(returnUrl).cancelUrl(cancelUrl).build();
+
+            CheckoutResponseData data = payOS.createPaymentLink(paymentData);
+            User user = userService.getUserEntity(userId);
+            CreatePaymentLinkRequest paymentLinkRequest = CreatePaymentLinkRequest.builder()
+                    .amount(createRentDepositPaymentLinkRequest.getAmount())
+                    .description(createRentDepositPaymentLinkRequest.getDescription())
+                    .productName(createRentDepositPaymentLinkRequest.getProductName())
+                    .rentedRoomId(createRentDepositPaymentLinkRequest.getRentedRoomId())
+                    .build();
+            createPaymentLinkForRentedRoomWallet(data, user, paymentLinkRequest,
+                                                createRentDepositPaymentLinkRequest.getCheckoutId(),
+                                                createRentDepositPaymentLinkRequest.getChatMessageId());
+        } catch (Exception e) {
+            log.error("Payment link creation failed: {}", e.getMessage(), e);
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_PROCESSING_ERROR,
+                                   " .Error: " + e.getMessage());
+        }
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CheckoutResponse createPaymentLink(CreatePaymentLinkRequest paymentLinkRequest, String userId) {
         log.info("Creating payment link for amount: {}", paymentLinkRequest.getAmount());
         try {
+            String checkoutId = UtilFunction.hash(UUID.randomUUID().toString());
             final String productName = paymentLinkRequest.getProductName();
             final String description = paymentLinkRequest.getDescription();
             final boolean isInAppWallet = paymentLinkRequest.isInAppWallet();
@@ -69,9 +114,9 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
             User user = userService.getUserEntity(userId);
             if (isInAppWallet) {
-                return createPaymentLinkForInAppWallet(data, user);
+                return createPaymentLinkForInAppWallet(data, user, checkoutId);
             } else {
-                return createPaymentLinkForRentedRoomWallet(data, user, paymentLinkRequest.getRentedRoomId());
+                return createPaymentLinkForRentedRoomWallet(data, user, paymentLinkRequest, checkoutId, null);
             }
         } catch (Exception e) {
             log.error("Payment link creation failed: {}", e.getMessage(), e);
@@ -214,6 +259,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID) {
             handleDepositPaid(rentedRoom, room);
         }
+
         // Check if the debt needs to be paid
         else if (rentedRoom.getStatus() == RentedRoomStatus.DEBT
                 || rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING) {
@@ -234,9 +280,12 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         transactionRepository.save(transaction);
     }
 
-    private CheckoutResponse createPaymentLinkForInAppWallet(CheckoutResponseData data, User user) {
+    private CheckoutResponse createPaymentLinkForInAppWallet(CheckoutResponseData data,
+                                                             User user,
+                                                             String checkoutId) {
         CheckoutResponse checkoutResponse = buildCheckoutResponse(data);
-        CheckoutResponse savedCheckoutResponse = checkoutInfoRepository.save(checkoutResponse);
+        CheckoutResponse savedCheckoutResponse = checkoutInfoRepository.save(checkoutId,
+                                                                             checkoutResponse);
         Transaction transaction = Transaction.builder()
                 .amount(BigDecimal.valueOf(data.getAmount()))
                 .status(TransactionStatus.PENDING)
@@ -253,11 +302,13 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
 
     private CheckoutResponse createPaymentLinkForRentedRoomWallet(CheckoutResponseData data,
                                                                   User user,
-                                                                  String rentedRoomId) {
+                                                                  CreatePaymentLinkRequest request,
+                                                                  String checkoutId,
+                                                                  String chatMessageId) {
         // Build the checkout response
         CheckoutResponse checkoutResponse = buildCheckoutResponse(data);
-        CheckoutResponse savedCheckoutResponse = checkoutInfoRepository.save(checkoutResponse);
-        RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
+        CheckoutResponse savedCheckoutResponse = checkoutInfoRepository.save(checkoutId, checkoutResponse);
+        RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(request.getRentedRoomId());
         Transaction transaction = Transaction.builder()
                 .amount(BigDecimal.valueOf(data.getAmount()))
                 .status(TransactionStatus.PENDING)
@@ -268,6 +319,9 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 .updatedAt(LocalDateTime.now())
                 .checkoutResponseId(savedCheckoutResponse.getId())
                 .build();
+        if (chatMessageId != null) {
+            transaction.setChatMessageId(chatMessageId);
+        }
         transactionRepository.save(transaction);
         log.info("Successfully created payment link to top up rented room wallet for user: {}", user.getUsername());
         return savedCheckoutResponse;
@@ -318,7 +372,22 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } else{
             rentedRoomService.saveRentedRoom(rentedRoom);
         }
-
+        if (transaction.getChatMessageId() != null) {
+            try{
+                ChatMessage chatMessage = chatMessageService.getChatMessageById(transaction.getChatMessageId());
+                chatMessage.setMessage("Đã trả tiền đặt cọc thành công.");
+                checkoutInfoRepository.delete(transaction.getCheckoutResponseId());
+                chatMessage.setMetadata(null);
+                chatMessageService.saveChatMessageEntity(chatMessage);
+                List<String> users = chatRoomService.getChatRoomUserIds(chatMessage.getChatRoom().getId());
+                users.forEach(user -> messagingTemplate.convertAndSendToUser(user,
+                                                                             "/queue/refresh/"+
+                                                                                     chatMessage.getChatRoom().getId(),
+                                                                             true));
+            } catch (ResourceNotFoundException e) {
+                log.error("Chat message not found for ID: {}", transaction.getChatMessageId());
+            }
+        }
         // Send notification to tenant and rented room
         CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
                 .rentedRoomId(rentedRoomId)

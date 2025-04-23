@@ -17,7 +17,5 @@ import java.math.BigDecimal;
 public class AddRoomRequest {
     @NotBlank(message = "Room ID cannot be empty")
     private String roomId;
-    @NotNull(message = "CPC Bid amount is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "CPC Bid amount must be greater than 0")
     private BigDecimal cpcBid;
 } 

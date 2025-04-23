@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,20 +38,21 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AdsServiceImpl implements AdsService {
     // TODO: Implement redis count instead of store impression log in DB
-    private final AdCampaignRepository adCampaignRepository;
+    // TODO: Implement batch-processing for counting click and impression
+    private final AdsCampaignRepository adsCampaignRepository;
     private final PromotedRoomRepository promotedRoomRepository;
     private final CampaignStatisticRepository campaignStatisticRepository;
     private final UserService userService;
     private final RoomService roomService;
     private final EventService eventService;
+    private final AdsClickDeDupRepository adsClickDeDupRepository;
+    private final AdsClickLogRepository adsClickLogRepository;
+    private final AdsImpressionLogRepository adsImpressionLogRepository;
     private final RabbitTemplate rabbitTemplate;
-    private final AdDeDupRepository adDeDupRepository;
-    private final AdClickLogRepository adClickLogRepository;
-    private final AdImpressionLogRepository adImpressionLogRepository;
 
     @Override
     public AdClickLog getAdClickLogById(String adClickId) {
-        return adClickLogRepository.findById(adClickId)
+        return adsClickLogRepository.findById(adClickId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ad Click Log", "id", adClickId));
     }
 
@@ -124,7 +124,7 @@ public class AdsServiceImpl implements AdsService {
                 .promotedRooms(new ArrayList<>())
                 .campaignStatistics(new ArrayList<>())
                 .build();
-        adCampaignRepository.save(campaign);
+        adsCampaignRepository.save(campaign);
 
         CampaignStatistic campaignStatistic = CampaignStatistic.builder()
                 .adCampaign(campaign)
@@ -215,7 +215,7 @@ public class AdsServiceImpl implements AdsService {
             campaign.setEndDate(request.getEndDate());
         }
         
-        adCampaignRepository.save(campaign);
+        adsCampaignRepository.save(campaign);
     }
 
     @Override
@@ -228,7 +228,7 @@ public class AdsServiceImpl implements AdsService {
                                    "Only active campaigns can be paused");
         }
         campaign.setStatus(AdCampaignStatus.PAUSED);
-        AdCampaign updatedCampaign = adCampaignRepository.save(campaign);
+        AdCampaign updatedCampaign = adsCampaignRepository.save(campaign);
         promotedRoomRepository.updateStatusByCampaignId(PromotedRoomStatus.PAUSED, updatedCampaign.getId());
     }
 
@@ -256,7 +256,7 @@ public class AdsServiceImpl implements AdsService {
             campaign.setStatus(AdCampaignStatus.ACTIVE);
         }
         
-        adCampaignRepository.save(campaign);
+        adsCampaignRepository.save(campaign);
         if (campaign.getStatus() == AdCampaignStatus.ACTIVE) {
             promotedRoomRepository.updateStatusByCampaignId(PromotedRoomStatus.ACTIVE, campaignId);
         }
@@ -270,7 +270,7 @@ public class AdsServiceImpl implements AdsService {
                                    ErrorCode.FLEXIBLE_ERROR,
                                    "Active campaigns cannot be deleted");
         }
-        adCampaignRepository.delete(campaign);
+        adsCampaignRepository.delete(campaign);
     }
 
     @Override
@@ -281,7 +281,7 @@ public class AdsServiceImpl implements AdsService {
 
     @Override
     public List<AdCampaignResponse> getUserCampaigns(String userId) {
-        List<AdCampaign> campaigns = adCampaignRepository.findByUserId(userId);
+        List<AdCampaign> campaigns = adsCampaignRepository.findByUserId(userId);
         return campaigns.stream()
                 .map(this::mapToAdCampaignResponse)
                 .collect(Collectors.toList());
@@ -300,17 +300,14 @@ public class AdsServiceImpl implements AdsService {
         }
 
         if (campaign.getPricingModel() == PricingModel.CPC
-                && request.getCpcBid() == null) {
+                && request.getCpcBid().compareTo(BigDecimal.ZERO) <= 0) {
             throw new APIException(HttpStatus.BAD_REQUEST,
                                    ErrorCode.FLEXIBLE_ERROR,
-                                   "CPC bid must be provided for CPC pricing model");
+                                   "CPC bid must be greater than zero for CPC pricing model");
         }
 
-        if (campaign.getPricingModel() == PricingModel.CPM
-                && request.getCpcBid() != null) {
-            throw new APIException(HttpStatus.BAD_REQUEST,
-                                   ErrorCode.FLEXIBLE_ERROR,
-                                   "CPC bid cannot be provided for CPM pricing model");
+        if (campaign.getPricingModel() == PricingModel.CPM) {
+            request.setCpcBid(BigDecimal.ZERO);
         }
 
         boolean roomAlreadyInCampaign = campaign.getPromotedRooms().stream()
@@ -332,16 +329,6 @@ public class AdsServiceImpl implements AdsService {
                 .cpcBid(request.getCpcBid())
                 .status(status)
                 .build();
-
-        if (status == PromotedRoomStatus.ACTIVE) {
-            PromotedRoom existingPromotedRoom = promotedRoomRepository.findActivePromotedRoomByRoomId(
-                    room.getId(), LocalDateTime.now()).orElse(null);
-            if (existingPromotedRoom != null && existingPromotedRoom.getCpcBid().compareTo(promotedRoom.getCpcBid()) > 0) {
-                existingPromotedRoom.setStatus(PromotedRoomStatus.ACTIVE);
-                promotedRoomRepository.save(existingPromotedRoom);
-                promotedRoom.setStatus(PromotedRoomStatus.PAUSED);
-            }
-        }
 
         promotedRoomRepository.save(promotedRoom);
     }
@@ -390,17 +377,14 @@ public class AdsServiceImpl implements AdsService {
 
     @Override
     public AdClickResponse recordClick(AdClickRequest adClickRequest) {
-        if (!adDeDupRepository.save(adClickRequest)) {
-            AdClickResponse.builder().adClickId(null).status("duplicate").build();
+        if (!adsClickDeDupRepository.save(adClickRequest)) {
+            return AdClickResponse.builder().adClickId(null).status("duplicate").build();
         }
+
         PromotedRoom promotedRoom = promotedRoomRepository.findById(adClickRequest.getPromotedRoomId())
                 .orElseThrow(() -> new ResourceNotFoundException("Promoted Room", "id", adClickRequest.getPromotedRoomId()));
         Room room = promotedRoom.getRoom();
         AdCampaign campaign = promotedRoom.getAdCampaign();
-
-        if (campaign.getPricingModel() == PricingModel.CPM) {
-            return AdClickResponse.builder().adClickId(null).status("error").build();
-        }
 
         if (room.getStatus() != RoomStatus.AVAILABLE) {
             return AdClickResponse.builder().adClickId(null).status("error").build();
@@ -415,12 +399,19 @@ public class AdsServiceImpl implements AdsService {
         AdClickLog adClickLog = AdClickLog.builder()
                 .campaignId(campaign.getId())
                 .promotedRoomId(promotedRoom.getId())
+                .roomId(promotedRoom.getRoom().getId())
                 .userId(adClickRequest.getUserId())
                 .ipAddress(adClickRequest.getIpAddress())
                 .timestamp(LocalDateTime.now())
                 .cost(promotedRoom.getCpcBid())
                 .build();
-        AdClickLog savedAdClickLog = adClickLogRepository.save(adClickLog);
+        AdClickLog savedAdClickLog = adsClickLogRepository.save(adClickLog);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.ADS_EXCHANGE_NAME,
+                                      RabbitMQConfig.ADS_CLICK_ROUTING_KEY,
+                                      AdClickEvent.builder()
+                                              .promotedRoomId(promotedRoom.getId())
+                                              .timestamp(savedAdClickLog.getTimestamp())
+                                              .build());
         return AdClickResponse.builder().adClickId(savedAdClickLog.getId()).status("success").build();
     }
 
@@ -437,21 +428,16 @@ public class AdsServiceImpl implements AdsService {
                                    ErrorCode.FLEXIBLE_ERROR,
                                    "Promoted room is not active");
         }
-        if (cost.compareTo(BigDecimal.ZERO) <= 0){
-            throw new APIException(HttpStatus.BAD_REQUEST,
-                                   ErrorCode.FLEXIBLE_ERROR,
-                                   "Cost must be greater than zero");
-        }
         if (campaign.getSpentAmount().add(cost).compareTo(campaign.getBudget()) > 0) {
             campaign.setStatus(AdCampaignStatus.OUT_OF_BUDGET);
-            adCampaignRepository.save(campaign);
+            adsCampaignRepository.save(campaign);
             throw new APIException(HttpStatus.BAD_REQUEST,
                                    ErrorCode.FLEXIBLE_ERROR,
                                    "Campaign budget exceeded");
         }
         if (user.getBalance().compareTo(cost) < 0) {
             campaign.setStatus(AdCampaignStatus.INSUFFICIENT_FUNDS);
-            adCampaignRepository.save(campaign);
+            adsCampaignRepository.save(campaign);
             throw new APIException(HttpStatus.BAD_REQUEST,
                                    ErrorCode.FLEXIBLE_ERROR,
                                    "Insufficient balance");
@@ -459,7 +445,7 @@ public class AdsServiceImpl implements AdsService {
         campaign.setSpentAmount(campaign.getSpentAmount().add(cost));
         campaign.setDailySpentAmount(campaign.getDailySpentAmount().add(cost));
         user.setBalance(user.getBalance().subtract(cost));
-        adCampaignRepository.save(campaign);
+        adsCampaignRepository.save(campaign);
         userService.saveUser(user);
     }
 
@@ -475,57 +461,79 @@ public class AdsServiceImpl implements AdsService {
             AdImpressionLog adImpressionLog = AdImpressionLog.builder()
                     .campaignId(campaign.getId())
                     .promotedRoomId(promotedRoom.getId())
+                    .roomId(promotedRoom.getRoom().getId())
                     .isProcessed(false)
                     .userId(adImpressionRequest.getUserId())
                     .timestamp(LocalDateTime.now())
                     .build();
-            adImpressionLogRepository.save(adImpressionLog);
+            adsImpressionLogRepository.save(adImpressionLog);
         }
     }
 
-    @Scheduled(fixedRate = 600000)
+//    @Scheduled(fixedRate = 600000)
+    @Scheduled(fixedRate = 60000)
+    @Transactional
     public void processImpressions(){
-        List<AdImpressionLog> unprocessedImpressions = adImpressionLogRepository.findByIsProcessedFalse();
+        List<AdImpressionLog> unprocessedImpressions = adsImpressionLogRepository.findByIsProcessedFalse();
+        if (unprocessedImpressions.isEmpty()) return;
         Map<String, List<String>> groupByCampaignId = unprocessedImpressions.stream()
-                .collect(Collectors.groupingBy(AdImpressionLog::getCampaignId,
+                .collect(Collectors.groupingByConcurrent(AdImpressionLog::getCampaignId,
                         Collectors.mapping(AdImpressionLog::getId, Collectors.toList())));
+        Map<String, Integer> countByPromotedRoomId = unprocessedImpressions.stream()
+                .collect(Collectors.groupingByConcurrent(AdImpressionLog::getPromotedRoomId,
+                        Collectors.summingInt(e -> 1)));
         for (String campaignId : groupByCampaignId.keySet()){
-            AdCampaign campaign = adCampaignRepository.findById(campaignId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Ad Campaign", "id", campaignId));
+            AdCampaign campaign;
+            try{
+                campaign = adsCampaignRepository.findById(campaignId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Ad Campaign", "id", campaignId));
+            } catch (ResourceNotFoundException e){
+                adsImpressionLogRepository.markAsProcessed(groupByCampaignId.get(campaignId));
+                continue;
+            }
             User landlord = campaign.getUser();
-            if (campaign.getStatus() != AdCampaignStatus.ACTIVE) {
-                continue;
-            }
-            if (campaign.getPricingModel() != PricingModel.CPM) {
-                continue;
-            }
             long impressionCount = groupByCampaignId.get(campaignId).size();
             BigDecimal cpmRate = campaign.getCpmRate();
             BigDecimal cost = BigDecimal.valueOf(impressionCount).divide(BigDecimal.valueOf(1000), MathContext.DECIMAL64)
                     .multiply(cpmRate);
             if (campaign.getSpentAmount().add(cost).compareTo(campaign.getBudget()) > 0) {
+                campaign.setStatus(AdCampaignStatus.OUT_OF_BUDGET);
+                adsCampaignRepository.save(campaign);
                 continue;
             }
             if (campaign.getDailySpentAmount().add(cost).compareTo(campaign.getDailyBudget()) > 0) {
                 campaign.setStatus(AdCampaignStatus.OUT_OF_DAILY_BUDGET);
-                adCampaignRepository.save(campaign);
+                adsCampaignRepository.save(campaign);
                 continue;
             }
             if (cost.compareTo(landlord.getBalance()) > 0){
                 campaign.setStatus(AdCampaignStatus.INSUFFICIENT_FUNDS);
-                adCampaignRepository.save(campaign);
+                adsCampaignRepository.save(campaign);
                 continue;
             }
             landlord.setBalance(landlord.getBalance().subtract(cost));
             campaign.setSpentAmount(campaign.getSpentAmount().add(cost));
             campaign.setDailySpentAmount(campaign.getDailySpentAmount().add(cost));
-            adCampaignRepository.save(campaign);
+            adsCampaignRepository.save(campaign);
             userService.saveUser(landlord);
             CampaignStatistic campaignStatistic = campaignStatisticRepository.findByAdCampaignId(campaignId)
                     .orElseThrow(() -> new ResourceNotFoundException("Campaign Statistic", "id", campaignId));
             campaignStatistic.setImpressionCount(campaignStatistic.getImpressionCount() + impressionCount);
             campaignStatisticRepository.save(campaignStatistic);
-            adImpressionLogRepository.markAsProcessed(groupByCampaignId.get(campaignId));
+            adsImpressionLogRepository.markAsProcessed(groupByCampaignId.get(campaignId));
+        }
+        for (String promotedRoomId : countByPromotedRoomId.keySet()){
+            PromotedRoom promotedRoom;
+            try{
+                promotedRoom = promotedRoomRepository.findById(promotedRoomId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Promoted Room", "id", promotedRoomId));
+            } catch (ResourceNotFoundException e){
+                adsImpressionLogRepository.markAsProcessed(groupByCampaignId.get(promotedRoomId));
+                continue;
+            }
+            promotedRoom.setImpressionCount(promotedRoom.getImpressionCount() +
+                                                    countByPromotedRoomId.get(promotedRoomId));
+            promotedRoomRepository.save(promotedRoom);
         }
     }
 
@@ -534,12 +542,12 @@ public class AdsServiceImpl implements AdsService {
     @Transactional(readOnly = true)
     public void processDailyCampaigns() {
         log.info("Processing daily campaigns");
-        List<String> outOfBudgetCampaignIds = adCampaignRepository.findActiveCampaignDailySpentGreaterThanZero();
-        adCampaignRepository.resetDailySpentAmount(outOfBudgetCampaignIds);
+        List<String> outOfBudgetCampaignIds = adsCampaignRepository.findActiveCampaignDailySpentGreaterThanZero();
+        adsCampaignRepository.resetDailySpentAmount(outOfBudgetCampaignIds);
         log.info("Processing start campaigns");
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime endOfDay = startOfDay.plusDays(1);
-        List<AdCampaign> nonStartedCampaigns = adCampaignRepository.findByStartDateBetween(startOfDay, endOfDay);
+        List<AdCampaign> nonStartedCampaigns = adsCampaignRepository.findByStartDateBetween(startOfDay, endOfDay);
         for (AdCampaign campaign : nonStartedCampaigns) {
             if (campaign.getStatus() == AdCampaignStatus.DRAFT) {
                 eventService.publishEvent(
@@ -551,7 +559,7 @@ public class AdsServiceImpl implements AdsService {
                 );
             }
         }
-        List<AdCampaign> expiredCampaigns = adCampaignRepository.findByEndDateBetween(startOfDay, endOfDay);
+        List<AdCampaign> expiredCampaigns = adsCampaignRepository.findByEndDateBetween(startOfDay, endOfDay);
         for (AdCampaign campaign : expiredCampaigns) {
             if (campaign.getStatus() == AdCampaignStatus.ACTIVE) {
                 eventService.publishEvent(
@@ -563,7 +571,7 @@ public class AdsServiceImpl implements AdsService {
                 );
             }
         }
-        List<AdCampaign> outOfDailyBudgetCampaigns = adCampaignRepository.findByStatusAndEndDateAfter(
+        List<AdCampaign> outOfDailyBudgetCampaigns = adsCampaignRepository.findByStatusAndEndDateAfter(
                 AdCampaignStatus.OUT_OF_DAILY_BUDGET, LocalDateTime.now());
         for (AdCampaign campaign : outOfDailyBudgetCampaigns) {
                 reBudgetCampaign(campaign);
@@ -572,51 +580,62 @@ public class AdsServiceImpl implements AdsService {
 
     @Override
     public void startCampaign(String campaignId) {
-        AdCampaign campaign = adCampaignRepository.findById(campaignId)
+        AdCampaign campaign = adsCampaignRepository.findById(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign", "id", campaignId));
-        List<PromotedRoom> activePromotedRooms = promotedRoomRepository.findActiveByUserId(
-                campaign.getUser().getId());
-        Map<String, PromotedRoom> activePromotedRoomMap = activePromotedRooms.stream()
-                .collect(Collectors.toMap(pr -> pr.getRoom().getId(), pr -> pr));
+//        List<PromotedRoom> activePromotedRooms = promotedRoomRepository.findActiveByUserId(
+//                campaign.getUser().getId());
+//        Map<String, PromotedRoom> activePromotedRoomMap = activePromotedRooms.stream()
+//                .collect(Collectors.toMap(pr -> pr.getRoom().getId(), pr -> pr));
+        campaign.setStatus(AdCampaignStatus.ACTIVE);
+        adsCampaignRepository.save(campaign);
         List<PromotedRoom> campaignPromotedRooms = campaign.getPromotedRooms();
-        List<String> neededPromotedRoomIds = new ArrayList<>();
-        for (PromotedRoom promotedRoom : campaignPromotedRooms) {
-            if (activePromotedRoomMap.containsKey(promotedRoom.getRoom().getId())) {
-                PromotedRoom activePromotedRoom = activePromotedRoomMap.get(promotedRoom.getRoom().getId());
-                if (promotedRoom.getCpcBid().compareTo(activePromotedRoom.getCpcBid()) > 0) {
-                    neededPromotedRoomIds.add(activePromotedRoom.getId());
-                    continue;
-                }
-            }
-            neededPromotedRoomIds.add(promotedRoom.getId());
-        }
-
-        promotedRoomRepository.updateStatusByIds(
-                PromotedRoomStatus.ACTIVE,
-                neededPromotedRoomIds
-        );
+        promotedRoomRepository.updateStatusByCampaignId(PromotedRoomStatus.ACTIVE, campaignId);
+//        List<String> neededPromotedRoomIds = new ArrayList<>();
+//        List<String> neededDeactivatedRoomIds = new ArrayList<>();
+//
+//        for (PromotedRoom campaignPromotedRoom : campaignPromotedRooms) {
+//            if (activePromotedRoomMap.containsKey(campaignPromotedRoom.getRoom().getId())) {
+//                PromotedRoom activePromotedRoom = activePromotedRoomMap.get(campaignPromotedRoom.getRoom().getId());
+//                if (campaignPromotedRoom.getCpcBid().compareTo(activePromotedRoom.getCpcBid()) > 0) {
+//                    neededPromotedRoomIds.add(campaignPromotedRoom.getId());
+//                    neededDeactivatedRoomIds.add(activePromotedRoom.getId());
+//                    continue;
+//                }
+//            }
+//            neededPromotedRoomIds.add(campaignPromotedRoom.getId());
+//        }
+//
+//        promotedRoomRepository.updateStatusByIds(
+//                PromotedRoomStatus.ACTIVE,
+//                neededPromotedRoomIds
+//        );
+//        promotedRoomRepository.updateStatusByIds(
+//                PromotedRoomStatus.PAUSED,
+//                neededDeactivatedRoomIds
+//        );
     }
 
     @Override
     public void expireCampaign(String campaignId) {
-        AdCampaign campaign = adCampaignRepository.findById(campaignId)
+        AdCampaign campaign = adsCampaignRepository.findById(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign", "id", campaignId));
         if (campaign.getStatus() != AdCampaignStatus.ACTIVE) {
             return;
         }
         campaign.setStatus(AdCampaignStatus.COMPLETED);
-        adCampaignRepository.save(campaign);
+        adsCampaignRepository.save(campaign);
         promotedRoomRepository.updateStatusByCampaignId(PromotedRoomStatus.PAUSED, campaignId);
+
         log.info("Campaign {} expired", campaignId);
     }
 
     private void reBudgetCampaign(AdCampaign campaign) {
         campaign.setStatus(AdCampaignStatus.ACTIVE);
-        adCampaignRepository.save(campaign);
+        adsCampaignRepository.save(campaign);
     }
 
     private AdCampaign getCampaignAndValidateOwnership(String userId, String campaignId) {
-        AdCampaign campaign = adCampaignRepository.findById(campaignId)
+        AdCampaign campaign = adsCampaignRepository.findById(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign", "id", campaignId));
         
         if (!campaign.getUser().getId().equals(userId)) {
@@ -642,31 +661,28 @@ public class AdsServiceImpl implements AdsService {
     }
 
     private AdCampaignResponse mapToAdCampaignResponse(AdCampaign campaign) {
-        Long totalClicks = campaignStatisticRepository.getTotalClicksByCampaignId(campaign.getId());
-        Long totalConversions = campaignStatisticRepository.getTotalConversionsByCampaignId(campaign.getId());
+        CampaignStatistic campaignStatistic = campaign.getCampaignStatistics().get(0);
+        long totalClicks = campaignStatistic.getClicks();
+        long totalConversions = campaignStatistic.getConversionCount();
+        long totalImpressions = campaignStatistic.getImpressionCount();
 
-        if (totalClicks == null) totalClicks = 0L;
-        if (totalConversions == null) totalConversions = 0L;
-        
-        // Calculate derived metrics
-//        Double clickThroughRate = totalImpressions > 0 ? (double) totalClicks / totalImpressions : 0.0;
+        Double clickThroughRate = totalImpressions > 0 ? (double) totalClicks / totalImpressions : 0.0;
         Double conversionRate = totalClicks > 0 ? (double) totalConversions / totalClicks : 0.0;
         Double costPerClick = totalClicks > 0 ? campaign.getSpentAmount().doubleValue() / totalClicks : 0.0;
-//        Double costPerMille = totalImpressions > 0 ?
-//                campaign.getSpentAmount().doubleValue() / (totalImpressions / 1000.0) : 0.0;
+        Double costPerMille = totalImpressions > 0 ?
+                campaign.getSpentAmount().doubleValue() / (totalImpressions / 1000.0) : 0.0;
         
         CampaignStatisticsResponse statisticsResponse = CampaignStatisticsResponse.builder()
-//                .totalImpressions(totalImpressions)
+                .totalImpressions(totalImpressions)
                 .totalClicks(totalClicks)
                 .totalConversions(totalConversions)
                 .totalSpent(campaign.getSpentAmount())
-//                .clickThroughRate(clickThroughRate)
+                .clickThroughRate(clickThroughRate)
                 .conversionRate(conversionRate)
                 .costPerClick(costPerClick)
-//                .costPerMille(costPerMille)
+                .costPerMille(costPerMille)
                 .build();
-        
-        // Map promoted rooms if they are loaded
+
         List<PromotedRoomResponse> promotedRoomResponses = new ArrayList<>();
         if (campaign.getPromotedRooms() != null && !campaign.getPromotedRooms().isEmpty()) {
             promotedRoomResponses = campaign.getPromotedRooms().stream()
@@ -699,4 +715,4 @@ public class AdsServiceImpl implements AdsService {
                 .roomId(promotedRoom.getRoom().getId())
                 .build();
     }
-} 
+}

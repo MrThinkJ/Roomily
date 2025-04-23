@@ -363,7 +363,9 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                     .build();
                 notificationService.sendNotification(notification);
             }
-            chatRoomService.updateChatRoomStatus(chatRoom.getId(), ChatRoomStatus.ARCHIVED);
+            chatRoom.setStatus(ChatRoomStatus.ARCHIVED);
+            chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+            chatRoomService.saveChatRoom(chatRoom);
             ChatMessage chatMessage = ChatMessage.builder()
                 .message("Rental has been cancelled")
                 .chatRoom(chatRoom)

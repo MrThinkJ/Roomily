@@ -63,7 +63,7 @@ public class Room {
     @ManyToOne
     @JoinColumn(name = "landlord_id")
     private User landlord;
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "room_tags",
             joinColumns = @JoinColumn(name = "room_id"),

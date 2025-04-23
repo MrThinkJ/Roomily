@@ -2,10 +2,7 @@ package com.c2se.roomily.repository;
 
 import com.c2se.roomily.entity.AdCampaign;
 import com.c2se.roomily.enums.AdCampaignStatus;
-import jakarta.persistence.LockModeType;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,10 +10,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
-public interface AdCampaignRepository extends JpaRepository<AdCampaign, String> {
+public interface AdsCampaignRepository extends JpaRepository<AdCampaign, String> {
     List<AdCampaign> findByUserId(String userId);
 
     @Query("SELECT ac FROM AdCampaign ac WHERE ac.status = 'ACTIVE' AND " +

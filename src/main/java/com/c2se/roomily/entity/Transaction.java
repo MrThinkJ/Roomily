@@ -35,6 +35,7 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
     private TransactionType type;
+    private String chatMessageId;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

@@ -12,9 +12,4 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TestController {
     private final CheckoutInfoRepository checkoutInfoRepository;
-
-    @PostMapping("/checkout")
-    public void testCheckout() {
-        checkoutInfoRepository.save(CheckoutResponse.builder().build());
-    }
 }

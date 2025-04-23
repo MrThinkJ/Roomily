@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 /src/main/resources/application-dev.yml
+/src/main/resources/application-prod.yml
 roomily.tar
 minio
 deploy-compose.bat

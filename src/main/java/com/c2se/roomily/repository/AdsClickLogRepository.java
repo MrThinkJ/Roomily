@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface AdClickLogRepository extends JpaRepository<AdClickLog, String>{
+public interface AdsClickLogRepository extends JpaRepository<AdClickLog, String>{
 }

@@ -165,8 +165,17 @@ public interface RoomRepository extends JpaRepository<Room, String> {
                     )
                 )
             )
-            SELECT *
+            SELECT fr.*, COALESCE(fpp.hasFindPartnerPost, FALSE) AS hasFindParnerPost
             FROM filtered_rooms fr
+            LEFT JOIN
+            (
+              SELECT
+                fpp.room_id,
+                TRUE as hasFindPartnerPost,
+                ROW_NUMBER() OVER(PARTITION BY fpp.room_id) as rn
+              FROM find_partner_posts fpp
+              WHERE fpp.status = 'ACTIVE'
+            ) AS fpp ON fr.id = fpp.room_id AND fpp.rn = 1
             WHERE
             (
                 (fr.updatedAt, fr.id) < (:timestamp, :pivotId)
@@ -186,7 +195,7 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             @Param("maxPrice") BigDecimal maxPrice,
             @Param("minPeople") Integer minPeople,
             @Param("maxPeople") Integer maxPeople,
-            @Param("pivotSubscribed") boolean pivotSubscribed,
+            @Param("hasFindPartnerPost") boolean hasFindPartnerPost,
             @Param("timestamp") LocalDateTime timestamp,
             @Param("pivotId") String pivotId,
             @Param("limit") int limit,

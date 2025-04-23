@@ -22,6 +22,7 @@ public class AdImpressionLog {
     private String id;
     private String campaignId;
     private String promotedRoomId;
+    private String roomId;
     private String userId;
     private LocalDateTime timestamp;
     private Boolean isProcessed = false;

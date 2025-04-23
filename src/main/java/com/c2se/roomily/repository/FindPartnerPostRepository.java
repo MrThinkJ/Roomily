@@ -29,6 +29,9 @@ public interface FindPartnerPostRepository extends JpaRepository<FindPartnerPost
                                                          @Param("status") FindPartnerPostStatus status);
 
     boolean existsByRentedRoomIdAndType(String rentedRoomId, FindPartnerPostType type);
+
+    @Query(value = "SELECT COUNT(fp) > 0 FROM FindPartnerPost fp WHERE fp.room.id = :roomId AND fp.status = 'ACTIVE'")
+    boolean hasActiveFindPartnerPostByRoomId(String roomId);
     
     @Query(value = "SELECT COUNT(p) > 0 FROM FindPartnerPost fp JOIN fp.participants p WHERE fp.id = :postId AND p.id = :userId")
     boolean existsByPostIdAndParticipantId(@Param("postId") String postId, @Param("userId") String userId);

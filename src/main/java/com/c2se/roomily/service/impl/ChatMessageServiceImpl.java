@@ -12,6 +12,7 @@ import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.request.ChatMessageToAdd;
 import com.c2se.roomily.payload.response.ChatMessageResponse;
+import com.c2se.roomily.repository.AdsConversionDeDupRepository;
 import com.c2se.roomily.repository.ChatMessageRepository;
 import com.c2se.roomily.repository.ChatRoomRepository;
 import com.c2se.roomily.service.*;
@@ -38,6 +39,19 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final SimpMessagingTemplate messagingTemplate;
     private final RabbitTemplate rabbitTemplate;
     private final AdsService adsService;
+    private final AdsConversionDeDupRepository adsConversionDeDupRepository;
+
+    @Override
+    public ChatMessage getChatMessageById(String id) {
+        return chatMessageRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Chat message", "id", id)
+        );
+    }
+
+    @Override
+    public void saveChatMessageEntity(ChatMessage chatMessage) {
+        chatMessageRepository.save(chatMessage);
+    }
 
     @Override
     public ChatMessageResponse saveChatMessage(ChatMessageToAdd chatMessageToAdd) {
@@ -50,13 +64,17 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         );
         String campaignId = null;
         if (chatMessageToAdd.getIsAdConversion()){
+            if (!adsConversionDeDupRepository.save(sender.getId(), chatRoomId)){
+                throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
+                        "Ad conversion already exists for 15 minutes for this user in this chat room");
+            }
             AdClickLog adClickLog = adsService.getAdClickLogById(chatMessageToAdd.getAdClickId());
             if (adClickLog == null) {
                 throw new ResourceNotFoundException("Ad click log", "id", chatMessageToAdd.getAdClickId());
             }
             campaignId = adClickLog.getCampaignId();
-            rabbitTemplate.convertAndSend(RabbitMQConfig.AD_CLICK_ROUTING_KEY,
-                                          RabbitMQConfig.ADS_EXCHANGE_NAME,
+            rabbitTemplate.convertAndSend(RabbitMQConfig.ADS_EXCHANGE_NAME,
+                                          RabbitMQConfig.ADS_CONVERSION_ROUTING_KEY,
                                           AdConversionRecordEvent.builder()
                                                   .adClickId(chatMessageToAdd.getAdClickId())
                                                   .build());
@@ -98,11 +116,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     @Override
-    public void saveSystemMessage(ChatMessage chatMessage, ChatRoom chatRoom) {
-        chatMessageRepository.save(chatMessage);
+    public String saveSystemMessage(ChatMessage chatMessage, ChatRoom chatRoom) {
+        ChatMessage savedChatMessage = chatMessageRepository.save(chatMessage);
         List<String> users = chatRoomService.getChatRoomUserIds(chatRoom.getId());
         ChatMessageResponse response = mapToResponse(chatMessage);
         users.forEach(user -> messagingTemplate.convertAndSendToUser(user, "/queue/messages", response));
+        return savedChatMessage.getId();
     }
 
     @Override

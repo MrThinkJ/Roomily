@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface AdImpressionLogRepository extends JpaRepository<AdImpressionLog, String> {
+public interface AdsImpressionLogRepository extends JpaRepository<AdImpressionLog, String> {
     List<AdImpressionLog> findByIsProcessedFalse();
 
     @Modifying

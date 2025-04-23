@@ -51,11 +51,12 @@ public class DepositPayEventHandler {
         ChatRoom chatRoom = event.getChatRoom();
         String requesterId = event.getRequesterId();
         String taskId = "deposit-pay-" + rentedRoom.getId();
-        sendSystemMessage(rentedRoom, chatRoom, requesterId);
+        String chatMessageId = sendSystemMessage(rentedRoom, chatRoom, requesterId);
         eventService.publishEvent(SendPaymentLinkEvent.builder(this)
                                           .rentedRoomId(rentedRoom.getId())
                                           .chatRoomId(chatRoom.getId())
                                           .requesterId(requesterId)
+                                          .chatMessageId(chatMessageId)
                                           .build());
         log.info("Processing deposit pay event for rented room ID: {}", rentedRoom.getId());
         publishTask(rentedRoom.getId());
@@ -90,14 +91,14 @@ public class DepositPayEventHandler {
         }
     }
 
-    private void sendSystemMessage(RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId){
+    private String sendSystemMessage(RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId){
         ChatMessage chatMessage = ChatMessage.builder()
                 .message("Yêu cầu thuê phòng đã được chấp nhận, vui lòng thanh toán tiền cọc trong 12 giờ, " +
                                  "để hoàn tất quá trình thuê phòng, chậm chân là mất ngay nhé")
                 .chatRoom(chatRoom)
                 .subId(chatRoom.getNextSubId() + 1)
                 .build();
-        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
+        String savedChatMessageId = chatMessageService.saveSystemMessage(chatMessage, chatRoom);
         chatRoom.setStatus(ChatRoomStatus.COMPLETED);
         chatRoom.setLastMessage(chatMessage.getMessage());
         chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
@@ -106,5 +107,6 @@ public class DepositPayEventHandler {
         chatRoomService.saveChatRoom(chatRoom);
         simpMessagingTemplate.convertAndSendToUser(requesterId, "/queue/chat-room",
                                                    chatRoom.getId());
+        return savedChatMessageId;
     }
 }

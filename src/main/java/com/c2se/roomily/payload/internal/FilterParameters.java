@@ -22,9 +22,9 @@ public class FilterParameters {
     BigDecimal maxPrice;
     Integer minPeople;
     Integer maxPeople;
+    boolean hasFindPartnerPost;
     String pivotId;
     int limit;
     LocalDateTime timestamp;
-    boolean pivotSubscribed;
     List<String> tagIds;
 }

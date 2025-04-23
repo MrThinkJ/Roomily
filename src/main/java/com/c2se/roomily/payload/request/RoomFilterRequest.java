@@ -22,7 +22,7 @@ public class RoomFilterRequest {
     private String pivotId;
     private Integer limit;
     private String timestamp;
-    @JsonProperty("isSubscribed")
-    private boolean isSubscribed;
+    @JsonProperty("hasFindPartnerPost")
+    private boolean hasFindPartnerPost;
     private List<String> tagIds;
 }

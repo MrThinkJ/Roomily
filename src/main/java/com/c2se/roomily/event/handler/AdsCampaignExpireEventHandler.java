@@ -15,7 +15,7 @@ import java.time.ZoneId;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class AdCampaignExpireEventHandler {
+public class AdsCampaignExpireEventHandler {
     private final TaskScheduler taskScheduler;
     private final AdsService adsService;
 

@@ -31,6 +31,8 @@ public class PromotedRoom {
     private PromotedRoomStatus status;
     @Column(name = "cpc_bid", precision = 10, scale = 2, nullable = false)
     private BigDecimal cpcBid;
+    private long clickCount = 0L;
+    private long impressionCount = 0L;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ad_campaign_id", nullable = false)
     private AdCampaign adCampaign;

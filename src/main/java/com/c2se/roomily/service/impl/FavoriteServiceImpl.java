@@ -14,8 +14,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.c2se.roomily.service.impl.RoomServiceImpl.getRoomResponse;
-
 @Service
 @AllArgsConstructor
 public class FavoriteServiceImpl implements FavoriteService {
@@ -65,7 +63,7 @@ public class FavoriteServiceImpl implements FavoriteService {
     }
 
     private RoomResponse mapToRoomResponse(Room room) {
-        return getRoomResponse(room);
+        return roomService.getRoomResponse(room);
     }
 
 
