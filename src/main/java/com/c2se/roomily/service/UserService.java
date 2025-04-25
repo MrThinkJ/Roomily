@@ -11,7 +11,9 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface UserService {
-    User getUserEntity(String id);
+    User getUserEntityById(String id);
+
+    boolean isUserExists(String id);
 
     User getCurrentUser();
 

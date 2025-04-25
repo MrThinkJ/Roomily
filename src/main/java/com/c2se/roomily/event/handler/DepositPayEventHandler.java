@@ -43,23 +43,23 @@ public class DepositPayEventHandler {
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final TaskScheduler taskScheduler;
     private final EventService eventService;
+
     @EventListener
     @Async
     @Transactional
     public void handleDepositPayEvent(DepositPayEvent event) {
-        RentedRoom rentedRoom = event.getRentedRoom();
+        String rentedRoomId = event.getRentedRoomId();
         ChatRoom chatRoom = event.getChatRoom();
         String requesterId = event.getRequesterId();
-        String taskId = "deposit-pay-" + rentedRoom.getId();
-        String chatMessageId = sendSystemMessage(rentedRoom, chatRoom, requesterId);
+        String taskId = "deposit-pay-" + rentedRoomId;
+        sendSystemMessage(rentedRoomId, chatRoom, requesterId);
         eventService.publishEvent(SendPaymentLinkEvent.builder(this)
-                                          .rentedRoomId(rentedRoom.getId())
+                                          .rentedRoomId(rentedRoomId)
                                           .chatRoomId(chatRoom.getId())
                                           .requesterId(requesterId)
-                                          .chatMessageId(chatMessageId)
                                           .build());
-        log.info("Processing deposit pay event for rented room ID: {}", rentedRoom.getId());
-        publishTask(rentedRoom.getId());
+        log.info("Processing deposit pay event for rented room ID: {}", rentedRoomId);
+        publishTask(rentedRoomId);
     }
 
     private void publishTask(String rentedRoomId){
@@ -91,7 +91,7 @@ public class DepositPayEventHandler {
         }
     }
 
-    private String sendSystemMessage(RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId){
+    private String sendSystemMessage(String rentedRoomId, ChatRoom chatRoom, String requesterId){
         ChatMessage chatMessage = ChatMessage.builder()
                 .message("Yêu cầu thuê phòng đã được chấp nhận, vui lòng thanh toán tiền cọc trong 12 giờ, " +
                                  "để hoàn tất quá trình thuê phòng, chậm chân là mất ngay nhé")
@@ -103,7 +103,7 @@ public class DepositPayEventHandler {
         chatRoom.setLastMessage(chatMessage.getMessage());
         chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
         chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
-        chatRoom.setRentedRoomId(rentedRoom.getId());
+        chatRoom.setRentedRoomId(rentedRoomId);
         chatRoomService.saveChatRoom(chatRoom);
         simpMessagingTemplate.convertAndSendToUser(requesterId, "/queue/chat-room",
                                                    chatRoom.getId());

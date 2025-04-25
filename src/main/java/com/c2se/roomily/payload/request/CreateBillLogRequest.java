@@ -17,4 +17,5 @@ public class CreateBillLogRequest {
     private BigDecimal rentalCost;
     private String rentedRoomId;
     private LocalDate lateDate;
+    private boolean isRentalCostPaid;
 }

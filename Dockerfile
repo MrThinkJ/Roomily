@@ -11,6 +11,7 @@ RUN --mount=type=cache,target=/root/.m2 \
 FROM eclipse-temurin:21-jre-alpine as production
 WORKDIR /app
 COPY --from=build target/*.jar target/app.jar
+COPY --from=build ./src/main/resources/config/firebase_key.json resources/config/firebase_key.json
 COPY --from=build ./src/main/resources/static/contract.html resources/static/contract.html
 COPY --from=build ./src/main/resources/static/fonts/times.ttf resources/static/fonts/times.ttf
 EXPOSE 8080

@@ -1,5 +1,6 @@
 package com.c2se.roomily.service.impl;
 
+import com.c2se.roomily.config.StorageConfig;
 import com.c2se.roomily.entity.Role;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.ErrorCode;
@@ -38,6 +39,8 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
     private final RoleService roleService;
     private final TokenBlackListService tokenBlackListService;
+    private final StorageService storageService;
+    private final StorageConfig storageConfig;
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
@@ -108,8 +111,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserResponse me(String userId) {
-        User user = userService.getUserEntity(userId);
-        return UserResponse.builder()
+        User user = userService.getUserEntityById(userId);
+        UserResponse.UserResponseBuilder builder = UserResponse.builder()
                 .id(userId)
                 .phone(user.getPhone())
                 .username(user.getUsername())
@@ -121,7 +124,19 @@ public class AuthServiceImpl implements AuthService {
                 .rating(user.getRating())
                 .isVerified(user.getIsVerified())
                 .balance(user.getBalance())
-                .privateId(user.getPrivateId())
-                .build();
+                .privateId(user.getPrivateId());
+        if (user.getProfilePicture() != null && !user.getProfilePicture().isEmpty()) {
+            try {
+                String presignedUrl = storageService.generatePresignedUrl(
+                        storageConfig.getBucketStore(),
+                        user.getProfilePicture());
+                builder.profilePicture(presignedUrl);
+            } catch (Exception e) {
+                builder.profilePicture(user.getProfilePicture());
+            }
+        } else {
+            builder.profilePicture(user.getProfilePicture());
+        }
+        return builder.build();
     }
 }

@@ -136,8 +136,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Override
     public ChatRoomResponse createDirectChatRoomToLandlord(String userId, String roomId) {
         Room room = roomService.getRoomEntityById(roomId);
-        User landlord = userService.getUserEntity(room.getLandlord().getId());
-        User tenant = userService.getUserEntity(userId);
+        User landlord = userService.getUserEntityById(room.getLandlord().getId());
+        User tenant = userService.getUserEntityById(userId);
         Optional<ChatRoom> existingChatRoom = chatRoomRepository.findByRoomIdAndUsers(
                 roomId,
                 landlord.getId(),
@@ -165,7 +165,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         if (chatRoom.getType() != ChatRoomType.GROUP) {
             throw new IllegalArgumentException("Invalid chat room type");
         }
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         ChatRoomUser chatRoomUser = ChatRoomUser.builder()
                 .chatRoom(chatRoom)
                 .user(user)
@@ -183,7 +183,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
         if (!chatRoom.getManagerId().equals(managerId))
             throw new IllegalArgumentException("Only manager can remove user from group chat room");
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         ChatRoomUser chatRoomUser = chatRoomUserRepository.findByChatRoomAndUser(chatRoom, user).orElseThrow(
                 () -> new ResourceNotFoundException("ChatRoom", "ChatRoom Or User", chatRoomId + " " + userId)
         );
@@ -198,7 +198,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         if (chatRoom.getType() != ChatRoomType.GROUP) {
             throw new IllegalArgumentException("Invalid chat room type");
         }
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         ChatRoomUser chatRoomUser = chatRoomUserRepository.findByChatRoomAndUser(chatRoom, user).orElseThrow(
                 () -> new ResourceNotFoundException("ChatRoom", "ChatRoom Or User", chatRoomId + " " + userId)
         );

@@ -98,6 +98,7 @@ public class BillLogServiceImpl implements BillLogService {
                 .rentedRoom(rentedRoom)
                 .roomId(rentedRoom.getRoom().getId())
                 .billStatus(BillStatus.MISSING)
+                .isRentalCostPaid(createBillLogRequest.isRentalCostPaid())
                 .build();
         billLogRepository.save(billLog);
     }
@@ -167,18 +168,22 @@ public class BillLogServiceImpl implements BillLogService {
             billLog.setWaterAmount(updateBillLogRequest.getWater());
         try{
             if (updateBillLogRequest.getWaterImage() != null){
-                String waterImageUrl = generateBillLogImageUrl(billLogId, "water", billLog.getRentedRoom().getId());
+                String waterImageName = generateImageName(billLogId,
+                                                         "water",
+                                                         updateBillLogRequest.getWaterImage().getOriginalFilename());
                 storageService.putObject(updateBillLogRequest.getWaterImage(),
                                          storageConfig.getBucketStore(),
-                                         generateBillLogImageUrl(billLogId, "water", billLog.getRentedRoom().getId()));
-                billLog.setWaterImage(waterImageUrl);
+                                         waterImageName);
+                billLog.setWaterImage(waterImageName);
             }
             if (updateBillLogRequest.getElectricityImage() != null){
-                String electricityImageUrl = generateBillLogImageUrl(billLogId, "electricity", billLog.getRentedRoom().getId());
+                String electricityImageName = generateImageName(billLogId,
+                                                               "electricity",
+                                                               updateBillLogRequest.getElectricityImage().getOriginalFilename());
                 storageService.putObject(updateBillLogRequest.getElectricityImage(),
                                          storageConfig.getBucketStore(),
-                                         generateBillLogImageUrl(billLogId, "electricity", billLog.getRentedRoom().getId()));
-                billLog.setElectricityImage(electricityImageUrl);
+                                         electricityImageName);
+                billLog.setElectricityImage(electricityImageName);
             }
         } catch (Exception e){
             throw new APIException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR,
@@ -186,6 +191,11 @@ public class BillLogServiceImpl implements BillLogService {
         }
         billLog.setBillStatus(BillStatus.CHECKING);
         billLogRepository.save(billLog);
+    }
+
+    private String generateImageName(String billLogId, String type, String originalFilename) {
+        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        return "bill-log" + billLogId + "-"+type+ "-" + UUID.randomUUID() + extension;
     }
 
     private BillLogResponse mapBillLogToBillLogResponse(BillLog billLog) {
@@ -216,11 +226,8 @@ public class BillLogServiceImpl implements BillLogService {
                 .createdAt(billLog.getCreatedAt())
                 .roomId(billLog.getRoomId())
                 .rentedRoomId(billLog.getRentedRoom().getId())
+                .isRentalCostPaid(billLog.isRentalCostPaid())
                 .build();
-    }
-
-    private String generateBillLogImageUrl(String billLogId, String type, String rentedRoomId) {
-        return String.format("%s-%s-%s", billLogId, type, rentedRoomId);
     }
 
     @Scheduled(cron = "0 0 0 * * *")

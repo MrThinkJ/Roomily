@@ -37,7 +37,7 @@ public class BanServiceImpl implements BanService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void banUser(BanUserRequest banUserRequest) {
-        User user = userService.getUserEntity(banUserRequest.getUserId());
+        User user = userService.getUserEntityById(banUserRequest.getUserId());
         if (banHistoryRepository.existsActiveBanByUserId(banUserRequest.getUserId())) {
             return;
         }
@@ -62,7 +62,7 @@ public class BanServiceImpl implements BanService {
 
     @Override
     public void unbanUser(String userId) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         BanHistory activeBan = banHistoryRepository.findActiveBanByUserId(userId).orElse(null);
         if (activeBan == null)
             return;
@@ -74,7 +74,7 @@ public class BanServiceImpl implements BanService {
 
     @Override
     public Boolean isUserBanned(String userId) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         return UserStatus.BANNED.equals(user.getStatus());
     }
 
@@ -150,7 +150,7 @@ public class BanServiceImpl implements BanService {
                 return;
             }
             
-            User user = userService.getUserEntity(userId);
+            User user = userService.getUserEntityById(userId);
             if (!UserStatus.BANNED.equals(user.getStatus())) {
                 log.info("User {} is not currently banned, no action needed", userId);
                 return;

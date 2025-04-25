@@ -85,7 +85,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void createFindPartnerPost(String userId, CreateFindPartnerPostRequest request) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         Room room = roomService.getRoomEntityById(request.getRoomId());
         // If the room is in find partner only mode, reject the request
         if (room.getStatus().equals(RoomStatus.FIND_PARTNER_ONLY))
@@ -158,19 +158,22 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                 roomId,FindPartnerPostStatus.ACTIVE);
         findPartnerPosts.forEach(findPartnerPost -> {
             findPartnerPost.getParticipants().forEach(participant -> {
-                CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder().header(
-                        "Find partner post has been deleted").body("Find partner post has been deleted").userId(
-                        participant.getId()).build();
+                CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder()
+                        .header("Find partner post has been deleted")
+                        .body("Find partner post has been deleted")
+                        .userId(participant.getId())
+                        .build();
                 notificationService.sendNotification(createNotificationRequest);
             });
             chatRoomService.archiveAllChatRoomsByFindPartnerPostId(findPartnerPost.getId());
-            findPartnerPostRepository.delete(findPartnerPost);
+            findPartnerPost.setStatus(FindPartnerPostStatus.DELETED);
+            findPartnerPostRepository.save(findPartnerPost);
         });
     }
 
     @Override
     public RentalRequest requestToJoinFindPartnerPost(String userId, String findPartnerPostId, String chatRoomId) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
         if (!chatRoomService.isUserInChatRoom(userId, chatRoomId))
@@ -230,7 +233,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
         RentalRequest rentalRequest = validateAndGetRentalRequest(chatRoom, posterId);
         FindPartnerPost findPartnerPost = validateAndGetFindPartnerPost(rentalRequest, posterId);
-        User user = userService.getUserEntity(rentalRequest.getRequesterId());
+        User user = userService.getUserEntityById(rentalRequest.getRequesterId());
         if (findPartnerPost.getParticipants().contains(user)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You have already accepted this request");
@@ -269,7 +272,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
     @Override
     public void addParticipantToFindPartnerPost(String userId, String findPartnerPostId, String privateId) {
         User user = userService.getUserEntityByPrivateId(privateId);
-        User poster = userService.getUserEntity(userId);
+        User poster = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(poster.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
@@ -297,8 +300,8 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void removeParticipantFromFindPartnerPost(String userId, String findPartnerPostId, String participantId) {
-        User user = userService.getUserEntity(userId);
-        User participant = userService.getUserEntity(participantId);
+        User user = userService.getUserEntityById(userId);
+        User participant = userService.getUserEntityById(participantId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
@@ -317,7 +320,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void exitFindPartnerPost(String userId, String findPartnerPostId) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getParticipants().contains(user)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not in this post");
@@ -348,13 +351,14 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = validatePostOwnership(userId, findPartnerPostId);
         sendDeletionNotifications(findPartnerPost);
         cleanupChatRooms(findPartnerPost.getId());
-        findPartnerPostRepository.delete(findPartnerPost);
+        findPartnerPost.setStatus(FindPartnerPostStatus.DELETED);
+        findPartnerPostRepository.save(findPartnerPost);
     }
 
     @Override
     public void updateFindPartnerPost(String userId, String findPartnerPostId,
                                       UpdateFindPartnerPostRequest request) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,

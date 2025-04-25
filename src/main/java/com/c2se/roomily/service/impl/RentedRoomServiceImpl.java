@@ -102,7 +102,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RentalRequest requestRent(String userId, CreateRentedRoomRequest createRentedRoomRequest) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         Room room = roomService.getRoomEntityById(createRentedRoomRequest.getRoomId());
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(createRentedRoomRequest.getChatRoomId());
         if (room.getStatus() != RoomStatus.AVAILABLE)
@@ -168,7 +168,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         if (!rentalRequest.getRecipientId().equals(landlordId))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the recipient");
 
-        User user = userService.getUserEntity(rentalRequest.getRequesterId());
+        User user = userService.getUserEntityById(rentalRequest.getRequesterId());
         Room room = roomService.getRoomEntityById(rentalRequest.getRoomId());
 
         if (room.getStatus() != RoomStatus.AVAILABLE)
@@ -179,7 +179,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         RentedRoom rentedRoom = RentedRoom.builder()
                 .user(user)
                 .room(room)
-                .landlord(userService.getUserEntity(landlordId))
+                .landlord(userService.getUserEntityById(landlordId))
                 .startDate(LocalDate.now())
                 .endDate(LocalDate.now().plusMonths(1))
                 .status(RentedRoomStatus.DEPOSIT_NOT_PAID)
@@ -202,7 +202,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         RentedRoom savedRentedRoom = rentedRoomRepository.save(rentedRoom);
         contractGenerationService.generateRentContract(savedRentedRoom);
 
-        handleRentalDepositPayment(savedRentedRoom, chatRoom, user.getId());
+        handleRentalDepositPayment(savedRentedRoom.getId(), chatRoom, user.getId());
         requestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
@@ -276,7 +276,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
             notifyRentalParticipants(rentedRoom, "Người thuê chính thay đổi", message);
         } else {
             // Case 2: Co-tenant exits
-            User exitingUser = userService.getUserEntity(userId);
+            User exitingUser = userService.getUserEntityById(userId);
             rentedRoom.getCoTenants().remove(exitingUser);
             
             // Create activity and notification
@@ -320,7 +320,7 @@ public class RentedRoomServiceImpl implements RentedRoomService {
     @Transactional(rollbackFor = Exception.class)
     public void cancelRent(String userId, String rentedRoomId) {
         RentedRoom rentedRoom = getRentedRoomEntityById(rentedRoomId);
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
 
         // If user is tenant
         if (user.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_TENANT"))){
@@ -505,15 +505,12 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                                                                       .build()));
     }
 
-    private void handleRentalDepositPayment(RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId) {
-        if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID) {
-            eventService.publishEvent(DepositPayEvent.builder(this)
-                                              .rentedRoom(rentedRoom)
-                                              .chatRoom(chatRoom)
-                                              .requesterId(requesterId)
-                                              .build());
-        }
-
+    private void handleRentalDepositPayment(String rentedRoomId, ChatRoom chatRoom, String requesterId) {
+        eventService.publishEvent(DepositPayEvent.builder(this)
+                                          .rentedRoomId(rentedRoomId)
+                                          .chatRoom(chatRoom)
+                                          .requesterId(requesterId)
+                                          .build());
     }
 
     private RentedRoomResponse mapToRentedRoomResponse(RentedRoom rentedRoom) {

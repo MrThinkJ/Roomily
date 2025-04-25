@@ -28,4 +28,5 @@ public class BillLogResponse {
     private LocalDateTime createdAt;
     private String roomId;
     private String rentedRoomId;
+    private boolean isRentalCostPaid;
 }

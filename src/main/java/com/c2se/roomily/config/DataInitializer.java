@@ -22,11 +22,13 @@ import java.util.List;
 @Configuration
 @Slf4j
 public class DataInitializer {
+
     @Bean
     CommandLineRunner initTags(TagRepository tagRepository) {
         List<TagData> initialTags = Arrays.asList(
                 // --- IN_ROOM_FEATURE ---
                 new TagData("AIR_CONDITIONING", TagCategory.IN_ROOM_FEATURE, "Điều hòa"),
+                new TagData("WASHING_MACHINE", TagCategory.IN_ROOM_FEATURE, "Máy giặt"),
                 new TagData("BALCONY", TagCategory.IN_ROOM_FEATURE, "Ban công"),
                 new TagData("FRIDGE", TagCategory.IN_ROOM_FEATURE, "Tủ lạnh"),
                 new TagData("KITCHEN", TagCategory.IN_ROOM_FEATURE, "Có bếp"),
@@ -60,7 +62,6 @@ public class DataInitializer {
 
                 // --- POLICY ---
                 new TagData("PET_ALLOWED", TagCategory.POLICY, "Cho phép nuôi thú cưng"),
-                new TagData("NO_PETS", TagCategory.POLICY, "Không cho nuôi thú cưng"),
                 new TagData("WIFI_INCLUDED", TagCategory.POLICY, "Bao gồm Wifi"),
                 new TagData("NO_CURFEW", TagCategory.POLICY, "Giờ giấc tự do"),
                 new TagData("CURFEW_SPECIFIC", TagCategory.POLICY, "Có giới nghiêm (hỏi chủ nhà)"),

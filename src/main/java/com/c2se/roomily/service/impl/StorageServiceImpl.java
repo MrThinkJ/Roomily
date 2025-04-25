@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.Map;
 
 @Service
 @AllArgsConstructor
@@ -108,6 +109,7 @@ public class StorageServiceImpl implements StorageService {
                         .bucket(bucket)
                         .object(objectName)
                         .expiry(60 * 60)
+                        .extraQueryParams(Map.of("response-content-disposition", "inline"))
                         .build()
         );
     }

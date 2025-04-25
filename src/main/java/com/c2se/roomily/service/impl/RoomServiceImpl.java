@@ -1,14 +1,13 @@
 package com.c2se.roomily.service.impl;
 
 import com.c2se.roomily.config.RabbitMQConfig;
+import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.entity.Tag;
 import com.c2se.roomily.entity.User;
-import com.c2se.roomily.enums.ErrorCode;
-import com.c2se.roomily.enums.FindPartnerPostType;
-import com.c2se.roomily.enums.RoomStatus;
-import com.c2se.roomily.enums.RoomType;
+import com.c2se.roomily.enums.*;
 import com.c2se.roomily.event.pojo.CreateRoomEvent;
+import com.c2se.roomily.event.pojo.RoomDeleteEvent;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
 import com.c2se.roomily.payload.dao.RoomDao;
@@ -20,6 +19,7 @@ import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
 import com.c2se.roomily.payload.response.RoomResponse;
 import com.c2se.roomily.repository.FindPartnerPostRepository;
+import com.c2se.roomily.repository.RentedRoomRepository;
 import com.c2se.roomily.repository.RoomRepository;
 import com.c2se.roomily.security.CustomUserDetails;
 import com.c2se.roomily.service.*;
@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RoomServiceImpl implements RoomService {
     private final RoomRepository roomRepository;
+    private final RentedRoomRepository rentedRoomRepository;
     private final TagService tagService;
     private final UserService userService;
     private final ContractGenerationService contractGenerationService;
@@ -160,7 +161,7 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public String createRoom(CreateRoomRequest createRoomRequest, String landlordId) {
-        User landlord = userService.getUserEntity(landlordId);
+        User landlord = userService.getUserEntityById(landlordId);
         List<Tag> tags = tagService.getTagsByIdIn(createRoomRequest.getTagIds());
         if (tags.size() != createRoomRequest.getTagIds().size()) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Some tags are not found");
@@ -229,6 +230,15 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomRepository.findById(roomId).orElseThrow(
                 () -> new ResourceNotFoundException("Room", "id", roomId)
         );
+        RentedRoom rentedRoom = rentedRoomRepository.findActiveByRoomId(roomId, List.of(RentedRoomStatus.IN_USE,
+                                                                                        RentedRoomStatus.DEBT,
+                                                                                        RentedRoomStatus.DEPOSIT_NOT_PAID,
+                                                                                        RentedRoomStatus.BILL_MISSING,
+                                                                                        RentedRoomStatus.PENDING));
+        if (rentedRoom != null) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
+                                   "Cannot delete room because it is currently rented");
+        }
         room.setStatus(RoomStatus.DELETED);
         roomRepository.save(room);
         Map<String, String> body = new HashMap<>();
@@ -236,6 +246,9 @@ public class RoomServiceImpl implements RoomService {
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,
                                       RabbitMQConfig.ROOM_ROUTING_KEY,
                                       body);
+        eventService.publishEvent(RoomDeleteEvent.builder(this)
+                                          .roomId(roomId)
+                                          .build());
     }
 
     @Override

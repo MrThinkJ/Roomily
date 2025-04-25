@@ -34,7 +34,9 @@ public class RoomImageServiceImpl implements RoomImageService {
         Room room = roomRepository.findById(roomId).orElseThrow(
                 () -> new ResourceNotFoundException("Room", "id", roomId)
         );
+
         List<String> imageNames = roomImageRepository.getRoomImageNamesByRoomId(room.getId());
+
         return imageNames.stream().map(name -> {
             try {
                 return storageService.generatePresignedUrl(storageConfig.getBucketStore(), name);

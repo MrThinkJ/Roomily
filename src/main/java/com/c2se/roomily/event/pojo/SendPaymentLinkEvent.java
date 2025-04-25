@@ -7,19 +7,16 @@ public class SendPaymentLinkEvent extends ApplicationEvent {
     private final String rentedRoomId;
     private final String chatRoomId;
     private final String requesterId;
-    private final String chatMessageId;
 
     @Builder
     public SendPaymentLinkEvent(Object source,
                                 String rentedRoomId,
                                 String chatRoomId,
-                                String requesterId,
-                                String chatMessageId) {
+                                String requesterId) {
         super(source);
         this.rentedRoomId = rentedRoomId;
         this.chatRoomId = chatRoomId;
         this.requesterId = requesterId;
-        this.chatMessageId = chatMessageId;
     }
 
     public static SendPaymentLinkEventBuilder builder(Object source) {
@@ -38,7 +35,4 @@ public class SendPaymentLinkEvent extends ApplicationEvent {
         return requesterId;
     }
 
-    public String getChatMessageId() {
-        return chatMessageId;
-    }
 }

@@ -59,7 +59,7 @@ public class AdsServiceImpl implements AdsService {
     @Override
     @Transactional
     public void createCampaign(String userId, CreateCampaignRequest request) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
 
         if (request.getEndDate() != null && request.getEndDate().isBefore(request.getStartDate())) {
             throw new APIException(HttpStatus.BAD_REQUEST,
@@ -394,8 +394,11 @@ public class AdsServiceImpl implements AdsService {
             return AdClickResponse.builder().adClickId(null).status("inactive").build();
         }
 
-        BigDecimal cost = promotedRoom.getCpcBid();
-        chargeForUserClick(promotedRoom.getId(), cost);
+        if (campaign.getPricingModel() == PricingModel.CPC){
+            BigDecimal cost = promotedRoom.getCpcBid();
+            chargeForUserClick(promotedRoom.getId(), cost);
+        }
+
         AdClickLog adClickLog = AdClickLog.builder()
                 .campaignId(campaign.getId())
                 .promotedRoomId(promotedRoom.getId())
@@ -491,31 +494,33 @@ public class AdsServiceImpl implements AdsService {
                 adsImpressionLogRepository.markAsProcessed(groupByCampaignId.get(campaignId));
                 continue;
             }
-            User landlord = campaign.getUser();
             long impressionCount = groupByCampaignId.get(campaignId).size();
-            BigDecimal cpmRate = campaign.getCpmRate();
-            BigDecimal cost = BigDecimal.valueOf(impressionCount).divide(BigDecimal.valueOf(1000), MathContext.DECIMAL64)
-                    .multiply(cpmRate);
-            if (campaign.getSpentAmount().add(cost).compareTo(campaign.getBudget()) > 0) {
-                campaign.setStatus(AdCampaignStatus.OUT_OF_BUDGET);
+            if (campaign.getPricingModel() == PricingModel.CPM){
+                User landlord = campaign.getUser();
+                BigDecimal cpmRate = campaign.getCpmRate();
+                BigDecimal cost = BigDecimal.valueOf(impressionCount).divide(BigDecimal.valueOf(1000), MathContext.DECIMAL64)
+                        .multiply(cpmRate);
+                if (campaign.getSpentAmount().add(cost).compareTo(campaign.getBudget()) > 0) {
+                    campaign.setStatus(AdCampaignStatus.OUT_OF_BUDGET);
+                    adsCampaignRepository.save(campaign);
+                    continue;
+                }
+                if (campaign.getDailySpentAmount().add(cost).compareTo(campaign.getDailyBudget()) > 0) {
+                    campaign.setStatus(AdCampaignStatus.OUT_OF_DAILY_BUDGET);
+                    adsCampaignRepository.save(campaign);
+                    continue;
+                }
+                if (cost.compareTo(landlord.getBalance()) > 0){
+                    campaign.setStatus(AdCampaignStatus.INSUFFICIENT_FUNDS);
+                    adsCampaignRepository.save(campaign);
+                    continue;
+                }
+                landlord.setBalance(landlord.getBalance().subtract(cost));
+                campaign.setSpentAmount(campaign.getSpentAmount().add(cost));
+                campaign.setDailySpentAmount(campaign.getDailySpentAmount().add(cost));
                 adsCampaignRepository.save(campaign);
-                continue;
+                userService.saveUser(landlord);
             }
-            if (campaign.getDailySpentAmount().add(cost).compareTo(campaign.getDailyBudget()) > 0) {
-                campaign.setStatus(AdCampaignStatus.OUT_OF_DAILY_BUDGET);
-                adsCampaignRepository.save(campaign);
-                continue;
-            }
-            if (cost.compareTo(landlord.getBalance()) > 0){
-                campaign.setStatus(AdCampaignStatus.INSUFFICIENT_FUNDS);
-                adsCampaignRepository.save(campaign);
-                continue;
-            }
-            landlord.setBalance(landlord.getBalance().subtract(cost));
-            campaign.setSpentAmount(campaign.getSpentAmount().add(cost));
-            campaign.setDailySpentAmount(campaign.getDailySpentAmount().add(cost));
-            adsCampaignRepository.save(campaign);
-            userService.saveUser(landlord);
             CampaignStatistic campaignStatistic = campaignStatisticRepository.findByAdCampaignId(campaignId)
                     .orElseThrow(() -> new ResourceNotFoundException("Campaign Statistic", "id", campaignId));
             campaignStatistic.setImpressionCount(campaignStatistic.getImpressionCount() + impressionCount);

@@ -3,29 +3,23 @@ package com.c2se.roomily.event.handler;
 import com.c2se.roomily.config.RabbitMQConfig;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.event.pojo.CreateRoomEvent;
-import com.c2se.roomily.payload.internal.GooglePlacesResponseResult;
 import com.c2se.roomily.payload.internal.GooglePlacesTag;
 import com.c2se.roomily.service.RoomService;
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class CreateRoomEventHandler {
+public class RoomCreateEventHandler {
     private final RoomService roomService;
     private final RabbitTemplate rabbitTemplate;
 

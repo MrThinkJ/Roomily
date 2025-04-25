@@ -180,6 +180,11 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             (
                 (fr.updatedAt, fr.id) < (:timestamp, :pivotId)
             )
+            AND
+            (
+                (:hasFindPartnerPost = TRUE AND fpp.hasFindPartnerPost = TRUE)
+                OR (:hasFindPartnerPost = FALSE)
+            )
             ORDER BY
                 fr.updatedAt DESC,
                 fr.id DESC
@@ -202,8 +207,50 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             @Param("tagIds") String[] tagIds
     );
 
+    @Query(value = """
+            SELECT r.* FROM rooms r
+            JOIN room_tags rt ON rt.room_id = r.room_id AND (:mustHaveTagIds IS NULL OR rt.tag_id IN :mustHaveTagIds)
+            WHERE (COALESCE(:city, '') = '' OR r.city LIKE '%' || :city || '%')
+            AND (COALESCE(:district, '') = '' OR r.district LIKE '%' || :district || '%')
+            AND (COALESCE(:ward, '') = '' OR r.ward LIKE '%' || :ward || '%')
+            AND (:type IS NULL OR r.room_type = :type)
+            AND r.price <= :maxPrice
+            AND r.room_status = 'AVAILABLE'
+            GROUP BY r.room_id
+            HAVING :mustHaveTagCount = 0 OR COUNT(rt.tag_id) = :mustHaveTagCount
+            """, nativeQuery = true)
+    List<Room> findRoomByUserPreference(
+            @Param("city") String city,
+            @Param("district") String district,
+            @Param("ward") String ward,
+            @Param("type") String type,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("mustHaveTagIds") Set<String> mustHaveTagIds,
+            @Param("mustHaveTagCount") Integer mustHaveTagCount
+    );
+
     boolean existsById(@NotNull String roomId);
 
     @Query("SELECT r.tags FROM Room r WHERE r.id = :roomId")
     Set<Tag> findTagsById(String roomId);
+
+//    BigDecimal getAverageCostInDistrict(String city, String district);
+
+    @Query("""
+        SELECT AVG(r.electricityPrice)
+        FROM Room r
+        WHERE r.city = :city
+        AND r.district = :district
+        AND r.type = :roomType
+    """)
+    BigDecimal getAverageElectricityCostInDistrict(String city, String district, RoomType roomType);
+
+    @Query("""
+        SELECT AVG(r.waterPrice)
+        FROM Room r
+        WHERE r.city = :city
+        AND r.district = :district
+        AND r.type = :roomType
+    """)
+    BigDecimal getAverageWaterCostInDistrict(String city, String district, RoomType roomType);
 }

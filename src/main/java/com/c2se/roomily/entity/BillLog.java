@@ -34,6 +34,7 @@ public class BillLog {
     private BigDecimal electricityCost;
     private BigDecimal waterCost;
     private BigDecimal rentalCost;
+    private boolean isRentalCostPaid;
     private String roomId;
     @Enumerated(EnumType.STRING)
     @Column(name = "status")

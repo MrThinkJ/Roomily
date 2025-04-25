@@ -33,10 +33,15 @@ public class UserServiceImpl implements UserService {
     private final StorageConfig storageConfig;
 
     @Override
-    public User getUserEntity(String id) {
+    public User getUserEntityById(String id) {
         return userRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("User", "id", id)
         );
+    }
+
+    @Override
+    public boolean isUserExists(String id) {
+        return userRepository.existsById(id);
     }
 
     @Override
@@ -68,7 +73,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse getUserByUserId(String id) {
-        return mapToUserResponse(getUserEntity(id));
+        return mapToUserResponse(getUserEntityById(id));
     }
 
     @Override
@@ -108,7 +113,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateUser(String userId, UpdateUserRequest request) {
-        User user = getUserEntity(userId);
+        User user = getUserEntityById(userId);
         user.setFullName(request.getFullName() != null ? request.getFullName() : user.getFullName());
         user.setEmail(request.getEmail() != null ? request.getEmail() : user.getEmail());
         user.setPhone(request.getPhone() != null ? request.getPhone() : user.getPhone());

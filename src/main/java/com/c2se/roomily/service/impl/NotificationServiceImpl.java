@@ -4,22 +4,32 @@ import com.c2se.roomily.entity.Notification;
 import com.c2se.roomily.entity.User;
 import com.c2se.roomily.enums.NotificationType;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.internal.PushNotificationDto;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.response.NotificationResponse;
 import com.c2se.roomily.repository.NotificationRepository;
 import com.c2se.roomily.service.NotificationService;
+import com.c2se.roomily.service.PushNotificationService;
+import com.c2se.roomily.service.UserDeviceService;
 import com.c2se.roomily.service.UserService;
+import com.google.firebase.messaging.FirebaseMessagingException;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
+@Slf4j
 public class NotificationServiceImpl implements NotificationService {
-    NotificationRepository notificationRepository;
-    UserService userService;
+    private final NotificationRepository notificationRepository;
+    private final UserService userService;
+    private final UserDeviceService userDeviceService;
+    private final PushNotificationService pushNotificationService;
 
     @Override
     public NotificationResponse getNotificationById(String id) {
@@ -61,16 +71,61 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void sendNotification(CreateNotificationRequest request) {
-        // TODO: Implement sending notification to device
-        User user = userService.getUserEntity(request.getUserId());
+    public void sendNotification(CreateNotificationRequest createNotificationRequest) {
+        User toUser = userService.getUserEntityById(createNotificationRequest.getUserId());
+        List<String> deviceTokens = userDeviceService.getActiveUserToken(toUser.getId());
+        log.info("Sending notification to user: "+toUser.getUsername());
+        deviceTokens.forEach(token ->{
+            try{
+                PushNotificationDto request = PushNotificationDto.builder()
+                        .title(createNotificationRequest.getHeader())
+                        .message(createNotificationRequest.getBody())
+                        .token(token)
+                        .build();
+                pushNotificationService.sendPushNotificationToToken(request);
+                log.info("Notification sent to device: "+token);
+            } catch (Exception e){
+                if (e instanceof FirebaseMessagingException){
+                    userDeviceService.deleteDevice(token);
+                    log.info("Device deleted from database: "+token);
+                }
+                log.error("Error sending notification to device: "+token);
+                log.error(e.getMessage());
+            }
+        });
         Notification notification = Notification.builder()
-                .header(request.getHeader())
-                .body(request.getBody())
+                .header(createNotificationRequest.getHeader())
+                .body(createNotificationRequest.getBody())
                 .isRead(false)
-                .user(user)
+                .user(toUser)
                 .build();
         notificationRepository.save(notification);
+        log.info("Notification saved to database");
+    }
+
+    @Override
+    public void sendTestNotification(String toUserId, String message) {
+        User toUser = userService.getUserEntityById(toUserId);
+        List<String> deviceTokens = userDeviceService.getActiveUserToken(toUser.getId());
+        log.info("Sending test notification to user: "+toUser.getUsername());
+        deviceTokens.forEach(token ->{
+            try{
+                PushNotificationDto request = PushNotificationDto.builder()
+                        .title("Test Notification")
+                        .message(message)
+                        .token(token)
+                        .build();
+                pushNotificationService.sendPushNotificationToToken(request);
+                log.info("Test notification sent to device: "+token);
+            } catch (Exception e){
+                if (e instanceof FirebaseMessagingException){
+                    userDeviceService.deleteDevice(token);
+                    log.info("Device deleted from database: "+token);
+                }
+                log.error("Error sending test notification to device: "+token);
+                log.error(e.getMessage());
+            }
+        });
     }
 
     @Override

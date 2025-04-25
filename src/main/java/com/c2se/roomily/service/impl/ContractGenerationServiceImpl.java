@@ -64,10 +64,12 @@ public class ContractGenerationServiceImpl implements ContractGenerationService 
         }
         try {
             byte[] roomContract = contractStorageService.getRoomContract(rentedRoom.getRoom().getId());
+            Document document;
             if (roomContract == null) {
-                generateRoomContract(rentedRoom.getRoom());
+                document = generateRoomContract(rentedRoom.getRoom());
+            } else {
+                document = Jsoup.parse(new String(roomContract));
             }
-            Document document = Jsoup.parse(new String(roomContract));
             contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());
             return document;
         } catch (Exception e) {

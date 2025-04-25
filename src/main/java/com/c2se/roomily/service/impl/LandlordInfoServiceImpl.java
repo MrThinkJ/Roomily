@@ -25,7 +25,7 @@ public class LandlordInfoServiceImpl implements LandlordInfoService {
 
     @Override
     public LandlordInfo saveLandlordInfo(String userId, LandlordFillContractRequest request) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         
         LandlordInfo landlordInfo = landlordInfoRepository.findByUserId(userId)
                 .orElse(LandlordInfo.builder()

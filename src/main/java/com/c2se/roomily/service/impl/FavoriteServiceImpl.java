@@ -23,7 +23,7 @@ public class FavoriteServiceImpl implements FavoriteService {
 
     @Override
     public boolean toggleFavorite(String userId, String roomId) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         Room room = roomService.getRoomEntityById(roomId);
         Favorite favorite = favoriteRepository.findByUserIdAndRoomId(userId, roomId).orElse(null);
         if (favorite != null) {

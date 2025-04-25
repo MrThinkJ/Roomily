@@ -28,6 +28,13 @@ public class TransactionServiceImpl implements TransactionService {
     UserRepository userRepository;
 
     @Override
+    public Transaction getTransactionEntityById(String id) {
+        return transactionRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Transaction", "id", id)
+        );
+    }
+
+    @Override
     public TransactionPageResponse getAllTransactions(int page, int size,
                                                       String sortBy, String sortDir) {
         Sort sort = Sort.by(
@@ -50,6 +57,11 @@ public class TransactionServiceImpl implements TransactionService {
         List<Transaction> transactions = transactionRepository.findByMetadataAndType(
                 rentedRoomId, TransactionType.RENT_PAYMENT);
         return transactions.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public void saveTransaction(Transaction transaction) {
+        transactionRepository.save(transaction);
     }
 
     @Override

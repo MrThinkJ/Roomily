@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 public class AdsClickEventConsumer {
-    private final AdsCampaignRepository adsCampaignRepository;
     private final PromotedRoomRepository promotedRoomRepository;
     private final CampaignStatisticRepository campaignStatisticRepository;
 

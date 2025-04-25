@@ -8,14 +8,14 @@ import lombok.EqualsAndHashCode;
 import org.springframework.context.ApplicationEvent;
 
 public class DepositPayEvent extends ApplicationEvent {
-    private final RentedRoom rentedRoom;
+    private final String rentedRoomId;
     private final ChatRoom chatRoom;
     private final String requesterId;
 
     @Builder
-    public DepositPayEvent(Object source, RentedRoom rentedRoom, ChatRoom chatRoom, String requesterId) {
+    public DepositPayEvent(Object source, String rentedRoomId, ChatRoom chatRoom, String requesterId) {
         super(source);
-        this.rentedRoom = rentedRoom;
+        this.rentedRoomId = rentedRoomId;
         this.chatRoom = chatRoom;
         this.requesterId = requesterId;
     }
@@ -24,8 +24,8 @@ public class DepositPayEvent extends ApplicationEvent {
         return new DepositPayEventBuilder().source(source);
     }
 
-    public RentedRoom getRentedRoom() {
-        return rentedRoom;
+    public String getRentedRoomId() {
+        return rentedRoomId;
     }
 
     public ChatRoom getChatRoom() {

@@ -27,6 +27,7 @@ app:
     expiration: 604800000
   resource:
     static-location: resources/static
+    config-location: resources/config
 minio:
   access-key: roomily
   secret-key: miniopassword

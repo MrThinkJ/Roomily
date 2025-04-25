@@ -6,6 +6,7 @@ import com.c2se.roomily.service.TransactionService;
 import com.c2se.roomily.util.AppConstants;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -65,6 +66,7 @@ public class TransactionController {
     }
 
     @GetMapping("/type/{type}/status/{status}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     public ResponseEntity<TransactionPageResponse> getTransactionsByTypeAndStatus(
             @PathVariable String type,
             @PathVariable String status,

@@ -51,6 +51,7 @@ public class RoomExpireEventHandler {
         
         // Handle rental cost
         BigDecimal rentalCost = rentedRoom.getRoom().getPrice();
+        boolean isRentalCostPaid = false;
         if (rentedRoom.getRentedRoomWallet().compareTo(rentalCost) < 0) {
             // Not enough money for rental cost
             rentedRoom.setWalletDebt(rentalCost);
@@ -58,6 +59,7 @@ public class RoomExpireEventHandler {
             // Has enough for rental cost
             rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentalCost));
             rentedRoom.setWalletDebt(BigDecimal.ZERO);
+            isRentalCostPaid = true;
         }
         
         // Update dates for next period
@@ -72,6 +74,7 @@ public class RoomExpireEventHandler {
                 .rentedRoomId(rentedRoom.getId())
                 .rentalCost(rentalCost)
                 .lateDate(lateDate)
+                .isRentalCostPaid(isRentalCostPaid)
                 .build();
         billLogService.createBillLog(billLogRequest);
         

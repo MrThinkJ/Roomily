@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -49,13 +50,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     @Override
-    public void saveChatMessageEntity(ChatMessage chatMessage) {
-        chatMessageRepository.save(chatMessage);
+    public ChatMessage saveChatMessageEntity(ChatMessage chatMessage) {
+        return chatMessageRepository.save(chatMessage);
     }
 
     @Override
     public ChatMessageResponse saveChatMessage(ChatMessageToAdd chatMessageToAdd) {
-        User sender = userService.getUserEntity(chatMessageToAdd.getSenderId());
+        User sender = userService.getUserEntityById(chatMessageToAdd.getSenderId());
         String chatRoomId = chatMessageToAdd.getChatRoomId();
         if (!chatRoomRepository.existsById(chatRoomId))
             throw new ResourceNotFoundException("Chat room", "id", chatRoomId);
@@ -93,7 +94,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 .isAdConversion(chatMessageToAdd.getIsAdConversion())
                 .build();
         if (chatMessageToAdd.getImage() != null) {
-            String fileName = chatRoomId + "_" + UUID.randomUUID();
+            String fileName = "chat-room-"+chatRoomId + "_" + UUID.randomUUID()+
+                    chatMessageToAdd.getImage().getOriginalFilename();
             try {
                 storageService.putObject(chatMessageToAdd.getImage(), storageConfig.getBucketStore(), fileName);
                 chatMessage.setImageUrl(fileName);
@@ -104,7 +106,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
 
         chatRoom.setLastMessage(chatMessage.getMessage());
-        chatRoom.setLastMessageTimeStamp(chatMessage.getCreatedAt());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
         chatRoom.setLastMessageSender(chatMessage.getSender().getId());
         chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
         chatRoomRepository.save(chatRoom);

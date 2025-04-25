@@ -34,6 +34,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -64,16 +65,20 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             final String cancelUrl = "/cancel";
             final int price = createRentDepositPaymentLinkRequest.getAmount();
 
-            String currentTimeString = String.valueOf(new Date().getTime());
-            long orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
-
+            Random random = new Random();
+            long orderCode = random.nextLong();
             ItemData item = ItemData.builder().name(productName).price(price).quantity(1).build();
-
-            PaymentData paymentData = PaymentData.builder().orderCode(orderCode).description(description).amount(price)
-                    .item(item).returnUrl(returnUrl).cancelUrl(cancelUrl).build();
+            PaymentData paymentData = PaymentData.builder()
+                    .orderCode(orderCode)
+                    .description(description)
+                    .amount(price)
+                    .item(item)
+                    .returnUrl(returnUrl)
+                    .cancelUrl(cancelUrl)
+                    .build();
 
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-            User user = userService.getUserEntity(userId);
+            User user = userService.getUserEntityById(userId);
             CreatePaymentLinkRequest paymentLinkRequest = CreatePaymentLinkRequest.builder()
                     .amount(createRentDepositPaymentLinkRequest.getAmount())
                     .description(createRentDepositPaymentLinkRequest.getDescription())
@@ -102,17 +107,20 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             final String returnUrl = "/success";
             final String cancelUrl = "/cancel";
             final int price = paymentLinkRequest.getAmount();
-
-            String currentTimeString = String.valueOf(new Date().getTime());
-            long orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
-
+            Random random = new Random();
+            long orderCode = random.nextLong();
             ItemData item = ItemData.builder().name(productName).price(price).quantity(1).build();
-
-            PaymentData paymentData = PaymentData.builder().orderCode(orderCode).description(description).amount(price)
-                    .item(item).returnUrl(returnUrl).cancelUrl(cancelUrl).build();
+            PaymentData paymentData = PaymentData.builder()
+                    .orderCode(orderCode)
+                    .description(description)
+                    .amount(price)
+                    .item(item)
+                    .returnUrl(returnUrl)
+                    .cancelUrl(cancelUrl)
+                    .build();
 
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-            User user = userService.getUserEntity(userId);
+            User user = userService.getUserEntityById(userId);
             if (isInAppWallet) {
                 return createPaymentLinkForInAppWallet(data, user, checkoutId);
             } else {
@@ -245,7 +253,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     public void mockTopUpToRoomWallet(String rentedRoomId, double amount) {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String userId = userDetails.getId();
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(rentedRoomId);
         Room room = rentedRoom.getRoom();
 
@@ -372,6 +380,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } else{
             rentedRoomService.saveRentedRoom(rentedRoom);
         }
+
         if (transaction.getChatMessageId() != null) {
             try{
                 ChatMessage chatMessage = chatMessageService.getChatMessageById(transaction.getChatMessageId());
@@ -493,13 +502,15 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } else {
             // For BILL_MISSING status, the bill log still needs to be filled
             // Just deduct the rental cost from the wallet
-            rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getWalletDebt()));
-            rentedRoom.setWalletDebt(BigDecimal.ZERO);
-
             // Get the active bill log and update its status if already created
             BillLog activeBillLog = billLogService.getActiveBillLogByRentedRoomId(rentedRoom.getId());
-
-            if (activeBillLog != null && activeBillLog.getBillStatus() == BillStatus.MISSING) {
+            if (!activeBillLog.isRentalCostPaid()){
+                rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(rentedRoom.getWalletDebt()));
+                rentedRoom.setWalletDebt(BigDecimal.ZERO);
+                activeBillLog.setRentalCostPaid(true);
+                billLogService.save(activeBillLog);
+            }
+            if (activeBillLog.getBillStatus() == BillStatus.MISSING) {
                 // The rental cost is already paid but still waiting for bill information
                 // No status change needed as the bill is still missing
                 CreateRentedRoomActivityRequest rentalPaidActivity = CreateRentedRoomActivityRequest.builder()
