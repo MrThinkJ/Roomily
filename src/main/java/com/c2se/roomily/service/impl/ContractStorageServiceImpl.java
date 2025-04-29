@@ -53,12 +53,25 @@ public class ContractStorageServiceImpl implements ContractStorageService {
     }
 
     @Override
-    public byte[] getRoomContract(String roomId) {
-        String contractFilename = "contract_" + roomId + ".html";
+    public byte[] getLandlordContract(String landlordId) {
+        String contractFilename = "landlord_contract_" + landlordId + ".html";
         try {
             byte[] contractBytes = storageService.getObject(storageConfig.getBucketContract(), contractFilename).readAllBytes();
             Document document = Jsoup.parse(new String(contractBytes, "UTF-8"));
             return document.html().getBytes("UTF-8");
+        } catch (Exception e) {
+            return null; // Return null if the contract is not found
+        }
+    }
+
+    @Override
+    public byte[] getRoomContract(String roomId) {
+        String contractFilename = "contract_" + roomId + ".html";
+        try {
+//            byte[] contractBytes = storageService.getObject(storageConfig.getBucketContract(), contractFilename).readAllBytes();
+            return storageService.getObject(storageConfig.getBucketContract(), contractFilename).readAllBytes();
+//            Document document = Jsoup.parse(new String(contractBytes, "UTF-8"));
+//            return document.html().getBytes("UTF-8");
         } catch (Exception e) {
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR,
                                    "Contract not found for room: " + roomId);

@@ -46,7 +46,9 @@ public class SecurityConfig {
                                         "/api/v1/auth/register",
                                 "/swagger-ui/**",
                                 "/api-docs/**",
-                                "/ws/**")
+                                "/ws/**",
+                                "/api/v1/payments/transfer-handler"
+                                )
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated())

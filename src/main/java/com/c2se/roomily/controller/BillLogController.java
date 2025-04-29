@@ -31,13 +31,13 @@ public class BillLogController {
     }
 
     @GetMapping("/active/room/{roomId}")
-    public ResponseEntity<List<BillLogResponse>> getActiveBillLogByRoomId(@PathVariable String roomId) {
+    public ResponseEntity<BillLogResponse> getActiveBillLogByRoomId(@PathVariable String roomId) {
         return ResponseEntity.ok(billLogService.getActiveBillLogByRoomId(roomId));
     }
 
     @GetMapping("/active/rented-room/{rentedRoomId}")
-    public ResponseEntity<List<BillLogResponse>> getActiveBillLogByRentedRoomId(@PathVariable String rentedRoomId) {
-        return ResponseEntity.ok(billLogService.getActiveBillLogByRentedRoomId(rentedRoomId));
+    public ResponseEntity<BillLogResponse> getActiveBillLogByRentedRoomId(@PathVariable String rentedRoomId) {
+        return ResponseEntity.ok(billLogService.getActiveBillLogResponseByRentedRoomId(rentedRoomId));
     }
 
     @PostMapping("/{billLogId}/check")
@@ -47,15 +47,15 @@ public class BillLogController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{billLogId}/process")
-    public ResponseEntity<Void> processBillLog(@PathVariable String billLogId) {
-        billLogService.processBillLog(billLogId);
-        return ResponseEntity.ok().build();
-    }
+//    @PostMapping("/{billLogId}/process")
+//    public ResponseEntity<Void> processBillLog(@PathVariable String billLogId) {
+//        billLogService.processBillLog(billLogId);
+//        return ResponseEntity.ok().build();
+//    }
 
     @PatchMapping("/{billLogId}")
     public ResponseEntity<Void> updateBillLog(@PathVariable String billLogId,
-                                              @RequestBody UpdateBillLogRequest updateBillLogRequest) {
+                                              @ModelAttribute UpdateBillLogRequest updateBillLogRequest) {
         billLogService.updateBillLog(billLogId, updateBillLogRequest);
         return ResponseEntity.ok().build();
     }

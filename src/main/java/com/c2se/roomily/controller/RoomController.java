@@ -1,5 +1,7 @@
 package com.c2se.roomily.controller;
 
+import com.c2se.roomily.entity.Tag;
+import com.c2se.roomily.payload.internal.GooglePlacesTag;
 import com.c2se.roomily.payload.request.CreateRoomRequest;
 import com.c2se.roomily.payload.request.RoomFilterRequest;
 import com.c2se.roomily.payload.request.UpdateRoomRequest;
@@ -9,7 +11,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @AllArgsConstructor
@@ -27,11 +31,10 @@ public class RoomController extends BaseController {
         return ResponseEntity.ok(roomService.getRoomsByLandlordId(landlordId));
     }
 
-    @PostMapping("/filter")
-    public ResponseEntity<List<RoomResponse>> getRoomsByFilter(@RequestBody RoomFilterRequest filterRequest) {
-        return ResponseEntity.ok(
-                roomService.getRoomsByFilter(filterRequest)
-        );
+    @GetMapping("/recommended-tags")
+    public ResponseEntity<Set<GooglePlacesTag>> getRecommendedTagsByLocation(@RequestParam BigDecimal latitude,
+                                                                             @RequestParam BigDecimal longitude) {
+        return ResponseEntity.ok(roomService.getRecommendedTagsByLocation(latitude, longitude));
     }
 
     @GetMapping("/average-price")
@@ -39,18 +42,11 @@ public class RoomController extends BaseController {
         return ResponseEntity.ok(roomService.getAveragePriceAroundRoom(roomId, radius).doubleValue());
     }
 
-    @GetMapping("/subscribed/nearby")
-    public ResponseEntity<List<RoomResponse>> getSubscribedRoomsNearby(@RequestParam double latitude,
-                                                                       @RequestParam double longitude,
-                                                                       @RequestParam double radiusKm) {
-        return ResponseEntity.ok(roomService.getSubscribedRoomsNearby(latitude, longitude, radiusKm));
-    }
-
-    @GetMapping("/subscribed/location")
-    public ResponseEntity<List<RoomResponse>> getSubscribedRoomsByLocation(@RequestParam String city,
-                                                                           @RequestParam String district,
-                                                                           @RequestParam String ward) {
-        return ResponseEntity.ok(roomService.getSubscribedRoomsByLocation(city, district, ward));
+    @PostMapping("/filter")
+    public ResponseEntity<List<RoomResponse>> getRoomsByFilter(@RequestBody RoomFilterRequest filterRequest) {
+        return ResponseEntity.ok(
+                roomService.getRoomsByFilter(filterRequest)
+        );
     }
 
     @PostMapping

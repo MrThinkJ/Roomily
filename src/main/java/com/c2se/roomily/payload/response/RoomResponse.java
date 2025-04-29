@@ -36,5 +36,5 @@ public class RoomResponse {
     private LocalDateTime createdAt;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
-    private boolean isSubscribed;
+    private boolean hasFindPartnerPost;
 }

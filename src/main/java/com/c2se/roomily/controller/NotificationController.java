@@ -3,16 +3,17 @@ package com.c2se.roomily.controller;
 import com.c2se.roomily.payload.response.NotificationResponse;
 import com.c2se.roomily.service.NotificationService;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/notifications")
 public class NotificationController extends BaseController {
-    NotificationService notificationService;
+    private final NotificationService notificationService;
 
     @GetMapping("/{id}")
     public ResponseEntity<NotificationResponse> getNotificationById(@PathVariable String id) {
@@ -47,6 +48,12 @@ public class NotificationController extends BaseController {
     public ResponseEntity<Boolean> markAllNotificationsAsRead() {
         String userId = this.getUserInfo().getId();
         notificationService.markAllNotificationsAsRead(userId);
+        return ResponseEntity.ok(true);
+    }
+
+    @PostMapping("/test/{userId}")
+    public ResponseEntity<Boolean> test(@PathVariable String userId) {
+        notificationService.sendTestNotification(userId, "Test Notification");
         return ResponseEntity.ok(true);
     }
 }

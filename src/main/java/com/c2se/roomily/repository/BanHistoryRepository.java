@@ -24,5 +24,8 @@ public interface BanHistoryRepository extends JpaRepository<BanHistory, String> 
 
     Page<BanHistory> findByUserId(String userId, Pageable pageable);
 
-    List<BanHistory> findByExpiresAtBefore(LocalDateTime expiresAt);
+    List<BanHistory> findByExpiresAtAfter(LocalDateTime expiresAt);
+    
+    @Query("SELECT b FROM BanHistory b WHERE b.expiresAt BETWEEN :startDate AND :endDate AND b.user.status = 'BANNED'")
+    List<BanHistory> findBansExpiringToday(LocalDateTime startDate, LocalDateTime endDate);
 }

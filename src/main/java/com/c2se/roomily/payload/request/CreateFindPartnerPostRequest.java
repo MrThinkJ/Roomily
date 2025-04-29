@@ -10,6 +10,7 @@ import com.c2se.roomily.enums.FindPartnerPostType;
 @Data
 @Builder
 public class CreateFindPartnerPostRequest {
+    private String description;
     private Integer maxPeople;
     private String roomId;
     private List<String> currentParticipantPrivateIds;

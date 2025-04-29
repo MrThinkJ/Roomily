@@ -23,6 +23,7 @@ public class ChatMessage {
     @Column(name = "sub_id")
     private Integer subId;
     private String message;
+    private String metadata;
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -30,6 +31,10 @@ public class ChatMessage {
     private boolean isRead;
     @Column(name = "image_url")
     private String imageUrl;
+    private String roleName;
+    private boolean isAdConversion = false;
+    private String adClickId;
+    private String adCampaignId;
     @ManyToOne
     @JoinColumn(name = "sender_id")
     private User sender;

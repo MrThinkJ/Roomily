@@ -50,6 +50,16 @@ public class RentedRoomController extends BaseController {
         return ResponseEntity.ok(rentalRequestCacheService.getRequest(requestId).orElse(null));
     }
 
+    @GetMapping("/request/sender/{senderId}")
+    public ResponseEntity<List<RentalRequest>> getRequestsBySender(@PathVariable String senderId) {
+        return ResponseEntity.ok(rentalRequestCacheService.getRequestsBySender(senderId));
+    }
+
+    @GetMapping("/request/receiver/{receiverId}")
+    public ResponseEntity<List<RentalRequest>> getRequestsByReceiver(@PathVariable String receiverId) {
+        return ResponseEntity.ok(rentalRequestCacheService.getRequestsByReceiver(receiverId));
+    }
+
     @GetMapping("/active/{roomId}")
     public ResponseEntity<RentedRoomResponse> getRentedRoomActiveByUserIdOrCoTenantIdAndRoomId(@PathVariable String roomId) {
         String userId = this.getUserInfo().getId();

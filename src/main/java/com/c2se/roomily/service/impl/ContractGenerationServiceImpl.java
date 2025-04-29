@@ -4,6 +4,7 @@ import com.c2se.roomily.entity.RentedRoom;
 import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.enums.ErrorCode;
 import com.c2se.roomily.exception.APIException;
+import com.c2se.roomily.payload.request.LandlordFillContractRequest;
 import com.c2se.roomily.service.ContractGenerationService;
 import com.c2se.roomily.service.ContractStorageService;
 import com.c2se.roomily.util.AppConstants;
@@ -28,8 +29,9 @@ public class ContractGenerationServiceImpl implements ContractGenerationService 
     @Value("${app.resource.static-location}")
     private String staticLocation;
     private final ContractStorageService contractStorageService;
+
     @Override
-    public Document generateDefaultContract(Room room) {
+    public Document generateRoomContract(Room room) {
         if (room == null) {
             throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room not found");
         }
@@ -62,10 +64,12 @@ public class ContractGenerationServiceImpl implements ContractGenerationService 
         }
         try {
             byte[] roomContract = contractStorageService.getRoomContract(rentedRoom.getRoom().getId());
+            Document document;
             if (roomContract == null) {
-                throw new APIException(HttpStatus.NOT_FOUND, ErrorCode.FLEXIBLE_ERROR, "Room contract not found");
+                document = generateRoomContract(rentedRoom.getRoom());
+            } else {
+                document = Jsoup.parse(new String(roomContract));
             }
-            Document document = Jsoup.parse(new String(roomContract));
             contractStorageService.saveRentedRoomContract(rentedRoom.getId(), document.html());
             return document;
         } catch (Exception e) {

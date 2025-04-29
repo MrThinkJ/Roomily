@@ -32,6 +32,6 @@ public class RoomImageController extends BaseController {
     @DeleteMapping("/rooms/{roomId}")
     public void deleteImages(@PathVariable String roomId, @RequestBody List<String> imageIds) {
         String userId = this.getUserInfo().getId();
-        roomImageService.deleteImages(roomId, userId, imageIds);
+        roomImageService.deleteImages(userId, roomId, imageIds);
     }
 }

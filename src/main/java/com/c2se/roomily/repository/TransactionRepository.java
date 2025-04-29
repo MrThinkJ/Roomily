@@ -9,6 +9,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, String> {
     @NotNull
@@ -20,5 +23,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
 
     Page<Transaction> findByTypeAndStatus(TransactionType type, TransactionStatus status, Pageable pageable);
 
+    List<Transaction> findByMetadataAndType(String metadata, TransactionType type);
+
     Transaction findByPaymentId(String paymentId);
+
+    List<Transaction> findByTypeAndStatusAndCreatedAtBetween(
+            TransactionType type, 
+            TransactionStatus status, 
+            LocalDateTime start, 
+            LocalDateTime end);
+
+    List<Transaction> findByStatusAndCreatedAtBetween(
+            TransactionStatus status,
+            LocalDateTime start,
+            LocalDateTime end);
+
+    List<Transaction> findByStatus(TransactionStatus status);
+
+    long countByTypeAndStatus(TransactionType type, TransactionStatus status);
+
+    long countByStatus(TransactionStatus status);
 } 

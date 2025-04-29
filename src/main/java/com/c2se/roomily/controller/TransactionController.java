@@ -6,7 +6,10 @@ import com.c2se.roomily.service.TransactionService;
 import com.c2se.roomily.util.AppConstants;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @AllArgsConstructor
@@ -27,6 +30,11 @@ public class TransactionController {
     @GetMapping("/{id}")
     public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable String id) {
         return ResponseEntity.ok(transactionService.getTransactionById(id));
+    }
+
+    @GetMapping("/topup/{rentedRoomId}")
+    public ResponseEntity<List<TransactionResponse>> getTransactionTopUpToRentedRoomWallet(@PathVariable String rentedRoomId) {
+        return ResponseEntity.ok(transactionService.getTransactionTopUpToRentedRoomWallet(rentedRoomId));
     }
 
     @DeleteMapping("/{id}")
@@ -58,6 +66,7 @@ public class TransactionController {
     }
 
     @GetMapping("/type/{type}/status/{status}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     public ResponseEntity<TransactionPageResponse> getTransactionsByTypeAndStatus(
             @PathVariable String type,
             @PathVariable String status,

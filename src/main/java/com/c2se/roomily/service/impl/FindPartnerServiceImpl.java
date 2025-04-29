@@ -14,11 +14,14 @@ import com.c2se.roomily.payload.response.UserInFindPartnerPostResponse;
 import com.c2se.roomily.repository.FindPartnerPostRepository;
 import com.c2se.roomily.service.*;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,11 +37,17 @@ public class FindPartnerServiceImpl implements FindPartnerService {
     private final NotificationService notificationService;
     private final RequestCacheService requestCacheService;
     private final RentedRoomOperationsService rentedRoomOperationsService;
-
+    private final ChatMessageService chatMessageService;
+    private final SimpMessagingTemplate simpMessagingTemplate;
     @Override
     public FindPartnerPost getFindPartnerPostEntity(String findPartnerPostId) {
         return findPartnerPostRepository.findById(findPartnerPostId).orElseThrow(
                 () -> new ResourceNotFoundException("FindPartnerPost", "id", findPartnerPostId));
+    }
+
+    @Override
+    public FindPartnerPostResponse getFindPartnerPostResponse(String findPartnerPostId) {
+        return mapToFindPartnerPostResponse(getFindPartnerPostEntity(findPartnerPostId));
     }
 
     @Override
@@ -76,14 +85,14 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void createFindPartnerPost(String userId, CreateFindPartnerPostRequest request) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         Room room = roomService.getRoomEntityById(request.getRoomId());
         // If the room is in find partner only mode, reject the request
         if (room.getStatus().equals(RoomStatus.FIND_PARTNER_ONLY))
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "This room is in find partner only mode, you cannot create a find partner post for it");
         // If the user has already created a find partner post, reject the request
-        if (findPartnerPostRepository.existsByPosterId(user.getId())) {
+        if (findPartnerPostRepository.existsByPosterIdAndStatus(user.getId(), FindPartnerPostStatus.ACTIVE)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You have already created a find partner post");
         }
@@ -134,6 +143,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                 .currentPeople(users.size())
                 .maxPeople(request.getMaxPeople())
                 .status(FindPartnerPostStatus.ACTIVE)
+                .description(request.getDescription())
                 .participants(users)
                 .room(room)
                 .type(type)
@@ -144,22 +154,28 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void deleteActiveFindPartnerPostByRoomId(String roomId) {
-        List<FindPartnerPost> findPartnerPosts = findPartnerPostRepository.findByRoomIdAndStatus(
+        List<String> findPartnerPostIds = findPartnerPostRepository.findIdsByRoomIdAndStatus(
                 roomId,FindPartnerPostStatus.ACTIVE);
-        findPartnerPosts.forEach(findPartnerPost -> {
-            findPartnerPost.getParticipants().forEach(participant -> {
-                CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder().header(
-                        "Find partner post has been deleted").body("Find partner post has been deleted").userId(
-                        participant.getId()).type("FIND_PARTNER_POST_DELETED").build();
+        findPartnerPostIds.forEach( findPartnerPostId -> {
+            FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
+            Set<User> participants = new HashSet<>(findPartnerPost.getParticipants());
+            participants.forEach(participant -> {
+                CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder()
+                        .header("Bài đăng tìm bạn đã bị xóa")
+                        .body("Bài đăng tìm bạn đã bị xóa.")
+                        .userId(participant.getId())
+                        .build();
                 notificationService.sendNotification(createNotificationRequest);
             });
             chatRoomService.archiveAllChatRoomsByFindPartnerPostId(findPartnerPost.getId());
-            findPartnerPostRepository.delete(findPartnerPost);
+            findPartnerPost.setStatus(FindPartnerPostStatus.DELETED);
+            findPartnerPostRepository.save(findPartnerPost);
         });
     }
 
     @Override
     public RentalRequest requestToJoinFindPartnerPost(String userId, String findPartnerPostId, String chatRoomId) {
+        User user = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
         if (!chatRoomService.isUserInChatRoom(userId, chatRoomId))
@@ -172,7 +188,20 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                 .build();
         RentalRequest savedRequest = requestCacheService.saveRequest(rentalRequest);
         chatRoom.setRequestId(savedRequest.getId());
-        chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.WAITING);
+        chatRoom.setStatus(ChatRoomStatus.WAITING);
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message(user.getFullName() + " đã gửi yêu cầu tham gia bài đăng tìm bạn ở phòng " +
+                        findPartnerPost.getRoom().getId() + ". Vui lòng chấp nhận hoặc từ chối yêu cầu này.")
+                .chatRoom(chatRoom)
+                .subId(chatRoom.getNextSubId() + 1)
+                .build();
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
+        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
+        chatRoomService.saveChatRoom(chatRoom);
+        simpMessagingTemplate.convertAndSendToUser(userId, "/queue/chat-room",
+                                                   chatRoom.getId());
         return savedRequest;
     }
 
@@ -187,55 +216,84 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         requestCacheService.removeRequest(chatRoom.getRequestId());
         chatRoom.setRequestId(null);
         chatRoom.setStatus(ChatRoomStatus.ACTIVE);
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message("Yêu cầu tham gia bài đăng tìm bạn đã bị hủy")
+                .chatRoom(chatRoom)
+                .subId(chatRoom.getNextSubId() + 1)
+                .build();
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
+        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
         chatRoomService.saveChatRoom(chatRoom);
+        simpMessagingTemplate.convertAndSendToUser(rentalRequest.getRecipientId(), "/queue/chat-room",
+                                                   chatRoom.getId());
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional
     public void acceptRequestToJoinFindPartnerPost(String posterId, String chatRoomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
         RentalRequest rentalRequest = validateAndGetRentalRequest(chatRoom, posterId);
         FindPartnerPost findPartnerPost = validateAndGetFindPartnerPost(rentalRequest, posterId);
-        User user = userService.getUserEntity(rentalRequest.getRequesterId());
-
+        User user = userService.getUserEntityById(rentalRequest.getRequesterId());
+        if (findPartnerPost.getParticipants().contains(user)) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
+                                   "You have already accepted this request");
+        }
         addParticipantToPost(findPartnerPost, user);
         handleExistingChatRoom(findPartnerPost, user);
-        finalizeAcceptance(chatRoom, findPartnerPost);
+        finalizeAcceptance(chatRoom, findPartnerPost, user);
     }
 
     @Override
     public void rejectRequestToJoinFindPartnerPost(String posterId, String chatRoomId) {
-        RentalRequest rentalRequest = requestCacheService.getRequest(chatRoomId).orElse(null);
-        if (rentalRequest == null) {
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid request id");
-        }
-        if (!rentalRequest.getRecipientId().equals(posterId)) {
-            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not the recipient");
-        }
+        ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
+        RentalRequest rentalRequest = validateAndGetRentalRequest(chatRoom, posterId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(rentalRequest.getFindPartnerPostId());
         if (!findPartnerPost.getPoster().getId().equals(posterId)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You are not the poster of this post");
         }
         requestCacheService.removeRequest(chatRoomId);
-        chatRoomService.updateChatRoomStatus(chatRoomId, ChatRoomStatus.ACTIVE);
+        chatRoom.setRequestId(null);
+        chatRoom.setStatus(ChatRoomStatus.ACTIVE);
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message("Yêu cầu tham gia bài đăng tìm bạn đã bị từ chối")
+                .chatRoom(chatRoom)
+                .subId(chatRoom.getNextSubId() + 1)
+                .build();
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
+        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
+        chatRoomService.saveChatRoom(chatRoom);
+        simpMessagingTemplate.convertAndSendToUser(rentalRequest.getRequesterId(), "/queue/chat-room",
+                                                   chatRoom.getId());
     }
 
     @Override
     public void addParticipantToFindPartnerPost(String userId, String findPartnerPostId, String privateId) {
         User user = userService.getUserEntityByPrivateId(privateId);
-        User poster = userService.getUserEntity(userId);
+        User poster = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(poster.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You are not the poster of this post");
         }
-        findPartnerPost.getParticipants().add(user);
-        findPartnerPost.setCurrentPeople(findPartnerPost.getCurrentPeople() + 1);
-        findPartnerPostRepository.save(findPartnerPost);
+        boolean isUserAlreadyParticipant = findPartnerPost.getParticipants().stream()
+                .anyMatch(p -> p.getId().equals(user.getId()));
+
+        if (isUserAlreadyParticipant) {
+            System.out.println("User " + user.getId() + " is already in participants, skipping add operation");
+            return;
+        }
+
+        addParticipantToPost(findPartnerPost, user);
+        
         ChatRoom chatRoom = chatRoomService.getChatRoomByFindPartnerPostIdAndType(findPartnerPostId,
                                                                                   ChatRoomType.GROUP);
-        // If the chat room is already created, add the user to the chat room
+
         if (chatRoom != null) {
             chatRoomService.addUserToGroupChatRoom(user.getId(), chatRoom.getId());
             return;
@@ -245,8 +303,8 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void removeParticipantFromFindPartnerPost(String userId, String findPartnerPostId, String participantId) {
-        User user = userService.getUserEntity(userId);
-        User participant = userService.getUserEntity(participantId);
+        User user = userService.getUserEntityById(userId);
+        User participant = userService.getUserEntityById(participantId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
@@ -265,7 +323,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void exitFindPartnerPost(String userId, String findPartnerPostId) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getParticipants().contains(user)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "You are not in this post");
@@ -296,19 +354,31 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         FindPartnerPost findPartnerPost = validatePostOwnership(userId, findPartnerPostId);
         sendDeletionNotifications(findPartnerPost);
         cleanupChatRooms(findPartnerPost.getId());
-        findPartnerPostRepository.delete(findPartnerPost);
+        findPartnerPost.setStatus(FindPartnerPostStatus.DELETED);
+        findPartnerPostRepository.save(findPartnerPost);
     }
 
     @Override
     public void updateFindPartnerPost(String userId, String findPartnerPostId,
                                       UpdateFindPartnerPostRequest request) {
-        User user = userService.getUserEntity(userId);
+        User user = userService.getUserEntityById(userId);
         FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
         if (!findPartnerPost.getPoster().getId().equals(user.getId())) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You are not the poster of this post");
         }
+        if (request.getMaxPeople() > findPartnerPost.getRoom().getMaxPeople()) {
+            throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
+                                   "Max people must be less than or equal to room's max people");
+        }
         findPartnerPost.setMaxPeople(request.getMaxPeople());
+        findPartnerPost.setDescription(request.getDescription());
+        findPartnerPostRepository.save(findPartnerPost);
+    }
+
+    private void addParticipantToPost(FindPartnerPost findPartnerPost, User user) {
+        findPartnerPost.getParticipants().add(user);
+        findPartnerPost.setCurrentPeople(findPartnerPost.getCurrentPeople() + 1);
         findPartnerPostRepository.save(findPartnerPost);
     }
 
@@ -316,7 +386,10 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         if (findPartnerPost.getCurrentPeople() < findPartnerPost.getMaxPeople())
             return;
         markPostAsFull(findPartnerPost);
-        Set<User> participants = collectAllParticipants(findPartnerPost);
+        Set<User> participants = new HashSet<>();
+        participants.addAll(findPartnerPost.getParticipants());
+        User landlord = findPartnerPost.getRoom().getLandlord();
+        participants.add(landlord);
         String chatRoomId;
         if (findPartnerPost.getType() == FindPartnerPostType.ADDITIONAL_TENANT) {
             // For additional tenants, add them to the existing rental's chat room if it exists
@@ -332,13 +405,13 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                 chatRoomId = existingChatRoom.getId();
             } else {
                 // Create new chat room if none exists
-                chatRoomId = createGroupChatRoomForParticipants(findPartnerPost, participants);
+                chatRoomId = createGroupChatRoomForParticipants(findPartnerPost, participants, landlord);
             }
             // Update rented room with new co-tenants
             rentedRoom.getCoTenants().addAll(findPartnerPost.getParticipants());
             rentedRoomOperationsService.saveRentedRoom(rentedRoom);
         } else {
-            chatRoomId = createGroupChatRoomForParticipants(findPartnerPost, participants);
+            chatRoomId = createGroupChatRoomForParticipants(findPartnerPost, participants, landlord);
         }
 
         sendChatRoomNotifications(participants, chatRoomId);
@@ -349,18 +422,15 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         findPartnerPost.setStatus(FindPartnerPostStatus.FULL);
     }
 
-    private Set<User> collectAllParticipants(FindPartnerPost findPartnerPost) {
-        Set<User> participants = findPartnerPost.getParticipants();
-        participants.add(findPartnerPost.getRoom().getLandlord());
-        return participants;
-    }
-
-    private String createGroupChatRoomForParticipants(FindPartnerPost findPartnerPost, Set<User> participants) {
+    private String createGroupChatRoomForParticipants(FindPartnerPost findPartnerPost,
+                                                      Set<User> participants,
+                                                      User landlord) {
         ChatRoomResponse chatRoom = chatRoomService.createGroupChatRoom(
-                findPartnerPost.getPoster().getId(),
+                landlord.getId(),
                 participants.stream().map(User::getId).collect(Collectors.toSet()),
                 "Find partner, room: " + findPartnerPost.getRoom().getId(),
-                findPartnerPost.getRoom().getId());
+                findPartnerPost.getRoom().getId(),
+                findPartnerPost.getId());
         return chatRoom.getChatRoomId();
     }
 
@@ -370,7 +440,6 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                     .header("You have been added to a group chat room")
                     .body("You have been added to a group chat room")
                     .userId(participant.getId())
-                    .type("CHAT")
                     .extra(chatRoomId)
                     .build();
             notificationService.sendNotification(createNotificationRequest);
@@ -390,6 +459,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                 .status(findPartnerPost.getStatus().name())
                 .posterId(findPartnerPost.getPoster().getId())
                 .roomId(findPartnerPost.getRoom().getId())
+                .description(findPartnerPost.getDescription())
                 .participants(findPartnerPost.getParticipants().stream()
                                       .map(user -> UserInFindPartnerPostResponse.builder()
                                               .userId(user.getId())
@@ -400,6 +470,8 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                                               .build()
                                       ).collect(Collectors.toList()))
                 .rentedRoomId(findPartnerPost.getRentedRoom() == null ? null : findPartnerPost.getRentedRoom().getId())
+                .createdAt(findPartnerPost.getCreatedAt())
+                .updatedAt(findPartnerPost.getUpdatedAt())
                 .build();
     }
 
@@ -423,12 +495,6 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         return findPartnerPost;
     }
 
-    private void addParticipantToPost(FindPartnerPost findPartnerPost, User user) {
-        findPartnerPost.getParticipants().add(user);
-        findPartnerPost.setCurrentPeople(findPartnerPost.getCurrentPeople() + 1);
-        findPartnerPostRepository.save(findPartnerPost);
-    }
-
     private void handleExistingChatRoom(FindPartnerPost findPartnerPost, User user) {
         ChatRoom chatRoomLandlord = chatRoomService.getChatRoomByFindPartnerPostIdAndType(
                 findPartnerPost.getId(), ChatRoomType.GROUP);
@@ -439,8 +505,22 @@ public class FindPartnerServiceImpl implements FindPartnerService {
         }
     }
 
-    private void finalizeAcceptance(ChatRoom chatRoom, FindPartnerPost findPartnerPost) {
-        chatRoomService.updateChatRoomStatus(chatRoom.getId(), ChatRoomStatus.COMPLETED);
+    private void finalizeAcceptance(ChatRoom chatRoom, FindPartnerPost findPartnerPost, User requester) {
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message(requester.getFullName() + " đã được chấp nhận tham gia bài đăng tìm bạn ở phòng " +
+                        findPartnerPost.getRoom().getId() + ".")
+                .chatRoom(chatRoom)
+                .subId(chatRoom.getNextSubId() + 1)
+                .build();
+        chatRoom.setLastMessage(chatMessage.getMessage());
+        chatRoom.setLastMessageTimeStamp(LocalDateTime.now());
+        chatRoom.setNextSubId(chatRoom.getNextSubId() + 1);
+        chatMessageService.saveSystemMessage(chatMessage, chatRoom);
+        chatRoom.setRequestId(null);
+        chatRoom.setStatus(ChatRoomStatus.COMPLETED);
+        chatRoomService.saveChatRoom(chatRoom);
+        simpMessagingTemplate.convertAndSendToUser(requester.getId(), "/queue/chat-room",
+                                                   chatRoom.getId());
         requestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
@@ -459,7 +539,6 @@ public class FindPartnerServiceImpl implements FindPartnerService {
                     .header("Find partner post has been deleted")
                     .body("Find partner post has been deleted")
                     .userId(participant.getId())
-                    .type("FIND_PARTNER_POST_DELETED")
                     .build();
             notificationService.sendNotification(createNotificationRequest);
         });

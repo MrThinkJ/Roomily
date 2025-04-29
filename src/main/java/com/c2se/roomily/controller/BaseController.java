@@ -16,4 +16,9 @@ public abstract class BaseController {
         return UserInfoResponse.builder()
                 .id(userDetails.getId()).build();
     }
+
+    protected CustomUserDetails getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (CustomUserDetails) authentication.getPrincipal();
+    }
 }

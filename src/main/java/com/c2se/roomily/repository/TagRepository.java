@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TagRepository extends JpaRepository<Tag, String> {
@@ -17,7 +18,7 @@ public interface TagRepository extends JpaRepository<Tag, String> {
     @Query(value = "DELETE FROM room_tags WHERE tag_id = :tagId", nativeQuery = true)
     void deleteTagForRoom(@Param("tagId") String tagId);
 
-    Tag findByName(String name);
+    Optional<Tag> findByName(String name);
 
     List<Tag> findByIdIn(List<String> tagIds);
 }

@@ -7,7 +7,9 @@ import com.c2se.roomily.payload.request.UpdateUserRequest;
 import com.c2se.roomily.payload.response.PageUserResponse;
 import com.c2se.roomily.payload.response.UserResponse;
 import com.c2se.roomily.repository.UserRepository;
+import com.c2se.roomily.service.StorageService;
 import com.c2se.roomily.service.UserService;
+import com.c2se.roomily.config.StorageConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,22 +17,34 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final StorageService storageService;
+    private final StorageConfig storageConfig;
 
     @Override
-    public User getUserEntity(String id) {
+    public User getUserEntityById(String id) {
         return userRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("User", "id", id)
         );
+    }
+
+    @Override
+    public boolean isUserExists(String id) {
+        return userRepository.existsById(id);
     }
 
     @Override
@@ -62,7 +76,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse getUserByUserId(String id) {
-        return mapToUserResponse(getUserEntity(id));
+        return mapToUserResponse(getUserEntityById(id));
     }
 
     @Override
@@ -102,11 +116,40 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateUser(String userId, UpdateUserRequest request) {
-        User user = getUserEntity(userId);
+        User user = getUserEntityById(userId);
         user.setFullName(request.getFullName() != null ? request.getFullName() : user.getFullName());
         user.setEmail(request.getEmail() != null ? request.getEmail() : user.getEmail());
         user.setPhone(request.getPhone() != null ? request.getPhone() : user.getPhone());
         user.setAddress(request.getAddress() != null ? request.getAddress() : user.getAddress());
+        
+        // Handle profile picture upload
+        MultipartFile profilePicture = request.getProfilePicture();
+        if (profilePicture != null && !profilePicture.isEmpty()) {
+            try {
+                // Delete old image if it exists
+                if (user.getProfilePicture() != null && !user.getProfilePicture().isEmpty()) {
+                    try {
+                        storageService.removeObject(storageConfig.getBucketStore(), user.getProfilePicture());
+                    } catch (Exception e) {
+                        // Ignore if old image doesn't exist
+                    }
+                }
+                
+                // Create a unique filename
+                String originalFilename = profilePicture.getOriginalFilename();
+                String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                String filename = "user-" + userId + "-" + UUID.randomUUID() + extension;
+                
+                // Upload file to MinIO
+                storageService.putObject(profilePicture, storageConfig.getBucketStore(), filename);
+                
+                // Store just the filename in the database
+                user.setProfilePicture(filename);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to upload profile picture: " + e.getMessage(), e);
+            }
+        }
+        
         userRepository.save(user);
     }
 
@@ -122,7 +165,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapToUserResponse(User user) {
-        return UserResponse.builder()
+        UserResponse.UserResponseBuilder builder = UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
@@ -132,9 +175,22 @@ public class UserServiceImpl implements UserService {
                 .rating(user.getRating())
                 .privateId(user.getPrivateId())
                 .isVerified(user.getIsVerified())
-                .address(user.getAddress())
-                .profilePicture(user.getProfilePicture())
-                .build();
+                .address(user.getAddress());
+        
+        if (user.getProfilePicture() != null && !user.getProfilePicture().isEmpty()) {
+            try {
+                String presignedUrl = storageService.generatePresignedUrl(
+                        storageConfig.getBucketStore(), 
+                        user.getProfilePicture());
+                builder.profilePicture(presignedUrl);
+            } catch (Exception e) {
+                builder.profilePicture(user.getProfilePicture());
+            }
+        } else {
+            builder.profilePicture(user.getProfilePicture());
+        }
+        
+        return builder.build();
     }
 
     private PageUserResponse mapToPageUserResponse(Page<User> users) {
@@ -152,5 +208,40 @@ public class UserServiceImpl implements UserService {
                 .isFirst(users.isFirst())
                 .isLast(users.isLast())
                 .build();
+    }
+
+    @Override
+    public long getTotalUsers() {
+        return userRepository.count();
+    }
+
+    @Override
+    public long getTotalLandlords() {
+        return userRepository.findAllLandlords().size();
+    }
+
+    @Override
+    public long getTotalTenants() {
+        return userRepository.findAllTenants().size();
+    }
+
+    @Override
+    public long getUserCountByStatus(UserStatus status) {
+        return userRepository.countByStatus(status);
+    }
+
+    @Override
+    public long getNewUserCountThisMonth() {
+        YearMonth currentMonth = YearMonth.now();
+        LocalDateTime startOfMonth = currentMonth.atDay(1).atStartOfDay();
+        LocalDateTime endOfMonth = currentMonth.atEndOfMonth().atTime(23, 59, 59);
+        return userRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
+    }
+
+    @Override
+    public BigDecimal getTotalSystemBalance() {
+        return userRepository.findAll().stream()
+                .map(User::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

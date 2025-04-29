@@ -27,6 +27,7 @@ app:
     expiration: 604800000
   resource:
     static-location: src/main/resources/static
+    config-location: src/main/resources/config
 redis:
   host: localhost
   port: 6379
@@ -37,6 +38,11 @@ minio:
   bucket:
     image: images
     contract: contracts
+rabbitmq:
+    host: localhost
+    port: 5672
+    username: roomily
+    password: roomily
 payos:
   client-id: bb08d5f8-72bf-425a-a13b-b39c52d91ca7
   api-key: 73c759f5-eaf2-41f1-90cb-9bbd9385e7ec
@@ -49,3 +55,8 @@ management:
     web:
       exposure:
         include: "*"
+google:
+  map:
+    api-key: AIzaSyDefn6P99CBXAKfA_nE2J-6zIh4NKrpCgw
+  firebase:
+    api-key: YOUR_FIREBASE_API_KEY

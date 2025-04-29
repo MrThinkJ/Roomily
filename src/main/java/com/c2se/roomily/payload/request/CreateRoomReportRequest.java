@@ -9,4 +9,5 @@ public class CreateRoomReportRequest {
     private String reporterId;
     private String roomId;
     private String reason;
+    private String type;
 }

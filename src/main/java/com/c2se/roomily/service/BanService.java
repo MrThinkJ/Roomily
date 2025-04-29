@@ -16,4 +16,6 @@ public interface BanService {
     List<BanHistoryResponse> getUserBanHistory(String userId, Integer page, Integer size);
 
     List<BanHistoryResponse> getAllActiveBans();
+    
+    void processExpiredBans();
 } 

@@ -43,7 +43,7 @@ public class ContractController extends BaseController{
 
     @GetMapping("/download/rented-contract/{rentedRoomId}")
     public ResponseEntity<byte[]> getContractPdfByRentedRoomId(@PathVariable String rentedRoomId) {
-        byte[] pdf = contractService.getDefaultContractPdfByRoomId(rentedRoomId);
+        byte[] pdf = contractService.getContractPdfByRentedRoomId(rentedRoomId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"document.pdf\"")

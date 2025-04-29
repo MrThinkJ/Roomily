@@ -56,8 +56,8 @@ public class LandlordReviewServiceImpl implements LandlordReviewService {
     @Override
     public Boolean createLandlordReview(String reviewerId, String landlordId,
                                         CreateLandlordReviewRequest createLandlordReviewRequest) {
-        User reviewer = userService.getUserEntity(reviewerId);
-        User landlord = userService.getUserEntity(landlordId);
+        User reviewer = userService.getUserEntityById(reviewerId);
+        User landlord = userService.getUserEntityById(landlordId);
         LandlordReview review = LandlordReview.builder()
                 .reviewer(reviewer)
                 .landlord(landlord)

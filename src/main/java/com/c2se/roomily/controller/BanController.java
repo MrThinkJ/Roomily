@@ -38,8 +38,8 @@ public class BanController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/unban")
-    public ResponseEntity<Void> unbanUser(@RequestBody String userId) {
+    @PostMapping("/unban/{userId}")
+    public ResponseEntity<Void> unbanUser(@PathVariable String userId) {
         banService.unbanUser(userId);
         return ResponseEntity.ok().build();
     }

@@ -4,28 +4,36 @@ import com.c2se.roomily.payload.request.CreatePaymentLinkRequest;
 import com.c2se.roomily.payload.response.CheckoutResponse;
 import com.c2se.roomily.payload.response.PaymentLinkResponse;
 import com.c2se.roomily.service.PaymentProcessingService;
+import com.c2se.roomily.util.UtilFunction;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/payments")
-public class PaymentController {
+public class PaymentController extends BaseController{
     PaymentProcessingService paymentProcessingService;
 
     @PostMapping("/create")
     public ResponseEntity<CheckoutResponse> createPaymentLink(@RequestBody CreatePaymentLinkRequest
                                                                       createPaymentLinkRequest) {
-        return ResponseEntity.ok(paymentProcessingService.createPaymentLink(createPaymentLinkRequest));
+        String userId = this.getUserInfo().getId();
+        return ResponseEntity.ok(paymentProcessingService.createPaymentLink(createPaymentLinkRequest, userId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<PaymentLinkResponse> getPaymentLinkDataById(@PathVariable Long id) {
         return ResponseEntity.ok(paymentProcessingService.getPaymentLinkData(id));
+    }
+
+    @GetMapping("/checkout/{checkoutId}")
+    public ResponseEntity<CheckoutResponse> getPaymentLinkCheckoutData(@PathVariable String checkoutId) {
+        return ResponseEntity.ok(paymentProcessingService.getPaymentLinkCheckoutData(checkoutId));
     }
 
     @PutMapping("/{id}")

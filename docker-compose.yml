@@ -7,6 +7,7 @@ services:
     volumes:
       - /var/lib/redis/data:/data
     environment:
+      - TZ=Asia/Ho_Chi_Minh
       - REDIS_PORT=6379
     networks:
       - pi_shared_net
@@ -19,6 +20,7 @@ services:
       - 9000:9000
       - 9001:9001
     environment:
+      - TZ=Asia/Ho_Chi_Minh
       - MINIO_ROOT_USER=roomily
       - MINIO_ROOT_PASSWORD=miniopassword
       - VIRTUAL_HOST=storage.roomily.tech
@@ -47,6 +49,26 @@ services:
       - /var/lib/postgresql/data:/var/lib/postgresql/data
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+    networks:
+      - pi_shared_net
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    hostname: rabbitmq
+    restart: always
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+      - RABBITMQ_DEFAULT_USER=roomily
+      - RABBITMQ_DEFAULT_PASS=roomily
+      - VIRTUAL_HOST=mb.roomily.tech
+      - VIRTUAL_PORT=5672
+      - LETSENCRYPT_HOST=mb.roomily.tech
+      - LETSENCRYPT_EMAIL=blog@storage.roomily.tech
+    volumes:
+      - /var/lib/rabbitmq/data:/var/lib/rabbitmq/data
     networks:
       - pi_shared_net
 networks:

@@ -50,7 +50,7 @@ public class Room {
     @Column(name = "room_type")
     @Enumerated(EnumType.STRING)
     private RoomType type;
-    @Column(name = "nearby_amenities")
+    @Column(name = "nearby_amenities", columnDefinition = "TEXT")
     private String nearbyAmenities;
     private Integer maxPeople;
     private BigDecimal rentalDeposit;
@@ -63,7 +63,7 @@ public class Room {
     @ManyToOne
     @JoinColumn(name = "landlord_id")
     private User landlord;
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "room_tags",
             joinColumns = @JoinColumn(name = "room_id"),

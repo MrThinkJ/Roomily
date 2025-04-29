@@ -20,5 +20,7 @@ public interface NotificationService {
 
     void sendNotification(CreateNotificationRequest request);
 
+    void sendTestNotification(String toUserId, String message);
+
     void deleteNotificationById(String notificationId);
 }

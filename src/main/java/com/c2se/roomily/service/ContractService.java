@@ -12,7 +12,7 @@ public interface ContractService {
     void generateDefaultContract(String roomId);
     ContractResponsibilitiesResponse getContractResponsibilities(String userId, String roomId);
     void modifyContract(ModifyContractRequest modifyContractRequest);
-    void fillContractByLandlord(LandlordFillContractRequest landlordFillContractRequest);
+    void fillContractByLandlord(LandlordFillContractRequest request);
     void fillContractByTenant(TenantFillContractRequest tenantFillContractRequest);
     byte[] getDefaultContractPdfByRoomId(String roomId);
     byte[] getContractPdfByRentedRoomId(String rentedRoomId);

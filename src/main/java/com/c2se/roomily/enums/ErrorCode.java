@@ -6,7 +6,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ErrorCode {
     // Basic errors (1000-1099)
-    RESOURCE_NOT_FOUND(1000, "%s with id %s not found"),
+    RESOURCE_NOT_FOUND(1000, "%s not found with %s : '%s'"),
     RESOURCE_ALREADY_EXISTS(1001, "%s with id %s already exists"),
     RESOURCE_NOT_AVAILABLE(1002, "%s with id %s is not available"),
     RESOURCE_NOT_ACTIVE(1003, "%s with id %s is not active"),

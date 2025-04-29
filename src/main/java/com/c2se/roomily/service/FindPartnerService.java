@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface FindPartnerService {
     FindPartnerPost getFindPartnerPostEntity(String findPartnerPostId);
-
+    FindPartnerPostResponse getFindPartnerPostResponse(String findPartnerPostId);
     FindPartnerPost getAdditionalTenantFindPartnerPostEntityByRoomId(String roomId);
 
     List<FindPartnerPostResponse> getActiveFindPartnerPostsByRoomId(String roomId);
