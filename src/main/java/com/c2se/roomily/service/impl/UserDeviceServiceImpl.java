@@ -25,16 +25,16 @@ public class UserDeviceServiceImpl implements UserDeviceService {
     @Override
     public void registerDevice(UserDeviceRegisterRequest request) {
         User user = userRepository.findById(request.getUserId()).orElseThrow(
-                () -> new ResourceNotFoundException("User", "id", request.getUserId().toString())
+                () -> new ResourceNotFoundException("User", "id", request.getUserId())
         );
-        Optional<UserDevice> userDevice = userDeviceRepository.findByFcmToken(request.getFcmToken());
-        if (userDevice.isPresent()){
-            UserDevice device = userDevice.get();
-            device.setLastLoginAt(LocalDateTime.now());
-            userDeviceRepository.save(device);
+        UserDevice userDevice = userDeviceRepository.findByFcmTokenAndUserId(request.getFcmToken(),
+                                                                                       request.getUserId());
+        if (userDevice != null){
+            userDevice.setLastLoginAt(LocalDateTime.now());
+            userDeviceRepository.save(userDevice);
             return;
         }
-        UserDevice device = UserDevice.builder()
+        userDevice = UserDevice.builder()
                 .user(user)
                 .deviceType(request.getDeviceType())
                 .fcmToken(request.getFcmToken())
@@ -42,7 +42,7 @@ public class UserDeviceServiceImpl implements UserDeviceService {
                 .isActive(true)
                 .createdAt(LocalDateTime.now())
                 .build();
-        userDeviceRepository.save(device);
+        userDeviceRepository.save(userDevice);
     }
 
     @Override

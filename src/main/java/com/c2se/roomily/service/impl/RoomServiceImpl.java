@@ -155,7 +155,6 @@ public class RoomServiceImpl implements RoomService {
                 filterParameters.getLimit(),
                 filterParameters.getTagIds().toArray(new String[0])
         );
-        // TODO: Prioritize by recommendation score
         return rooms.stream().map(this::mapFromDaoToResponse).collect(Collectors.toList());
     }
 
@@ -383,11 +382,6 @@ public class RoomServiceImpl implements RoomService {
         } catch (IllegalArgumentException e) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR, "Invalid room type");
         }
-    }
-
-    private String getNearbyAmenitiesString(Double latitude, Double longitude) {
-        // TODO: Implement this method to get nearby amenities from latitude and longitude by calling Google Maps API
-        return "";
     }
 
     private RoomResponse mapToRoomResponse(Room room) {

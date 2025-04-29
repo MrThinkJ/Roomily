@@ -19,6 +19,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -205,5 +208,40 @@ public class UserServiceImpl implements UserService {
                 .isFirst(users.isFirst())
                 .isLast(users.isLast())
                 .build();
+    }
+
+    @Override
+    public long getTotalUsers() {
+        return userRepository.count();
+    }
+
+    @Override
+    public long getTotalLandlords() {
+        return userRepository.findAllLandlords().size();
+    }
+
+    @Override
+    public long getTotalTenants() {
+        return userRepository.findAllTenants().size();
+    }
+
+    @Override
+    public long getUserCountByStatus(UserStatus status) {
+        return userRepository.countByStatus(status);
+    }
+
+    @Override
+    public long getNewUserCountThisMonth() {
+        YearMonth currentMonth = YearMonth.now();
+        LocalDateTime startOfMonth = currentMonth.atDay(1).atStartOfDay();
+        LocalDateTime endOfMonth = currentMonth.atEndOfMonth().atTime(23, 59, 59);
+        return userRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
+    }
+
+    @Override
+    public BigDecimal getTotalSystemBalance() {
+        return userRepository.findAll().stream()
+                .map(User::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

@@ -4,6 +4,7 @@ import com.c2se.roomily.entity.Transaction;
 import com.c2se.roomily.payload.response.TransactionPageResponse;
 import com.c2se.roomily.payload.response.TransactionResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface TransactionService {
@@ -25,4 +26,15 @@ public interface TransactionService {
 
     TransactionPageResponse getTransactionsByTypeAndStatus(String type, String status, int page, int size,
                                                            String sortBy, String sortDir);
+                                                           
+    // New methods for admin dashboard
+    BigDecimal getTotalCompletedWithdrawalsThisMonth();
+    
+    BigDecimal getTotalCompletedDepositsThisMonth();
+    
+    long getPendingWithdrawalsCount();
+    
+    long getCompletedTransactionsCount();
+    
+    BigDecimal getTotalTransactionVolume();
 }

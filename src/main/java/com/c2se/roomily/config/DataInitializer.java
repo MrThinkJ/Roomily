@@ -65,9 +65,6 @@ public class DataInitializer {
                 new TagData("WIFI_INCLUDED", TagCategory.POLICY, "Bao gồm Wifi"),
                 new TagData("NO_CURFEW", TagCategory.POLICY, "Giờ giấc tự do"),
                 new TagData("CURFEW_SPECIFIC", TagCategory.POLICY, "Có giới nghiêm (hỏi chủ nhà)"),
-                new TagData("NO_SMOKING", TagCategory.POLICY, "Không hút thuốc"),
-                new TagData("SEPARATE_ENTRANCE", TagCategory.POLICY, "Lối đi riêng"),
-                new TagData("NOT_WITH_LANDLORD", TagCategory.POLICY, "Không chung chủ"),
 
                 // --- BUILDING_FEATURE ---
                 new TagData("ELEVATOR_AVAILABLE", TagCategory.BUILDING_FEATURE, "Có thang máy"),

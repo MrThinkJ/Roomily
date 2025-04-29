@@ -75,7 +75,7 @@ public class NotificationServiceImpl implements NotificationService {
         User toUser = userService.getUserEntityById(createNotificationRequest.getUserId());
         List<String> deviceTokens = userDeviceService.getActiveUserToken(toUser.getId());
         log.info("Sending notification to user: "+toUser.getUsername());
-        deviceTokens.forEach(token ->{
+        deviceTokens.forEach(token -> {
             try{
                 PushNotificationDto request = PushNotificationDto.builder()
                         .title(createNotificationRequest.getHeader())

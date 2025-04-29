@@ -15,7 +15,7 @@ import java.util.Optional;
 
 @Repository
 public interface FindPartnerPostRepository extends JpaRepository<FindPartnerPost, String> {
-    boolean existsByPosterId(String posterId);
+    boolean existsByPosterIdAndStatus(String posterId, FindPartnerPostStatus findPartnerPostStatus);
 
     Optional<FindPartnerPost> findByRoomIdAndType(String roomId, FindPartnerPostType type);
 
@@ -23,6 +23,9 @@ public interface FindPartnerPostRepository extends JpaRepository<FindPartnerPost
     List<FindPartnerPost> findByRoomId(String roomId);
 
     List<FindPartnerPost> findByRoomIdAndStatus(String roomId, FindPartnerPostStatus status);
+
+    @Query(value = "SELECT fp.id FROM FindPartnerPost fp WHERE fp.room.id = :roomId AND fp.status = :status")
+    List<String> findIdsByRoomIdAndStatus(String roomId, FindPartnerPostStatus status);
 
     @Query(value = "SELECT fp FROM FindPartnerPost fp WHERE :userId IN (SELECT p.id FROM fp.participants p) AND fp.status = :status")
     List<FindPartnerPost> findActiveByUserIdInParticipants(@Param("userId") String userId,

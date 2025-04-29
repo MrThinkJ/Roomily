@@ -74,7 +74,7 @@ public class BudgetPlanServiceImpl implements BudgetPlanService {
             userPreference.getCity(),
             userPreference.getDistrict(),
             userPreference.getWard(),
-            userPreference.getRoomType().name(),
+            userPreference.getRoomType() != null ? userPreference.getRoomType().name() : null,
             userPreference.getMaxBudget(),
             userPreference.getMustHaveTags().stream().map(Tag::getId).collect(Collectors.toSet()),
             userPreference.getMustHaveTags().size()
@@ -166,14 +166,14 @@ public class BudgetPlanServiceImpl implements BudgetPlanService {
         response.setAverageWaterCost(roomRepository.getAverageWaterCostInDistrict(
                 room.getCity(), room.getDistrict(), room.getType()));
         response.setRoomResponse(convertToRoomResponse(room));
+
         Set<Tag> roomTags = room.getTags();
-        Set<Tag> mustHaveTags = userPreference.getMustHaveTags();
-        Set<Tag> niceTags = userPreference.getNiceToHaveTags();
-        Set<Tag> matchedTags = new HashSet<>(mustHaveTags);
-        matchedTags.retainAll(roomTags);
-        Set<Tag> unmatchedTags = new HashSet<>(roomTags);
+        Set<Tag> allTagsNeed = userPreference.getMustHaveTags();
+        allTagsNeed.addAll(userPreference.getNiceToHaveTags());
+        Set<Tag> matchedTags = new HashSet<>(roomTags);
+        matchedTags.retainAll(allTagsNeed);
+        Set<Tag> unmatchedTags = new HashSet<>(allTagsNeed);
         unmatchedTags.removeAll(matchedTags);
-        unmatchedTags.retainAll(niceTags);
         response.setMatchedTags(matchedTags);
         response.setUnmatchedTags(unmatchedTags);
         return response;

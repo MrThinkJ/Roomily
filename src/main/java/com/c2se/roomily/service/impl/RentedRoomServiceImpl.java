@@ -2,6 +2,7 @@ package com.c2se.roomily.service.impl;
 
 import com.c2se.roomily.entity.*;
 import com.c2se.roomily.enums.*;
+import com.c2se.roomily.event.pojo.ContractGenerationEvent;
 import com.c2se.roomily.event.pojo.DebtDateExpireEvent;
 import com.c2se.roomily.event.pojo.DepositPayEvent;
 import com.c2se.roomily.event.pojo.RoomExpireEvent;
@@ -194,15 +195,22 @@ public class RentedRoomServiceImpl implements RentedRoomService {
             FindPartnerPost findPartnerPost = findPartnerService.getFindPartnerPostEntity(findPartnerPostId);
             findPartnerService.updateFindPartnerPostStatus(findPartnerPostId,
                                                            FindPartnerPostStatus.COMPLETED.toString());
-            findPartnerPost.getParticipants().remove(user);
-            rentedRoom.setCoTenants(findPartnerPost.getParticipants());
+            Set<User> participants = new HashSet<>(findPartnerPost.getParticipants());
+            participants.remove(user);
+            rentedRoom.setCoTenants(participants);
             findPartnerService.deleteFindPartnerPost(findPartnerPost.getPoster().getId(), findPartnerPostId);
         }
         findPartnerService.deleteActiveFindPartnerPostByRoomId(room.getId());
         RentedRoom savedRentedRoom = rentedRoomRepository.save(rentedRoom);
-        contractGenerationService.generateRentContract(savedRentedRoom);
 
-        handleRentalDepositPayment(savedRentedRoom.getId(), chatRoom, user.getId());
+        eventService.publishEvent(ContractGenerationEvent.builder(this)
+                                          .rentedRoomId(savedRentedRoom.getId())
+                                          .build());
+        eventService.publishEvent(DepositPayEvent.builder(this)
+                                          .rentedRoomId(savedRentedRoom.getId())
+                                          .chatRoom(chatRoom)
+                                          .requesterId(rentalRequest.getRequesterId())
+                                          .build());
         requestCacheService.removeRequest(chatRoom.getRequestId());
     }
 
@@ -381,8 +389,9 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         // 3. Delete any active find partner posts for additional tenants (rented group need to find more partners)
         FindPartnerPost additionalTenantPost = findPartnerService.getAdditionalTenantFindPartnerPostEntityByRoomId(
                 room.getId());
-        findPartnerService.deleteFindPartnerPost(additionalTenantPost.getPoster().getId(),
-                                                 additionalTenantPost.getId());
+        if (additionalTenantPost != null)
+            findPartnerService.deleteFindPartnerPost(additionalTenantPost.getPoster().getId(),
+                                                     additionalTenantPost.getId());
 
         // 4. Update rented room status
         rentedRoom.setStatus(RentedRoomStatus.END);
@@ -392,6 +401,9 @@ public class RentedRoomServiceImpl implements RentedRoomService {
         if (rentedRoom.getRentalDeposit().compareTo(BigDecimal.ZERO) > 0) {
             User mainTenant = rentedRoom.getUser();
             BigDecimal depositAmount = rentedRoom.getRentalDeposit();
+            BigDecimal roomWalletAmount = rentedRoom.getRentedRoomWallet();
+            mainTenant.setBalance(mainTenant.getBalance().add(roomWalletAmount));
+            // TODO: Need to confirm from landlord
             mainTenant.setBalance(mainTenant.getBalance().add(depositAmount));
             // Update user's wallet balance
             userService.saveUser(mainTenant);
@@ -503,14 +515,6 @@ public class RentedRoomServiceImpl implements RentedRoomService {
                                                                       .landlordId(rentedRoom.getLandlord().getId())
                                                                       .userId(rentedRoom.getUser().getId())
                                                                       .build()));
-    }
-
-    private void handleRentalDepositPayment(String rentedRoomId, ChatRoom chatRoom, String requesterId) {
-        eventService.publishEvent(DepositPayEvent.builder(this)
-                                          .rentedRoomId(rentedRoomId)
-                                          .chatRoom(chatRoom)
-                                          .requesterId(requesterId)
-                                          .build());
     }
 
     private RentedRoomResponse mapToRentedRoomResponse(RentedRoom rentedRoom) {

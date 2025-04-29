@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,8 +37,9 @@ public class PaymentLinkSendEventHandler {
     private final StorageService storageService;
     private final StorageConfig storageConfig;
 
-    @EventListener
     @Async
+    @EventListener
+    @Transactional
     public void handleSendPaymentLinkEvent(SendPaymentLinkEvent event) {
         RentedRoom rentedRoom = rentedRoomService.getRentedRoomEntityById(event.getRentedRoomId());
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(event.getChatRoomId());

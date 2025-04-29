@@ -1,6 +1,7 @@
 package com.c2se.roomily.event.handler;
 
 import com.c2se.roomily.entity.FindPartnerPost;
+import com.c2se.roomily.entity.Room;
 import com.c2se.roomily.enums.FindPartnerPostStatus;
 import com.c2se.roomily.event.pojo.RoomDeleteEvent;
 import com.c2se.roomily.payload.request.CreateNotificationRequest;
@@ -8,6 +9,7 @@ import com.c2se.roomily.repository.FindPartnerPostRepository;
 import com.c2se.roomily.service.ChatRoomService;
 import com.c2se.roomily.service.FindPartnerService;
 import com.c2se.roomily.service.NotificationService;
+import com.c2se.roomily.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -24,11 +26,19 @@ public class RoomDeleteEventHandler {
     private final FindPartnerPostRepository findPartnerPostRepository;
     private final ChatRoomService chatRoomService;
     private final NotificationService notificationService;
+    private final RoomService roomService;
     @EventListener
     @Async
     @Transactional
     public void handleRoomDeleteEvent(RoomDeleteEvent event) {
         String roomId = event.getRoomId();
+        Room room = roomService.getRoomEntityById(roomId);
+        CreateNotificationRequest landlordNotificationRequest = CreateNotificationRequest.builder()
+                .header("Phòng"+ room.getTitle() +" đã bị xóa")
+                .body("Phòng "+ room.getTitle()+ " đã bị xóa")
+                .userId(room.getLandlord().getId())
+                .build();
+        notificationService.sendNotification(landlordNotificationRequest);
         List<FindPartnerPost> findPartnerPosts = findPartnerPostRepository.findByRoomIdAndStatus(
                 roomId, FindPartnerPostStatus.ACTIVE);
         findPartnerPosts.forEach(findPartnerPost -> {

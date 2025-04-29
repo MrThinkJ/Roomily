@@ -44,7 +44,7 @@ public class RequestCacheServiceImpl implements RequestCacheService {
         if (request.getRecipientId() != null) {
             redisTemplate.opsForSet().add(RECIPIENT_INDEX_PREFIX + request.getRecipientId(),
                                             requestId);
-            redisTemplate.expire(REQUESTER_INDEX_PREFIX + request.getRecipientId(), REQUEST_TTL, TimeUnit.MINUTES);
+            redisTemplate.expire(RECIPIENT_INDEX_PREFIX + request.getRecipientId(), REQUEST_TTL, TimeUnit.MINUTES);
         }
         
         return request;

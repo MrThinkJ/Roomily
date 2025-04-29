@@ -124,7 +124,7 @@ public class AdsServiceImpl implements AdsService {
                 .promotedRooms(new ArrayList<>())
                 .campaignStatistics(new ArrayList<>())
                 .build();
-        adsCampaignRepository.save(campaign);
+        AdCampaign savedAdCampaign = adsCampaignRepository.save(campaign);
 
         CampaignStatistic campaignStatistic = CampaignStatistic.builder()
                 .adCampaign(campaign)
@@ -151,10 +151,8 @@ public class AdsServiceImpl implements AdsService {
                             .startTime(campaign.getStartDate())
                             .build()
             );
-            return;
         }
-        if (campaign.getStatus() == AdCampaignStatus.ACTIVE &&
-                endDay.equalsIgnoreCase(currentDay)) {
+        if (endDay.equalsIgnoreCase(currentDay)) {
             eventService.publishEvent(
                     AdCampaignExpireEvent.builder(this)
                             .campaignId(campaign.getId())

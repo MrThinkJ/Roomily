@@ -41,17 +41,17 @@ public class CheckoutExpirationListener implements MessageListener {
     private void handleCheckoutExpiration(String checkoutId) {
         Object value = redisTemplate.opsForValue().get("persistent:checkout:" + checkoutId);
         if (value != null) {
-            CheckoutResponse checkoutResponse = (CheckoutResponse) value;
-            try{
-                PaymentLinkData paymentLinkData = payOS.getPaymentLinkInformation(checkoutResponse.getOrderCode());
-                if (paymentLinkData.getStatus().equals("PENDING")){
-                    payOS.cancelPaymentLink(checkoutResponse.getOrderCode(),
-                                            checkoutResponse.getOrderCode() + " expired" );
-                }
-            } catch (Exception e) {
-                throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_LINK_GET_FAILED,
-                                       checkoutResponse.getOrderCode() + ". Error: " + e.getMessage());
-            }
+//            CheckoutResponse checkoutResponse = (CheckoutResponse) value;
+//            try{
+//                PaymentLinkData paymentLinkData = payOS.getPaymentLinkInformation(checkoutResponse.getOrderCode());
+//                if (paymentLinkData.getStatus().equals("PENDING")){
+//                    payOS.cancelPaymentLink(checkoutResponse.getOrderCode(),
+//                                            checkoutResponse.getOrderCode() + " expired" );
+//                }
+//            } catch (Exception e) {
+//                throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.PAYMENT_LINK_GET_FAILED,
+//                                       checkoutResponse.getOrderCode() + ". Error: " + e.getMessage());
+//            }
             redisTemplate.delete("persistent:checkout:" + checkoutId);
         }
     }

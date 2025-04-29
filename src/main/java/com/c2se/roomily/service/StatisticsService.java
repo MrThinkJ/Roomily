@@ -13,4 +13,9 @@ public interface StatisticsService {
     Double getLandlordResponseRate(String landlordId);
     LandlordStatisticsResponse getLandlordStatistics(String landlordId);
     TenantStatisticsResponse getTenantStatistics(String tenantId);
+    
+    // New methods for system statistics
+    long getTotalRentedRooms();
+    
+    long getTotalActiveRentedRooms();
 } 

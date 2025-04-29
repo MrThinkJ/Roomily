@@ -92,7 +92,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "This room is in find partner only mode, you cannot create a find partner post for it");
         // If the user has already created a find partner post, reject the request
-        if (findPartnerPostRepository.existsByPosterId(user.getId())) {
+        if (findPartnerPostRepository.existsByPosterIdAndStatus(user.getId(), FindPartnerPostStatus.ACTIVE)) {
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.FLEXIBLE_ERROR,
                                    "You have already created a find partner post");
         }
@@ -154,13 +154,15 @@ public class FindPartnerServiceImpl implements FindPartnerService {
 
     @Override
     public void deleteActiveFindPartnerPostByRoomId(String roomId) {
-        List<FindPartnerPost> findPartnerPosts = findPartnerPostRepository.findByRoomIdAndStatus(
+        List<String> findPartnerPostIds = findPartnerPostRepository.findIdsByRoomIdAndStatus(
                 roomId,FindPartnerPostStatus.ACTIVE);
-        findPartnerPosts.forEach(findPartnerPost -> {
-            findPartnerPost.getParticipants().forEach(participant -> {
+        findPartnerPostIds.forEach( findPartnerPostId -> {
+            FindPartnerPost findPartnerPost = getFindPartnerPostEntity(findPartnerPostId);
+            Set<User> participants = new HashSet<>(findPartnerPost.getParticipants());
+            participants.forEach(participant -> {
                 CreateNotificationRequest createNotificationRequest = CreateNotificationRequest.builder()
-                        .header("Find partner post has been deleted")
-                        .body("Find partner post has been deleted")
+                        .header("Bài đăng tìm bạn đã bị xóa")
+                        .body("Bài đăng tìm bạn đã bị xóa.")
                         .userId(participant.getId())
                         .build();
                 notificationService.sendNotification(createNotificationRequest);
@@ -229,6 +231,7 @@ public class FindPartnerServiceImpl implements FindPartnerService {
     }
 
     @Override
+    @Transactional
     public void acceptRequestToJoinFindPartnerPost(String posterId, String chatRoomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoomEntity(chatRoomId);
         RentalRequest rentalRequest = validateAndGetRentalRequest(chatRoom, posterId);

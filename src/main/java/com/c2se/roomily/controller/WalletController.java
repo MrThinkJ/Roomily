@@ -21,6 +21,12 @@ public class WalletController extends BaseController{
         return ResponseEntity.ok(walletService.getWithdrawInfo(userId));
     }
 
+    @GetMapping("/withdraw-info/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WithdrawInfoResponse> getWithdrawInfoByUserId(@PathVariable String userId) {
+        return ResponseEntity.ok(walletService.getWithdrawInfo(userId));
+    }
+
     @PostMapping("/withdraw-info")
     public ResponseEntity<Void> updateWithdrawInfo(@RequestBody WithdrawInfoRequest request) {
         String userId = this.getUserInfo().getId();

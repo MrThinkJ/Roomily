@@ -8,9 +8,11 @@ import com.c2se.roomily.enums.TransactionStatus;
 import com.c2se.roomily.enums.TransactionType;
 import com.c2se.roomily.exception.APIException;
 import com.c2se.roomily.exception.ResourceNotFoundException;
+import com.c2se.roomily.payload.request.CreateNotificationRequest;
 import com.c2se.roomily.payload.request.WithdrawInfoRequest;
 import com.c2se.roomily.payload.response.WithdrawInfoResponse;
 import com.c2se.roomily.repository.WithdrawInfoRepository;
+import com.c2se.roomily.service.NotificationService;
 import com.c2se.roomily.service.TransactionService;
 import com.c2se.roomily.service.UserService;
 import com.c2se.roomily.service.WalletService;
@@ -30,6 +32,7 @@ public class WalletServiceImpl implements WalletService {
     private final TransactionService transactionService;
     private final WithdrawInfoRepository withdrawInfoRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
     @Override
     public WithdrawInfoResponse getWithdrawInfo(String userId) {
@@ -56,9 +59,11 @@ public class WalletServiceImpl implements WalletService {
     public void withdraw(String userId, String amount) {
         BigDecimal withdrawAmount = new BigDecimal(amount);
         User user = userService.getUserEntityById(userId);
+
         if (user.getBalance().compareTo(withdrawAmount) < 0){
             throw new APIException(HttpStatus.BAD_REQUEST, ErrorCode.INSUFFICIENT_BALANCE, user.getBalance());
         }
+
         Transaction transaction = Transaction.builder()
                 .user(user)
                 .amount(withdrawAmount)
@@ -77,7 +82,6 @@ public class WalletServiceImpl implements WalletService {
         withdrawInfo.setLastWithdrawDate(LocalDate.now());
         withdrawInfoRepository.save(withdrawInfo);
         log.info("WithdrawInfo {} is updated", withdrawInfo.getId());
-
     }
 
     @Override
@@ -89,6 +93,13 @@ public class WalletServiceImpl implements WalletService {
         transaction.setStatus(TransactionStatus.COMPLETED);
         transaction.setUpdatedAt(LocalDateTime.now());
         transactionService.saveTransaction(transaction);
+        CreateNotificationRequest notificationRequest = CreateNotificationRequest.builder()
+                .userId(transaction.getUser().getId())
+                .header("Yêu cầu rút tiền được xác nhận")
+                .body("Yêu cầu rút tiền của bạn đã được xác nhận, số tiền: "+
+                              transaction.getAmount().toString())
+                .build();
+        notificationService.sendNotification(notificationRequest);
         log.info("Transaction {} is confirmed", transactionId);
     }
 
@@ -106,6 +117,13 @@ public class WalletServiceImpl implements WalletService {
         User user = transaction.getUser();
         user.setBalance(user.getBalance().add(transaction.getAmount()));
         userService.saveUser(user);
+        CreateNotificationRequest notificationRequest = CreateNotificationRequest.builder()
+                .userId(transaction.getUser().getId())
+                .header("Yêu cầu rút tiền bị từ chối")
+                .body("Yêu cầu rút tiền của bạn đã bị từ chối, lý do: "+
+                              transaction.getMetadata())
+                .build();
+        notificationService.sendNotification(notificationRequest);
         log.info("User {} balance is updated to {}", user.getId(), user.getBalance());
     }
 

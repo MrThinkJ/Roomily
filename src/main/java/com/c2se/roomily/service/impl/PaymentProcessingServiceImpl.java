@@ -30,13 +30,14 @@ import vn.payos.PayOS;
 import vn.payos.type.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -59,15 +60,20 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     public void createPaymentLink(CreateRentDepositPaymentLinkRequest createRentDepositPaymentLinkRequest, String userId) {
         log.info("Creating payment link for amount: {}", createRentDepositPaymentLinkRequest.getAmount());
         try {
-            final String productName = createRentDepositPaymentLinkRequest.getProductName();
-            final String description = createRentDepositPaymentLinkRequest.getDescription();
+            final String productName = (createRentDepositPaymentLinkRequest.getProductName()+
+                    UUID.randomUUID()).substring(0, 25);
+            final String description = (createRentDepositPaymentLinkRequest.getDescription()+
+                    UUID.randomUUID()).substring(0, 25);
             final String returnUrl = "/success";
             final String cancelUrl = "/cancel";
             final int price = createRentDepositPaymentLinkRequest.getAmount();
 
-            Random random = new Random();
-            long orderCode = random.nextLong();
+            String currentTimeString = String.valueOf(new Date().getTime());
+            long orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
             ItemData item = ItemData.builder().name(productName).price(price).quantity(1).build();
+//            Instant now = Instant.now();
+//            Instant expirationTime = now.plus(12, ChronoUnit.HOURS);
+//            Integer expiredAt = Math.toIntExact(expirationTime.getEpochSecond());
             PaymentData paymentData = PaymentData.builder()
                     .orderCode(orderCode)
                     .description(description)
@@ -75,6 +81,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                     .item(item)
                     .returnUrl(returnUrl)
                     .cancelUrl(cancelUrl)
+//                    .expiredAt(expiredAt)
                     .build();
 
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
@@ -101,15 +108,18 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         log.info("Creating payment link for amount: {}", paymentLinkRequest.getAmount());
         try {
             String checkoutId = UtilFunction.hash(UUID.randomUUID().toString());
-            final String productName = paymentLinkRequest.getProductName();
-            final String description = paymentLinkRequest.getDescription();
+            final String productName = (paymentLinkRequest.getProductName()+UUID.randomUUID()).substring(0, 25);
+            final String description = (paymentLinkRequest.getDescription()+UUID.randomUUID()).substring(0, 25);
             final boolean isInAppWallet = paymentLinkRequest.isInAppWallet();
             final String returnUrl = "/success";
             final String cancelUrl = "/cancel";
             final int price = paymentLinkRequest.getAmount();
-            Random random = new Random();
-            long orderCode = random.nextLong();
+            String currentTimeString = String.valueOf(new Date().getTime());
+            long orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
             ItemData item = ItemData.builder().name(productName).price(price).quantity(1).build();
+//            Instant now = Instant.now();
+//            Instant expirationTime = now.plus(12, ChronoUnit.HOURS);
+//            Integer expiredAt = Math.toIntExact(expirationTime.getEpochSecond());
             PaymentData paymentData = PaymentData.builder()
                     .orderCode(orderCode)
                     .description(description)
@@ -117,6 +127,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                     .item(item)
                     .returnUrl(returnUrl)
                     .cancelUrl(cancelUrl)
+//                    .expiredAt(expiredAt)
                     .build();
 
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
@@ -373,6 +384,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         if (rentedRoom.getStatus() == RentedRoomStatus.DEPOSIT_NOT_PAID) {
             handleDepositPaid(rentedRoom, room);
         }
+
         // Check if the debt needs to be paid
         else if (rentedRoom.getStatus() == RentedRoomStatus.DEBT
                 || rentedRoom.getStatus() == RentedRoomStatus.BILL_MISSING) {
@@ -380,29 +392,16 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } else{
             rentedRoomService.saveRentedRoom(rentedRoom);
         }
+        if (transaction.getChatMessageId() != null)
+            sendDepositPaidMessage(transaction);
 
-        if (transaction.getChatMessageId() != null) {
-            try{
-                ChatMessage chatMessage = chatMessageService.getChatMessageById(transaction.getChatMessageId());
-                chatMessage.setMessage("Đã trả tiền đặt cọc thành công.");
-                checkoutInfoRepository.delete(transaction.getCheckoutResponseId());
-                chatMessage.setMetadata(null);
-                chatMessageService.saveChatMessageEntity(chatMessage);
-                List<String> users = chatRoomService.getChatRoomUserIds(chatMessage.getChatRoom().getId());
-                users.forEach(user -> messagingTemplate.convertAndSendToUser(user,
-                                                                             "/queue/refresh/"+
-                                                                                     chatMessage.getChatRoom().getId(),
-                                                                             true));
-            } catch (ResourceNotFoundException e) {
-                log.error("Chat message not found for ID: {}", transaction.getChatMessageId());
-            }
-        }
         // Send notification to tenant and rented room
         CreateRentedRoomActivityRequest activityRequest = CreateRentedRoomActivityRequest.builder()
                 .rentedRoomId(rentedRoomId)
                 .message(String.format("%s nạp %s cho phòng thuê", transaction.getUser().getFullName(),
                                        data.getAmount()))
                 .build();
+
         rentedRoomActivityService.createRentedRoomActivity(activityRequest);
         CreateNotificationRequest tenantNotification = CreateNotificationRequest.builder()
                 .header("Nạp vào ví phòng thành công")
@@ -414,14 +413,33 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                  rentedRoom.getRoom().getId(), transaction.getUser().getUsername(), data.getAmount());
     }
 
+    private void sendDepositPaidMessage(Transaction transaction){
+        try{
+            ChatMessage chatMessage = chatMessageService.getChatMessageById(transaction.getChatMessageId());
+            chatMessage.setMessage("Đã trả tiền đặt cọc thành công.");
+            checkoutInfoRepository.delete(transaction.getCheckoutResponseId());
+            chatMessage.setMetadata(null);
+            chatMessageService.saveChatMessageEntity(chatMessage);
+            List<String> users = chatRoomService.getChatRoomUserIds(chatMessage.getChatRoom().getId());
+            users.forEach(user -> messagingTemplate.convertAndSendToUser(user,
+                                                                         "/queue/refresh/"+
+                                                                                 chatMessage.getChatRoom().getId(),
+                                                                         true));
+        } catch (ResourceNotFoundException e) {
+            log.error("Chat message not found for ID: {}", transaction.getChatMessageId());
+        }
+    }
+
     private void handleDepositPaid(RentedRoom rentedRoom, Room room){
         if (rentedRoom.getRentedRoomWallet().compareTo(room.getRentalDeposit()) < 0)
             return;
         roomService.updateRoomStatus(rentedRoom.getRoom().getId(), RoomStatus.RENTED.name());
+        // TODO: Change status of this room to need start bill
         rentedRoom.setStatus(RentedRoomStatus.IN_USE);
         rentedRoom.setRentedRoomWallet(rentedRoom.getRentedRoomWallet().subtract(room.getRentalDeposit()));
         rentedRoom.setRentalDeposit(room.getRentalDeposit());
         rentedRoomService.deleteRentedRoomNotPaidDepositByRoomId(rentedRoom.getRoom().getId());
+
         CreateRentedRoomActivityRequest depositPaidActivity = CreateRentedRoomActivityRequest.builder()
                 .rentedRoomId(rentedRoom.getId())
                 .message("Đã thanh toán tiền đặt cọc.")

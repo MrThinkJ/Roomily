@@ -46,7 +46,7 @@ public class FCMServiceImpl implements FCMService {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonOutput = gson.toJson(message);
         String response = sendAndGetResponse(message);
-        log.info("Sent message to token. Device token: " + request.getToken() + ", " + response+ " msg "+jsonOutput);
+        log.info("Sent message to token. Device token: " + request.getToken());
     }
 
     @Override

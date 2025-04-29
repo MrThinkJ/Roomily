@@ -23,6 +23,8 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -44,9 +46,8 @@ public class DepositPayEventHandler {
     private final TaskScheduler taskScheduler;
     private final EventService eventService;
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async
-    @Transactional
     public void handleDepositPayEvent(DepositPayEvent event) {
         String rentedRoomId = event.getRentedRoomId();
         ChatRoom chatRoom = event.getChatRoom();

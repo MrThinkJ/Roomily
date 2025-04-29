@@ -6,6 +6,7 @@ import com.c2se.roomily.payload.request.UpdateUserRequest;
 import com.c2se.roomily.payload.response.PageUserResponse;
 import com.c2se.roomily.payload.response.UserResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -43,4 +44,17 @@ public interface UserService {
     void updateUserStatus(User user, UserStatus status);
 
     void saveUser(User user);
+    
+    // New methods for admin dashboard
+    long getTotalUsers();
+    
+    long getTotalLandlords();
+    
+    long getTotalTenants();
+    
+    long getUserCountByStatus(UserStatus status);
+    
+    long getNewUserCountThisMonth();
+    
+    BigDecimal getTotalSystemBalance();
 }

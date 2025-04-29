@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RentedRoomRepository extends JpaRepository<RentedRoom, String> {
@@ -70,4 +71,8 @@ public interface RentedRoomRepository extends JpaRepository<RentedRoom, String> 
     int countByUserIdAndStatusNotIn(String userId, List<RentedRoomStatus> status);
     
     int countByLandlordId(String landlordId);
+
+    Optional<RentedRoom> findByUserIdAndRoomId(String userId, String roomId);
+
+    int countByStatus(RentedRoomStatus status);
 } 

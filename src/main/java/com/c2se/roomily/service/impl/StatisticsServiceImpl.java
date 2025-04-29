@@ -286,4 +286,14 @@ public class StatisticsServiceImpl implements StatisticsService {
         }
         log.info("Completed scheduled update of tenant statistics");
     }
+
+    @Override
+    public long getTotalRentedRooms() {
+        return rentedRoomRepository.count();
+    }
+    
+    @Override
+    public long getTotalActiveRentedRooms() {
+        return rentedRoomRepository.countByStatus(RentedRoomStatus.IN_USE);
+    }
 }
